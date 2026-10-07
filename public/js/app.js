@@ -114,7 +114,7 @@ btnCloseModal.addEventListener('click', () => {
   settingsModal.classList.add('hidden');
 });
 
-btnSaveApiKey.addEventListener('click', () => {
+btnSaveApiKey.addEventListener('click', async () => {
   const val = apiKeyInput.value.trim();
   if (val) {
     localStorage.setItem('GEMINI_API_KEY', val);
@@ -134,6 +134,21 @@ btnSaveApiKey.addEventListener('click', () => {
 
   if (ytTok) localStorage.setItem('YOUTUBE_ACCESS_TOKEN', ytTok);
   else localStorage.removeItem('YOUTUBE_ACCESS_TOKEN');
+
+  // Sync to server backend so background scheduler has the new token immediately
+  try {
+    await fetch('/api/settings/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        geminiApiKey: val,
+        metaIgUserId: metaIgUser,
+        metaIgToken: metaIgTok
+      })
+    });
+  } catch (err) {
+    console.error('Server settings sync error:', err);
+  }
 
   showToast('Settings saved successfully!');
   loadApiKeyStatus();
@@ -670,11 +685,18 @@ function initVideoStudio() {
         ? `<span class="badge" style="background: rgba(168,85,247,0.25); color: #c084fc; font-size: 0.65rem; padding: 0.15rem 0.45rem;"><i class="fa-solid fa-repeat"></i> Every Day</span>` 
         : '';
 
+      const isFailed = item.status?.includes('Failed');
+      const isPublishing = item.status?.includes('Publishing');
+
       const statusBadge = isPosted
-        ? `<a href="${item.lastPostUrl || '#'}" target="_blank" class="step-badge" style="background: rgba(16,185,129,0.2); color: #34d399; text-decoration: none;"><i class="fa-brands fa-instagram"></i> Live on IG ✓</a>`
+        ? `<a href="${item.lastPostUrl || '#'}" target="_blank" class="step-badge" style="background: rgba(16,185,129,0.2); color: #059669; text-decoration: none;"><i class="fa-brands fa-instagram"></i> Live on IG ✓</a>`
+        : isPublishing
+        ? '<span class="step-badge" style="background: rgba(234,179,8,0.2); color: #d97706;"><i class="fa-solid fa-spinner fa-spin"></i> Publishing...</span>'
+        : isFailed
+        ? `<span class="step-badge" style="background: rgba(239,68,68,0.2); color: #dc2626;" title="${(item.lastError || '').replace(/"/g, '&quot;')}"><i class="fa-solid fa-circle-exclamation"></i> Token Expired ⚠️</span>`
         : isReady 
-        ? '<span class="step-badge" style="background: rgba(16,185,129,0.15); color: #34d399;"><i class="fa-solid fa-check"></i> Ready to Post</span>' 
-        : '<span class="step-badge" style="background: rgba(6,182,212,0.15); color: #38bdf8;"><i class="fa-solid fa-clock"></i> Scheduled</span>';
+        ? '<span class="step-badge" style="background: rgba(16,185,129,0.15); color: #059669;"><i class="fa-solid fa-check"></i> Ready to Post</span>' 
+        : '<span class="step-badge" style="background: rgba(79,70,229,0.15); color: #4f46e5;"><i class="fa-solid fa-clock"></i> Scheduled</span>';
 
       const safeTitle = (item.viralTitle || item.fileName || 'Reel 30s').replace(/"/g, '&quot;');
 
@@ -685,9 +707,10 @@ function initVideoStudio() {
             <div class="queue-item-time">
               <i class="fa-solid fa-calendar-check"></i> ${friendlyTime} • ${statusBadge} ${recurringBadge}
             </div>
+            ${isFailed ? `<div style="font-size:0.72rem;color:#dc2626;margin-top:0.25rem;"><i class="fa-solid fa-triangle-exclamation"></i> ${item.lastError || 'Token expired. Update token in Settings and click Run Now.'}</div>` : ''}
           </div>
           <div class="queue-item-actions">
-            ${!isReady && !isPosted ? `<button type="button" class="btn-queue-action btn-queue-run" onclick="triggerRunScheduledReel('${item.id}')" title="Run now"><i class="fa-solid fa-bolt"></i> Run Now</button>` : ''}
+            ${!isPosted ? `<button type="button" class="btn-queue-action btn-queue-run" onclick="triggerRunScheduledReel('${item.id}')" title="Upload now"><i class="fa-solid fa-bolt"></i> ${isFailed ? 'Retry Now' : 'Run Now'}</button>` : ''}
             <button type="button" class="btn-queue-action" onclick="triggerCancelScheduledReel('${item.id}')" title="Cancel schedule"><i class="fa-solid fa-trash"></i></button>
           </div>
         </div>
@@ -695,20 +718,26 @@ function initVideoStudio() {
     }).join('');
   }
 
+  // Poll queue every 6 seconds to show real-time changes
+  setInterval(fetchScheduledQueue, 6000);
+
   window.triggerRunScheduledReel = async (id) => {
     try {
+      showToast('🚀 Publishing Reel to Instagram now...');
       const res = await fetch('/api/video/scheduled-queue/run-now', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id })
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to publish reel');
       if (data.success) {
-        showToast('⚡ Reel is ready for instant posting!');
+        showToast('🎉 Reel successfully posted to Instagram! Live now!');
         renderScheduledQueue(data.queue);
       }
     } catch (err) {
-      showToast(err.message, true);
+      showToast(`❌ Upload failed: ${err.message}`, true);
+      fetchScheduledQueue();
     }
   };
 

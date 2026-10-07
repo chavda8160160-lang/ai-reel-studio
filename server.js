@@ -947,17 +947,87 @@ app.post('/api/video/scheduled-queue/cancel', (req, res) => {
   }
 });
 
-app.post('/api/video/scheduled-queue/run-now', (req, res) => {
+app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
   try {
     const { id } = req.body;
     let queue = getScheduledQueue();
     const item = queue.find(i => i.id === id);
+    if (!item) return res.status(404).json({ error: 'Item not found in queue' });
+
+    console.log(`⚡ [Manual Run Now] Triggering instant upload for "${item.fileName}"...`);
+    item.status = 'Publishing to Instagram...';
+    item.startedPublishingAt = new Date().toISOString();
+    saveScheduledQueue(queue);
+
+    const videoPath = path.join(REELS_DIR, item.fileName);
+    if (!fs.existsSync(videoPath)) {
+      item.status = 'Post Failed (Ready to retry)';
+      item.lastError = 'Video file not found on disk';
+      saveScheduledQueue(queue);
+      return res.status(404).json({ error: 'Video file not found' });
+    }
+
+    const caption = `${item.viralCaption || ''}\n\n${item.viralHashtags || ''}`;
+    const pubResult = await publishReelDirectToInstagram(videoPath, caption);
+
+    item.status = 'Posted to Instagram ✓';
+    item.lastPostId = pubResult.postId;
+    item.lastPostUrl = pubResult.postUrl;
+    item.lastPostedAt = new Date().toISOString();
+    delete item.lastError;
+    saveScheduledQueue(queue);
+
+    res.json({ success: true, queue: getScheduledQueue(), item, postUrl: pubResult.postUrl, message: 'Reel successfully posted to Instagram!' });
+  } catch (err) {
+    console.error('Run-now error:', err);
+    let queue = getScheduledQueue();
+    const item = queue.find(i => i.id === req.body.id);
     if (item) {
-      item.status = 'Ready to Post';
-      item.readyAt = new Date().toISOString();
+      item.status = 'Post Failed (Ready to retry)';
+      item.lastError = err.message;
       saveScheduledQueue(queue);
     }
-    res.json({ success: true, queue, item, message: 'Reel તાત્કાલિક પોસ્ટ માટે તૈયાર થઈ ગઈ છે!' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint to save settings directly to server .env & process.env
+app.post('/api/settings/save', (req, res) => {
+  try {
+    const { metaIgUserId, metaIgToken, geminiApiKey } = req.body;
+    let envContent = '';
+    if (fs.existsSync('.env')) {
+      envContent = fs.readFileSync('.env', 'utf8');
+    }
+
+    if (metaIgToken) {
+      process.env.META_INSTAGRAM_TOKEN = metaIgToken;
+      if (envContent.includes('META_INSTAGRAM_TOKEN=')) {
+        envContent = envContent.replace(/META_INSTAGRAM_TOKEN=.*/, `META_INSTAGRAM_TOKEN=${metaIgToken}`);
+      } else {
+        envContent += `\nMETA_INSTAGRAM_TOKEN=${metaIgToken}`;
+      }
+    }
+    if (metaIgUserId) {
+      process.env.META_INSTAGRAM_USER_ID = metaIgUserId;
+      if (envContent.includes('META_INSTAGRAM_USER_ID=')) {
+        envContent = envContent.replace(/META_INSTAGRAM_USER_ID=.*/, `META_INSTAGRAM_USER_ID=${metaIgUserId}`);
+      } else {
+        envContent += `\nMETA_INSTAGRAM_USER_ID=${metaIgUserId}`;
+      }
+    }
+    if (geminiApiKey) {
+      process.env.GEMINI_API_KEY = geminiApiKey;
+      if (envContent.includes('GEMINI_API_KEY=')) {
+        envContent = envContent.replace(/GEMINI_API_KEY=.*/, `GEMINI_API_KEY=${geminiApiKey}`);
+      } else {
+        envContent += `\nGEMINI_API_KEY=${geminiApiKey}`;
+      }
+    }
+
+    fs.writeFileSync('.env', envContent.trim() + '\n', 'utf8');
+    console.log('✅ Settings saved to .env & process.env');
+    res.json({ success: true, message: 'Settings saved successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
