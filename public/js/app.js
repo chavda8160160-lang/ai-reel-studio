@@ -78,7 +78,7 @@ async function loadApiKeyStatus() {
   if (youtubeTokenInput) youtubeTokenInput.value = localStorage.getItem('YOUTUBE_ACCESS_TOKEN') || '';
 
   if (localKey) {
-    apiKeyStatusLabel.textContent = 'API Key સેટ છે ✓';
+    apiKeyStatusLabel.textContent = 'API Key Active ✓';
     apiKeyStatusLabel.style.color = 'var(--accent-emerald)';
     apiKeyInput.value = localKey;
     return;
@@ -89,13 +89,13 @@ async function loadApiKeyStatus() {
     const res = await fetch('/api/status');
     const data = await res.json();
     if (data.hasEnvKey) {
-      apiKeyStatusLabel.textContent = 'API Key એક્ટિવ છે ✓';
+      apiKeyStatusLabel.textContent = 'API Key Active ✓';
       apiKeyStatusLabel.style.color = 'var(--accent-emerald)';
       return;
     }
   } catch (_) {}
 
-  apiKeyStatusLabel.textContent = 'API Key નાખો ⚠️';
+  apiKeyStatusLabel.textContent = 'API Key Required ⚠️';
   apiKeyStatusLabel.style.color = 'var(--accent-rose)';
 }
 
@@ -135,7 +135,7 @@ btnSaveApiKey.addEventListener('click', () => {
   if (ytTok) localStorage.setItem('YOUTUBE_ACCESS_TOKEN', ytTok);
   else localStorage.removeItem('YOUTUBE_ACCESS_TOKEN');
 
-  showToast('સેટિંગ્સ સફળતાપૂર્વક સેવ થઈ ગયા!');
+  showToast('Settings saved successfully!');
   loadApiKeyStatus();
   settingsModal.classList.add('hidden');
 });
@@ -176,7 +176,7 @@ function initCopyButtons() {
       if (el) {
         navigator.clipboard.writeText(el.textContent);
         const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> કોપી થઈ ગયું!';
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
         setTimeout(() => {
           btn.innerHTML = originalText;
         }, 2000);
@@ -189,7 +189,7 @@ function initCopyButtons() {
 btnGenerate.addEventListener('click', async () => {
   const prompt = promptInput.value.trim();
   if (!prompt) {
-    showToast('કૃપા કરીને તમે શું બનાવવા માંગો છો તે લખો.', true);
+    showToast('Please enter your project requirements.', true);
     promptInput.focus();
     return;
   }
@@ -200,7 +200,7 @@ btnGenerate.addEventListener('click', async () => {
   // Set Loading UI
   btnGenerate.disabled = true;
   generationLoader.classList.remove('hidden');
-  loaderStatus.textContent = 'AI Architect આખો પ્રોજેક્ટ તૈયાર કરી રહ્યું છે... (આમાં ૩૦ સેકન્ડ લાગી શકે છે)';
+  loaderStatus.textContent = 'AI Architect is generating the full-stack project... (may take ~30s)';
 
   try {
     const payload = {
@@ -222,16 +222,16 @@ btnGenerate.addEventListener('click', async () => {
     const data = await res.json();
 
     if (!res.ok || !data.success) {
-      throw new Error(data.error || 'પ્રોજેક્ટ જનરેટ કરવામાં ભૂલ આવી.');
+      throw new Error(data.error || 'Failed to generate project.');
     }
 
     currentProject = data.project;
     renderProject(currentProject);
-    showToast('🎉 તમારો Full-Stack પ્રોજેક્ટ સફળતાપૂર્વક બની ગયો!');
+    showToast('🎉 Your Full-Stack project has been generated successfully!');
 
   } catch (err) {
     console.error(err);
-    showToast(`ભૂલ: ${err.message}`, true);
+    showToast(`Error: ${err.message}`, true);
   } finally {
     btnGenerate.disabled = false;
     generationLoader.classList.add('hidden');
@@ -326,16 +326,16 @@ function renderFrontendFiles(files) {
 }
 
 function renderGuide(project) {
-  let guideHtml = `<h3>🚀 ${project.projectTitle || project.projectName} કેવી રીતે રન કરવો?</h3>`;
-  guideHtml += `<p><strong>વર્ણન:</strong> ${project.description || ''}</p><br/>`;
-  guideHtml += `<h4>૧. ડેટાબેઝ સેટઅપ (${project.techStack?.database || 'SQL'}):</h4>`;
-  guideHtml += `<pre>${project.database?.notes || 'SSMS માં schema.sql રન કરીને ડેટાબેઝ બનાવો.'}</pre>`;
+  let guideHtml = `<h3>🚀 How to Run ${project.projectTitle || project.projectName}?</h3>`;
+  guideHtml += `<p><strong>Description:</strong> ${project.description || ''}</p><br/>`;
+  guideHtml += `<h4>1. Database Setup (${project.techStack?.database || 'SQL'}):</h4>`;
+  guideHtml += `<pre>${project.database?.notes || 'Execute schema.sql to create database and tables.'}</pre>`;
   
-  guideHtml += `<h4>૨. બેકએન્ડ સેટઅપ (${project.techStack?.backend || 'Backend'}):</h4>`;
-  guideHtml += `<pre>${project.backend?.setupInstructions || 'dotnet run અથવા npm start થી બેકએન્ડ રન કરો.'}</pre>`;
+  guideHtml += `<h4>2. Backend Setup (${project.techStack?.backend || 'Backend'}):</h4>`;
+  guideHtml += `<pre>${project.backend?.setupInstructions || 'Run backend with dotnet run or npm start.'}</pre>`;
 
-  guideHtml += `<h4>૩. સ્ટેપ-બાય-સ્ટેપ સંપૂર્ણ ગાઈડ:</h4>`;
-  guideHtml += `<pre>${project.runGuide || 'README.md ફાઈલ જુઓ.'}</pre>`;
+  guideHtml += `<h4>3. Complete Step-by-Step Guide:</h4>`;
+  guideHtml += `<pre>${project.runGuide || 'See README.md for details.'}</pre>`;
 
   guideContent.innerHTML = guideHtml;
 }
@@ -344,7 +344,7 @@ function renderGuide(project) {
 btnSaveToDisk.addEventListener('click', async () => {
   if (!currentProject) return;
   btnSaveToDisk.disabled = true;
-  btnSaveToDisk.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> સેવ થઈ રહ્યું છે...';
+  btnSaveToDisk.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving to PC...';
 
   try {
     const res = await fetch('/api/save-project', {
@@ -354,15 +354,15 @@ btnSaveToDisk.addEventListener('click', async () => {
     });
     const data = await res.json();
     if (!res.ok || !data.success) {
-      throw new Error(data.error || 'પ્રોજેક્ટ સેવ કરવામાં ભૂલ આવી.');
+      throw new Error(data.error || 'Failed to save project.');
     }
-    showToast(`✅ પ્રોજેક્ટ કમ્પ્યુટરમાં સેવ થઈ ગયો:\n${data.savedPath}`);
-    alert(`પ્રોજેક્ટ તમારા કમ્પ્યુટરમાં આ ફોલ્ડરમાં સેવ થયો છે:\n\n${data.savedPath}`);
+    showToast(`✅ Project saved to PC:\n${data.savedPath}`);
+    alert(`Project has been saved to your PC at:\n\n${data.savedPath}`);
   } catch (err) {
-    showToast(`ભૂલ: ${err.message}`, true);
+    showToast(`Error: ${err.message}`, true);
   } finally {
     btnSaveToDisk.disabled = false;
-    btnSaveToDisk.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> PC માં સેવ કરો';
+    btnSaveToDisk.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save to PC';
   }
 });
 
@@ -370,7 +370,7 @@ btnSaveToDisk.addEventListener('click', async () => {
 btnDownloadZip.addEventListener('click', async () => {
   if (!currentProject) return;
   btnDownloadZip.disabled = true;
-  btnDownloadZip.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ઝિપ બની રહી છે...';
+  btnDownloadZip.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating ZIP...';
 
   try {
     const res = await fetch('/api/download-zip', {
@@ -378,7 +378,7 @@ btnDownloadZip.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ project: currentProject })
     });
-    if (!res.ok) throw new Error('ZIP ડાઉનલોડ કરવામાં ભૂલ આવી.');
+    if (!res.ok) throw new Error('Failed to download ZIP file.');
 
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
@@ -389,12 +389,12 @@ btnDownloadZip.addEventListener('click', async () => {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
-    showToast('📦 ZIP ફાઈલ સફળતાપૂર્વક ડાઉનલોડ થઈ ગઈ!');
+    showToast('📦 ZIP file downloaded successfully!');
   } catch (err) {
-    showToast(`ભૂલ: ${err.message}`, true);
+    showToast(`Error: ${err.message}`, true);
   } finally {
     btnDownloadZip.disabled = false;
-    btnDownloadZip.innerHTML = '<i class="fa-solid fa-file-zipper"></i> ZIP ડાઉનલોડ';
+    btnDownloadZip.innerHTML = '<i class="fa-solid fa-file-zipper"></i> Download ZIP';
   }
 });
 
@@ -489,7 +489,7 @@ function initVideoStudio() {
   }
 
   function formatGujaratiDateTime(isoOrLocalString) {
-    if (!isoOrLocalString) return 'અત્યારે જ';
+    if (!isoOrLocalString) return 'Instant (Now)';
     const d = new Date(isoOrLocalString);
     if (isNaN(d.getTime())) return isoOrLocalString;
 
@@ -501,16 +501,16 @@ function initVideoStudio() {
 
     let hours = d.getHours();
     const minutes = String(d.getMinutes()).padStart(2, '0');
-    let period = 'સવારે';
-    if (hours >= 12 && hours < 16) period = 'બપોરે';
-    else if (hours >= 16 && hours < 20) period = 'સાંજે';
-    else if (hours >= 20 || hours < 5) period = 'રાત્રે';
+    let period = 'AM';
+    if (hours >= 12 && hours < 16) period = 'PM';
+    else if (hours >= 16 && hours < 20) period = 'PM';
+    else if (hours >= 20 || hours < 5) period = 'PM';
 
     const displayHours = hours % 12 || 12;
     const timeStr = `${String(displayHours).padStart(2, '0')}:${minutes} ${hours >= 12 ? 'PM' : 'AM'}`;
 
-    if (isToday) return `આજે ${period} ${timeStr}`;
-    if (isTomorrow) return `આવતીકાલે ${period} ${timeStr}`;
+    if (isToday) return `Today at ${timeStr} ${period}`;
+    if (isTomorrow) return `Tomorrow at ${timeStr} ${period}`;
 
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${d.getDate()} ${months[d.getMonth()]}, ${period} ${timeStr}`;
@@ -535,13 +535,13 @@ function initVideoStudio() {
     if (!videoScheduleDateTime || !videoScheduleFriendlyText) return;
     const val = videoScheduleDateTime.value;
     if (!val) {
-      videoScheduleFriendlyText.innerHTML = '<i class="fa-solid fa-bell"></i> પસંદ કરેલ સમય: <span>અત્યારે જ</span>';
+      videoScheduleFriendlyText.innerHTML = '<i class="fa-solid fa-bell"></i> Selected Time: <span>Instant (Now)</span>';
       return;
     }
     const friendly = formatGujaratiDateTime(val);
-    videoScheduleFriendlyText.innerHTML = `<i class="fa-solid fa-bell"></i> પસંદ કરેલ સમય: <span>${friendly}</span>`;
+    videoScheduleFriendlyText.innerHTML = `<i class="fa-solid fa-bell"></i> Selected Time: <span>${friendly}</span>`;
     if (isScheduleModeActive && btnProcessVideoText) {
-      btnProcessVideoText.textContent = `⏰ ${friendly} માટે Reel શેડ્યૂલ કરો`;
+      btnProcessVideoText.textContent = `⏰ Schedule Reel for ${friendly}`;
     }
   }
 
@@ -559,10 +559,10 @@ function initVideoStudio() {
       if (scheduleTimePickerBox) scheduleTimePickerBox.classList.add('hidden');
       if (everyDayRecurringInfoBanner) everyDayRecurringInfoBanner.classList.add('hidden');
       if (badgeScheduleMode) {
-        badgeScheduleMode.textContent = '⚡ અત્યારે (Instant)';
+        badgeScheduleMode.textContent = '⚡ Instant (Now)';
         badgeScheduleMode.style.background = 'rgba(99, 102, 241, 0.2)';
       }
-      if (btnProcessVideoText) btnProcessVideoText.textContent = '🎬 AI Auto-Edit & 30s Reel તૈયાર કરો';
+      if (btnProcessVideoText) btnProcessVideoText.textContent = '🎬 AI Auto-Edit & Generate 30s Reel';
       if (btnProcessVideoIcon) btnProcessVideoIcon.className = 'fa-solid fa-wand-magic-sparkles';
     });
 
@@ -575,7 +575,7 @@ function initVideoStudio() {
       if (scheduleTimePickerBox) scheduleTimePickerBox.classList.remove('hidden');
       if (everyDayRecurringInfoBanner) everyDayRecurringInfoBanner.classList.add('hidden');
       if (badgeScheduleMode) {
-        badgeScheduleMode.textContent = '⏰ ૧ વાર શેડ્યૂલ (Once)';
+        badgeScheduleMode.textContent = '⏰ Schedule Once';
         badgeScheduleMode.style.background = 'rgba(6, 182, 212, 0.25)';
       }
       if (btnProcessVideoIcon) btnProcessVideoIcon.className = 'fa-solid fa-calendar-check';
@@ -593,13 +593,13 @@ function initVideoStudio() {
       if (scheduleTimePickerBox) scheduleTimePickerBox.classList.remove('hidden');
       if (everyDayRecurringInfoBanner) everyDayRecurringInfoBanner.classList.remove('hidden');
       if (badgeScheduleMode) {
-        badgeScheduleMode.textContent = '🔁 દરરોજ (Every Day Auto-Post)';
+        badgeScheduleMode.textContent = '🔁 Daily Auto-Pilot (Every Day)';
         badgeScheduleMode.style.background = 'rgba(168, 85, 247, 0.35)';
       }
       if (btnProcessVideoIcon) btnProcessVideoIcon.className = 'fa-solid fa-repeat';
       initSchedulePickerDefault();
       if (btnProcessVideoText) {
-        btnProcessVideoText.textContent = '🔁 દરરોજ આ સમયે ઓટો-પોસ્ટ શેડ્યૂલ કરો';
+        btnProcessVideoText.textContent = '🔁 Schedule Daily Auto-Pilot';
       }
     });
   }
@@ -657,7 +657,7 @@ function initVideoStudio() {
     if (!scheduledQueueList || !scheduledCountBadge) return;
     scheduledCountBadge.textContent = `${queue.length} Reels`;
     if (!queue || queue.length === 0) {
-      scheduledQueueList.innerHTML = '<div class="empty-queue-hint">કોઈ Reel શેડ્યૂલ થયેલી નથી. ઉપરથી સમય પસંદ કરીને શેડ્યૂલ કરી શકો છો.</div>';
+      scheduledQueueList.innerHTML = '<div class="empty-queue-hint">No reels currently scheduled. Select a time above to schedule.</div>';
       return;
     }
 
@@ -667,7 +667,7 @@ function initVideoStudio() {
       const isPosted = item.status?.includes('Posted') || item.status?.includes('Instagram');
 
       const recurringBadge = item.recurringDaily 
-        ? `<span class="badge" style="background: rgba(168,85,247,0.25); color: #c084fc; font-size: 0.65rem; padding: 0.15rem 0.45rem;"><i class="fa-solid fa-repeat"></i> દરરોજ (Every Day)</span>` 
+        ? `<span class="badge" style="background: rgba(168,85,247,0.25); color: #c084fc; font-size: 0.65rem; padding: 0.15rem 0.45rem;"><i class="fa-solid fa-repeat"></i> Every Day</span>` 
         : '';
 
       const statusBadge = isPosted
@@ -687,8 +687,8 @@ function initVideoStudio() {
             </div>
           </div>
           <div class="queue-item-actions">
-            ${!isReady && !isPosted ? `<button type="button" class="btn-queue-action btn-queue-run" onclick="triggerRunScheduledReel('${item.id}')" title="અત્યારે જ રન કરો"><i class="fa-solid fa-bolt"></i> અત્યારે</button>` : ''}
-            <button type="button" class="btn-queue-action" onclick="triggerCancelScheduledReel('${item.id}')" title="શેડ્યૂલ રદ કરો"><i class="fa-solid fa-trash"></i></button>
+            ${!isReady && !isPosted ? `<button type="button" class="btn-queue-action btn-queue-run" onclick="triggerRunScheduledReel('${item.id}')" title="Run now"><i class="fa-solid fa-bolt"></i> Run Now</button>` : ''}
+            <button type="button" class="btn-queue-action" onclick="triggerCancelScheduledReel('${item.id}')" title="Cancel schedule"><i class="fa-solid fa-trash"></i></button>
           </div>
         </div>
       `;
@@ -704,7 +704,7 @@ function initVideoStudio() {
       });
       const data = await res.json();
       if (data.success) {
-        showToast('⚡ Reel તાત્કાલિક પોસ્ટ માટે રેડી થઈ ગઈ!');
+        showToast('⚡ Reel is ready for instant posting!');
         renderScheduledQueue(data.queue);
       }
     } catch (err) {
@@ -721,7 +721,7 @@ function initVideoStudio() {
       });
       const data = await res.json();
       if (data.success) {
-        showToast('શેડ્યૂલ રદ કરવામાં આવ્યું.');
+        showToast('Scheduled reel cancelled.');
         renderScheduledQueue(data.queue);
       }
     } catch (err) {
@@ -757,20 +757,20 @@ function initVideoStudio() {
 
   function handleFileSelected(file) {
     if (!file.type.startsWith('video/')) {
-      showToast('કૃપા કરીને વિડીયો ફાઈલ (MP4/MOV) પસંદ કરો.', true);
+      showToast('Please select a video file (MP4/MOV).', true);
       return;
     }
     selectedVideoFile = file;
     const mbSize = (file.size / (1024 * 1024)).toFixed(1);
-    selectedFileNameBadge.textContent = `✓ પસંદ થયેલ: ${file.name} (${mbSize} MB)`;
+    selectedFileNameBadge.textContent = `✓ Selected: ${file.name} (${mbSize} MB)`;
     selectedFileNameBadge.classList.remove('hidden');
-    showToast(`વિડીયો લોડ થયો: ${file.name}`);
+    showToast(`Video loaded: ${file.name}`);
   }
 
   // Process Video with AI Auto-Editing & Effects
   btnProcessVideo.addEventListener('click', async () => {
     if (!selectedVideoFile) {
-      showToast('કૃપા કરીને પહેલા કોઈપણ વિડીયો ફાઈલ અપલોડ કરો.', true);
+      showToast('Please upload a video file first.', true);
       fileInput.click();
       return;
     }
@@ -778,8 +778,8 @@ function initVideoStudio() {
     btnProcessVideo.disabled = true;
     videoLoader.classList.remove('hidden');
     videoLoaderStatus.textContent = isScheduleModeActive 
-      ? 'AI વિડીયોનું એનાલિસિસ અને નિર્ધારિત સમય માટે શેડ્યૂલ સેટ કરી રહ્યું છે...' 
-      : 'AI વિડીયોનું એનાલિસિસ કરીને 30s 9:16 રીલ અને કલર ઈફેક્ટ્સ લગાવી રહ્યું છે...';
+      ? 'AI is analyzing video and configuring schedule...' 
+      : 'AI is analyzing video and generating 30s 9:16 reel with color effects...';
 
     const formData = new FormData();
     formData.append('videoFile', selectedVideoFile);
@@ -806,7 +806,7 @@ function initVideoStudio() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'વિડીયો પ્રોસેસ કરવામાં ભૂલ આવી.');
+        throw new Error(data.error || 'Failed to process video.');
       }
 
       currentRenderedReel = data;
@@ -861,19 +861,19 @@ function initVideoStudio() {
 
       if (data.isScheduled && data.scheduledItem) {
         if (data.scheduledItem.recurringDaily) {
-          showToast(`🎉 દરરોજ આ જ સમયે (${formatGujaratiDateTime(data.scheduledItem.scheduledTime)}) ઓટો-પોસ્ટ સફળતાપૂર્વક સેટ થઈ ગયું! 🔁`);
+          showToast(`🎉 Daily recurring auto-post set successfully for ${formatGujaratiDateTime(data.scheduledItem.scheduledTime)}! 🔁`);
         } else {
-          showToast(`🎉 Reel સફળતાપૂર્વક ${formatGujaratiDateTime(data.scheduledItem.scheduledTime)} માટે શેડ્યૂલ થઈ ગઈ!`);
+          showToast(`🎉 Reel scheduled successfully for ${formatGujaratiDateTime(data.scheduledItem.scheduledTime)}!`);
         }
       } else {
-        showToast('🎉 ૩૦ સેકન્ડની AI એડિટ થયેલી Reel સફળતાપૂર્વક બની ગઈ!');
+        showToast('🎉 30-second AI Reel generated successfully!');
       }
 
       fetchScheduledQueue();
 
     } catch (err) {
       console.error(err);
-      showToast(`ભૂલ: ${err.message}`, true);
+      showToast(`Error: ${err.message}`, true);
     } finally {
       btnProcessVideo.disabled = false;
       videoLoader.classList.add('hidden');
@@ -905,7 +905,7 @@ function initVideoStudio() {
   if (btnRedownloadReel) {
     btnRedownloadReel.addEventListener('click', () => {
       triggerReelFileDownload();
-      showToast('વિડીયો ફરી ડાઉનલોડ થઈ રહ્યો છે...');
+      showToast('Re-downloading video...');
     });
   }
 
@@ -924,8 +924,8 @@ function initVideoStudio() {
     // 100% Hands-Free YouTube Data API Direct Publishing
     if (ytToken) {
       btnPublishYouTube.disabled = true;
-      btnPublishYouTube.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> YouTube Shorts પબ્લિશ થઈ રહ્યું છે...';
-      showToast('🚀 YouTube Data API દ્વારા Shorts સીધું પબ્લિશ થઈ રહ્યું છે...');
+      btnPublishYouTube.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publishing YouTube Shorts...';
+      showToast('🚀 Publishing Shorts directly via YouTube Data API...');
 
       try {
         const fullDesc = `${viralCaptionText.textContent}\n\n${viralHashtagsText.textContent}`;
@@ -942,20 +942,20 @@ function initVideoStudio() {
 
         const data = await res.json();
         if (!res.ok || !data.success) {
-          throw new Error(data.error || 'YouTube Upload નિષ્ફળ થયું.');
+          throw new Error(data.error || 'YouTube upload failed.');
         }
 
-        showToast('🎉 YouTube Short સીધું તમારી ચેનલ પર પબ્લિશ થઈ ગયું!');
+        showToast('🎉 YouTube Short published directly to your channel!');
         if (data.postUrl) {
           window.open(data.postUrl, '_blank');
         }
         return;
       } catch (err) {
-        showToast(`YouTube API ભૂલ: ${err.message}`, true);
+        showToast(`YouTube API Error: ${err.message}`, true);
         triggerGuidedYouTubeFlow();
       } finally {
         btnPublishYouTube.disabled = false;
-        btnPublishYouTube.innerHTML = '<i class="fa-brands fa-youtube"></i> <span>YouTube Shorts પર અપલોડ</span>';
+        btnPublishYouTube.innerHTML = '<i class="fa-brands fa-youtube"></i> <span>Upload to YouTube Shorts</span>';
       }
       return;
     }
@@ -972,7 +972,7 @@ function initVideoStudio() {
       const fullDesc = `${viralCaptionText.textContent}\n\n${viralHashtagsText.textContent}`;
       navigator.clipboard.writeText(`${viralTitleText.textContent}\n\n${fullDesc}`);
 
-      showToast('🎉 વિડીયો ડાઉનલોડ થયો & ટાઈટલ કોપી થઈ ગયું! YouTube Studio ખૂલી રહ્યું છે...');
+      showToast('🎉 Video downloaded & title copied! Opening YouTube Studio...');
       window.open('https://studio.youtube.com/channel/upload', '_blank');
     } catch (err) {
       showToast(err.message, true);
@@ -993,8 +993,8 @@ function initVideoStudio() {
     if (!currentRenderedReel) return;
 
     btnPublishInstagram.disabled = true;
-    btnPublishInstagram.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Instagram Reels પબ્લિશ થઈ રહી છે...';
-    showToast('🚀 Meta Graph API દ્વારા વિડીયો Instagram Reels પર અપલોડ થઈ રહ્યો છે...');
+    btnPublishInstagram.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publishing Instagram Reel...';
+    showToast('🚀 Uploading Reel directly via Meta Graph API...');
 
     try {
       const fullCaption = `${viralCaptionText.textContent}\n\n${viralHashtagsText.textContent}`;
@@ -1009,21 +1009,21 @@ function initVideoStudio() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Meta Reels પબ્લિશ કરવામાં સમસ્યા આવી.');
+        throw new Error(data.error || 'Error publishing Instagram Reel.');
       }
 
-      showToast('🎉 ૧૦૦% હેન્ડ્સ-ફ્રી: રીલ સીધી જ તમારા Instagram (@kuldip__3868) પર પબ્લિશ થઈ ગઈ!');
+      showToast('🎉 100% Hands-Free: Reel published directly to Instagram (@kuldip__3868)!');
       if (data.postUrl) {
         window.open(data.postUrl, '_blank');
       }
       return;
     } catch (err) {
       console.warn('Direct upload error, falling back to guided flow:', err);
-      showToast(`ઓટોમેટિક પબ્લિશ ભૂલ: ${err.message}`, true);
+      showToast(`Auto-publish error: ${err.message}`, true);
       triggerGuidedInstagramFlow();
     } finally {
       btnPublishInstagram.disabled = false;
-      btnPublishInstagram.innerHTML = '<i class="fa-brands fa-instagram"></i> <span>Instagram Reels પર અપલોડ (@kuldip__3868)</span>';
+      btnPublishInstagram.innerHTML = '<i class="fa-brands fa-instagram"></i> <span>Upload to Instagram Reels (@kuldip__3868)</span>';
     }
   });
 
@@ -1038,7 +1038,7 @@ function initVideoStudio() {
         navigator.clipboard.writeText(fullCaption);
       } catch (_) {}
 
-      showToast('✅ વિડીયો ડાઉનલોડ થઈ ગયો & કેપ્શન કોપી થઈ ગયું!');
+      showToast('✅ Video downloaded and caption copied to clipboard!');
 
       // 3. Open Instagram Web
       window.open('https://www.instagram.com/', '_blank');
@@ -1091,28 +1091,28 @@ function renderSchedulerState(state) {
   if (!lblSchedStatus) return;
 
   // Status Labels
-  lblSchedStatus.textContent = state.isActive ? 'Active (રોજ સવારે રન થશે ✓)' : 'Paused (બંધ છે)';
+  lblSchedStatus.textContent = state.isActive ? 'Active (Auto-Pilot Active ✓)' : 'Paused';
   lblSchedStatus.style.color = state.isActive ? 'var(--accent-emerald)' : 'var(--accent-rose)';
 
-  lblSchedTime.textContent = `દરરોજ ${state.scheduledTime || '08:30'} વાગ્યે`;
+  lblSchedTime.textContent = `Daily at ${state.scheduledTime || '08:30'}`;
   const timeInput = document.getElementById('scheduleDailyTime');
   if (timeInput) timeInput.value = state.scheduledTime || '08:30';
 
   if (state.masterVideo) {
     lblSchedVideoName.textContent = state.masterVideo.originalName || 'Master Video';
-    lblSchedTotalDur.textContent = `${state.masterVideo.totalDurationFormatted || ''} (કુલ ${state.masterVideo.totalParts || 0} ભાગો)`;
-    lblSchedNextPart.textContent = `Part ${state.currentPart} (સેકન્ડ ${state.lastPostedSeconds} થી ${state.lastPostedSeconds + 30})`;
+    lblSchedTotalDur.textContent = `${state.masterVideo.totalDurationFormatted || ''} (${state.masterVideo.totalParts || 0} total parts)`;
+    lblSchedNextPart.textContent = `Part ${state.currentPart} (Seconds ${state.lastPostedSeconds} - ${state.lastPostedSeconds + 30})`;
 
     // Progress Bar
     const postedParts = state.currentPart - 1;
     const totalParts = state.masterVideo.totalParts || 1;
     const pct = Math.min(100, Math.round((postedParts / totalParts) * 100));
     schedProgressBar.style.width = `${pct}%`;
-    schedProgressLabel.textContent = `${postedParts} / ${totalParts} Parts Posted (${pct}%) • ${totalParts - postedParts} બાકી છે`;
+    schedProgressLabel.textContent = `${postedParts} / ${totalParts} Parts Posted (${pct}%) • ${totalParts - postedParts} Remaining`;
   } else {
-    lblSchedVideoName.textContent = 'કોઈ લોંગ વિડીયો અપલોડ કરેલ નથી';
-    lblSchedTotalDur.textContent = '0 સેકન્ડ';
-    lblSchedNextPart.textContent = 'Part 1 (અપલોડ બાકી)';
+    lblSchedVideoName.textContent = 'No long video uploaded';
+    lblSchedTotalDur.textContent = '0 Seconds';
+    lblSchedNextPart.textContent = 'Part 1 (Pending)';
     schedProgressBar.style.width = '0%';
     schedProgressLabel.textContent = '0 / 0 Parts Posted';
   }
@@ -1123,7 +1123,7 @@ function renderSchedulerState(state) {
     partsHistoryList.innerHTML = `
       <div class="empty-parts-notice">
         <i class="fa-regular fa-clock"></i>
-        <p>હજી સુધી કોઈ ભાગ પોસ્ટ થયો નથી. "આગામી Part અત્યારે જ કટ કરો" દબાવીને ટેસ્ટ કરો.</p>
+        <p>No parts published yet. Click "Extract & Post Next Part Now" to test.</p>
       </div>`;
     schedLatestPlayer.style.display = 'none';
     schedPlayerPlaceholder.style.display = 'flex';
@@ -1144,10 +1144,10 @@ function renderSchedulerState(state) {
         <div style="font-size: 0.78rem; color: #a5b4fc;"><i class="fa-solid fa-wand-magic-sparkles"></i> ${item.detectedTopic || ''}</div>
         <div class="part-card-actions">
           <a href="${item.renderedReelUrl}" target="_blank" class="btn btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem;">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> પ્લે કરો
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Play
           </a>
           <a href="${item.renderedReelUrl}" download="${item.fileName || 'part.mp4'}" class="btn btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem;">
-            <i class="fa-solid fa-download"></i> ડાઉનલોડ
+            <i class="fa-solid fa-download"></i> Download
           </a>
         </div>
       </div>
@@ -1191,14 +1191,14 @@ function initSchedulerView() {
 
   function handleSchedulerFile(file) {
     if (!file.type.startsWith('video/')) {
-      showToast('કૃપા કરીને વિડીયો ફાઈલ પસંદ કરો.', true);
+      showToast('Please select a video file.', true);
       return;
     }
     selectedSchedulerFile = file;
     const mbSize = (file.size / (1024 * 1024)).toFixed(1);
-    fileNameBadge.textContent = `✓ પસંદ થયેલ: ${file.name} (${mbSize} MB)`;
+    fileNameBadge.textContent = `✓ Selected: ${file.name} (${mbSize} MB)`;
     fileNameBadge.classList.remove('hidden');
-    showToast(`લોંગ વિડીયો પસંદ થયો: ${file.name}`);
+    showToast(`Long video selected: ${file.name}`);
   }
 
   // Time formatting & Quick Presets
@@ -1210,9 +1210,9 @@ function initSchedulerView() {
     const period = h >= 12 ? 'PM' : 'AM';
     const displayHour = h % 12 || 12;
     const padM = String(m).padStart(2, '0');
-    const dayPeriod = (h >= 5 && h < 12) ? 'સવારે' : (h >= 12 && h < 17) ? 'બપોરે' : (h >= 17 && h < 20) ? 'સાંજે' : 'રાત્રે';
+    const dayPeriod = (h < 12) ? 'Morning' : (h < 17) ? 'Afternoon' : (h < 20) ? 'Evening' : 'Night';
     if (timeDisplayHint) {
-      timeDisplayHint.textContent = `${dayPeriod} ${displayHour}:${padM} ${period} વાગ્યે`;
+      timeDisplayHint.textContent = `Daily at ${displayHour}:${padM} ${period} (${dayPeriod})`;
     }
   }
 
@@ -1225,7 +1225,7 @@ function initSchedulerView() {
       const t = chip.getAttribute('data-time');
       timeInput.value = t;
       updateTimeLabel(t);
-      showToast(`સમય પસંદ થયો: ${chip.getAttribute('data-label')}`);
+      showToast(`Time selected: ${chip.getAttribute('data-label')}`);
     });
   });
 
@@ -1234,7 +1234,7 @@ function initSchedulerView() {
     const scheduledTime = timeInput.value || '08:30';
 
     btnSaveSchedule.disabled = true;
-    btnSaveSchedule.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> સેટ થઈ રહ્યું છે...';
+    btnSaveSchedule.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Activating...';
 
     const formData = new FormData();
     formData.append('scheduledTime', scheduledTime);
@@ -1249,22 +1249,22 @@ function initSchedulerView() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'શેડ્યૂલર સેટ કરવામાં ભૂલ આવી.');
+        throw new Error(data.error || 'Failed to configure scheduler.');
       }
-      showToast(data.message || 'શેડ્યૂલર સફળતાપૂર્વક ચાલુ થઈ ગયું!');
+      showToast(data.message || 'Scheduler auto-pilot activated successfully!');
       renderSchedulerState(data.state);
     } catch (err) {
-      showToast(`ભૂલ: ${err.message}`, true);
+      showToast(`Error: ${err.message}`, true);
     } finally {
       btnSaveSchedule.disabled = false;
-      btnSaveSchedule.innerHTML = '<i class="fa-solid fa-play"></i> <span>⏰ શેડ્યૂલર ચાલુ કરો (Auto-Pilot Activate)</span>';
+      btnSaveSchedule.innerHTML = '<i class="fa-solid fa-play"></i> <span>⏰ Activate Scheduler (Auto-Pilot)</span>';
     }
   });
 
   // Run Next Part Right Now (Test Action)
   btnRunNextNow.addEventListener('click', async () => {
     btnRunNextNow.disabled = true;
-    btnRunNextNow.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> આગામી 30s ભાગ બની રહ્યો છે...';
+    btnRunNextNow.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating next 30s part...';
 
     try {
       const res = await fetch('/api/scheduler/run-next', {
@@ -1272,15 +1272,15 @@ function initSchedulerView() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'ભાગ કટ કરવામાં ભૂલ આવી.');
+        throw new Error(data.error || 'Failed to extract part.');
       }
-      showToast(`🎉 Part ${data.item.part} સફળતાપૂર્વક તૈયાર થઈ ગયું! (આ ભાગ ફરી ક્યારેય રીપીટ નહીં થાય)`);
+      showToast(`🎉 Part ${data.item.part} generated successfully! (Will never repeat)`);
       renderSchedulerState(data.state);
     } catch (err) {
-      showToast(`ભૂલ: ${err.message}`, true);
+      showToast(`Error: ${err.message}`, true);
     } finally {
       btnRunNextNow.disabled = false;
-      btnRunNextNow.innerHTML = '<i class="fa-solid fa-forward-step"></i> <span>⚡ આગામી Part (30s) અત્યારે જ કટ & પબ્લિશ કરો</span>';
+      btnRunNextNow.innerHTML = '<i class="fa-solid fa-forward-step"></i> <span>⚡ Extract & Post Next Part (30s) Now</span>';
     }
   });
 
@@ -1288,7 +1288,7 @@ function initSchedulerView() {
   if (btnLoadSampleVideo) {
     btnLoadSampleVideo.addEventListener('click', async () => {
       btnLoadSampleVideo.disabled = true;
-      btnLoadSampleVideo.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> લોડ થઈ રહ્યો છે...';
+      btnLoadSampleVideo.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading sample...';
       try {
         const scheduledTime = timeInput.value || '08:30';
         const res = await fetch('/api/scheduler/load-sample', {
@@ -1298,22 +1298,22 @@ function initSchedulerView() {
         });
         const data = await res.json();
         if (!res.ok || !data.success) {
-          throw new Error(data.error || 'સેમ્પલ વિડીયો લોડ કરવામાં ભૂલ આવી.');
+          throw new Error(data.error || 'Failed to load sample video.');
         }
-        showToast('🎉 ૧૫ મિનિટનો ટેસ્ટ વિડીયો સફળતાપૂર્વક લોડ થઈ ગયો! (૩૦ ભાગો)');
+        showToast('🎉 15-minute sample video loaded successfully! (30 parts)');
         renderSchedulerState(data.state);
       } catch (err) {
-        showToast(`ભૂલ: ${err.message}`, true);
+        showToast(`Error: ${err.message}`, true);
       } finally {
         btnLoadSampleVideo.disabled = false;
-        btnLoadSampleVideo.innerHTML = '<i class="fa-solid fa-bolt"></i> ⚡ ૧૫ મિનિટનો સેમ્પલ વિડીયો લોડ કરો (Quick Test)';
+        btnLoadSampleVideo.innerHTML = '<i class="fa-solid fa-bolt"></i> ⚡ Load 15-Min Test Sample (Quick Test)';
       }
     });
   }
 
   btnRefreshSched.addEventListener('click', () => {
     fetchSchedulerStatus();
-    showToast('શેડ્યૂલર સ્ટેટસ અપડેટ થઈ ગયું.');
+    showToast('Scheduler status refreshed.');
   });
 }
 
@@ -1325,7 +1325,7 @@ async function initSocialConnectionBadge() {
     if (data.success && data.instagram?.connected) {
       const btnPublishIg = document.getElementById('btnPublishInstagram');
       if (btnPublishIg) {
-        btnPublishIg.innerHTML = `<i class="fa-brands fa-instagram"></i> <span>Instagram Reels પર અપલોડ (@${data.instagram.username} કનેક્ટેડ ⚡)</span>`;
+        btnPublishIg.innerHTML = `<i class="fa-brands fa-instagram"></i> <span>Upload to Instagram Reels (@${data.instagram.username} Connected ⚡)</span>`;
       }
       console.log('✅ Instagram Connected:', data.instagram.username);
     }
