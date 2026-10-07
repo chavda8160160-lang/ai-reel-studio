@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ForgeAI - Full-Stack App & AI Video Reels Automation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Background Glow & Grid -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+  <div class="bg-grid"></div>
+
+  <div class="app-layout">
+    <!-- Header with Studio Switcher -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <div>
+          <h1 class="brand-title">ForgeAI <span>Studio</span></h1>
+          <p class="brand-sub">Full-Stack Code Builder + AI 30s Video Reels Auto-Editor</p>
+        </div>
+      </div>
+
+      <!-- Mode Switcher Navigation -->
+      <nav class="mode-nav">
+        <button id="navModeApp" class="mode-tab active" data-target="appBuilderView">
+          <i class="fa-solid fa-laptop-code"></i> 1. Code Builder
+        </button>
+        <button id="navModeVideo" class="mode-tab" data-target="videoStudioView">
+          <i class="fa-solid fa-clapperboard"></i> 2. 🎬 30s Reel Studio
+        </button>
+        <button id="navModeScheduler" class="mode-tab" data-target="schedulerView">
+          <i class="fa-solid fa-clock"></i> 3. ⏰ Daily Auto-Pilot (8:30 AM)
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <button id="btnSettings" class="btn btn-ghost" title="API Key સેટિંગ્સ">
+          <i class="fa-solid fa-key"></i>
+          <span id="apiKeyStatusLabel">API Key</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- VIEW 1: Full-Stack Code Builder -->
+    <main class="main-container" id="appBuilderView">
+      <!-- Left Column: Controls & Input -->
+      <section class="prompt-panel glass-card">
+        <div class="panel-header">
+          <h2><i class="fa-solid fa-microchip"></i> પ્રોજેક્ટ શું બનાવવો છે?</h2>
+          <span class="badge badge-accent">AI Architect</span>
+        </div>
+
+        <!-- Prompt Textarea -->
+        <div class="form-group">
+          <label for="promptInput">તમારી જરૂરિયાત લખો (ગુજરાતી અથવા English):</label>
+          <textarea 
+            id="promptInput" 
+            rows="5" 
+            placeholder="દા.ત. મને એક Patola Saree E-commerce Store બનાવી આપો જેમાં Products, Cart, Customer Orders, અને Admin Dashboard માટે Database, C# Backend અને React UI હોય..."
+          ></textarea>
+        </div>
+
+        <!-- Quick Suggestions -->
+        <div class="quick-prompts">
+          <span class="quick-label"><i class="fa-solid fa-bolt"></i> તૈયાર આઇડિયાઝ:</span>
+          <div class="chips">
+            <button class="chip" data-prompt="Patola Saree Store: Products table with stock, customer cart, orders, C# API, and React frontend with photo viewer">🛍️ સાડી સ્ટોર</button>
+            <button class="chip" data-prompt="Hospital & Clinic Doctor Appointment System with Patients, Doctors, Time slots booking and billing">🏥 હોસ્પિટલ સિસ્ટમ</button>
+            <button class="chip" data-prompt="Inventory & Billing Management System with Customers, Items, Invoices, GST calculations and PDF invoices">📦 ઇન્વેન્ટરી & બિલિંગ</button>
+            <button class="chip" data-prompt="Real Estate Property Listing Portal with Buy/Rent properties, Image galleries, Inquiry leads and Agent contact">🏠 રિયલ એસ્ટેટ</button>
+          </div>
+        </div>
+
+        <!-- Tech Stack Configuration -->
+        <div class="tech-stack-section">
+          <h3><i class="fa-solid fa-sliders"></i> ટેકનોલોજી પસંદ કરો</h3>
+          
+          <div class="grid-3">
+            <div class="form-group">
+              <label for="dbEngine"><i class="fa-solid fa-database"></i> Database</label>
+              <select id="dbEngine" class="custom-select">
+                <option value="SQL Server" selected>SQL Server (T-SQL)</option>
+                <option value="PostgreSQL">PostgreSQL</option>
+                <option value="SQLite">SQLite</option>
+                <option value="MySQL">MySQL</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="backendFramework"><i class="fa-solid fa-server"></i> Backend</label>
+              <select id="backendFramework" class="custom-select">
+                <option value="ASP.NET Core C#" selected>ASP.NET Core (C#)</option>
+                <option value="Node.js Express">Node.js (Express)</option>
+                <option value="Python FastAPI">Python (FastAPI)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="frontendFramework"><i class="fa-solid fa-desktop"></i> Frontend</label>
+              <select id="frontendFramework" class="custom-select">
+                <option value="React" selected>React (Components)</option>
+                <option value="Modern HTML5/CSS/JS">Vanilla Web (HTML/JS)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <button id="btnGenerate" class="btn btn-primary btn-large">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>સંપૂર્ણ Full-Stack એપ્લિકેશન બનાવો</span>
+        </button>
+
+        <!-- Loader State -->
+        <div id="generationLoader" class="loader-box hidden">
+          <div class="spinner"></div>
+          <p class="loader-text" id="loaderStatus">AI સ્કીમા, કંટ્રોલર્સ અને UI કોડિંગ કરી રહ્યું છે...</p>
+          <div class="loader-steps">
+            <span class="step-badge active"><i class="fa-solid fa-check"></i> DB Schema</span>
+            <span class="step-badge active"><i class="fa-solid fa-check"></i> Backend API</span>
+            <span class="step-badge active"><i class="fa-solid fa-check"></i> Frontend UI</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Results & Code Viewer -->
+      <section class="output-panel glass-card">
+        <!-- Results Header & Actions -->
+        <div class="output-header">
+          <div class="output-meta">
+            <h2 id="projectTitleDisplay">તમારો જનરેટ થયેલો પ્રોજેક્ટ</h2>
+            <p id="projectDescDisplay" class="text-muted">પ્રોમ્પ્ટ લખીને "Generate" પર ક્લિક કરો એટલે અહીં કોડ અને લાઈવ ડેમો દેખાશે.</p>
+          </div>
+          
+          <div class="project-actions hidden" id="projectActionButtons">
+            <button id="btnSaveToDisk" class="btn btn-success" title="કમ્પ્યુટરમાં આખો પ્રોજેક્ટ સેવ કરો">
+              <i class="fa-solid fa-floppy-disk"></i> PC માં સેવ કરો
+            </button>
+            <button id="btnDownloadZip" class="btn btn-outline" title="ZIP ફાઈલ ડાઉનલોડ કરો">
+              <i class="fa-solid fa-file-zipper"></i> ZIP ડાઉનલોડ
+            </button>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="preview"><i class="fa-solid fa-play"></i> 1. લાઈવ UI પ્રિવ્યુ</button>
+          <button class="tab-btn" data-tab="database"><i class="fa-solid fa-database"></i> 2. Database (SQL)</button>
+          <button class="tab-btn" data-tab="backend"><i class="fa-solid fa-server"></i> 3. Backend (APIs)</button>
+          <button class="tab-btn" data-tab="frontend"><i class="fa-solid fa-code"></i> 4. Frontend (UI)</button>
+          <button class="tab-btn" data-tab="guide"><i class="fa-solid fa-book-open"></i> 5. રન કરવાની ગાઈડ</button>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="tab-content-area">
+          <div class="tab-pane active" id="tab-preview">
+            <div class="preview-wrapper">
+              <iframe id="previewIframe" srcdoc="<body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:90vh;color:#888;background:#111;'><div><h3>કોડ જનરેટ કર્યા પછી અહીં લાઈવ એપ્લિકેશન ચાલશે</h3></div></body>"></iframe>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-database">
+            <div class="code-header">
+              <span id="dbFileName"><i class="fa-solid fa-file-code"></i> schema.sql</span>
+              <button class="btn-copy" data-target="dbCodeArea"><i class="fa-regular fa-copy"></i> કોપી કરો</button>
+            </div>
+            <pre class="code-block"><code id="dbCodeArea">-- SQL Server Table Schema & Seed Data will appear here</code></pre>
+          </div>
+
+          <div class="tab-pane" id="tab-backend">
+            <div class="file-browser-layout">
+              <div class="file-list" id="backendFileList">
+                <span class="file-list-heading">Files</span>
+              </div>
+              <div class="file-viewer">
+                <div class="code-header">
+                  <span id="backendCurrentFileName"><i class="fa-solid fa-file-code"></i> Backend File</span>
+                  <button class="btn-copy" data-target="backendCodeArea"><i class="fa-regular fa-copy"></i> કોપી કરો</button>
+                </div>
+                <pre class="code-block"><code id="backendCodeArea">// Backend Code will appear here</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-frontend">
+            <div class="file-browser-layout">
+              <div class="file-list" id="frontendFileList">
+                <span class="file-list-heading">Files</span>
+              </div>
+              <div class="file-viewer">
+                <div class="code-header">
+                  <span id="frontendCurrentFileName"><i class="fa-solid fa-file-code"></i> Frontend File</span>
+                  <button class="btn-copy" data-target="frontendCodeArea"><i class="fa-regular fa-copy"></i> કોપી કરો</button>
+                </div>
+                <pre class="code-block"><code id="frontendCodeArea">// Frontend Code will appear here</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-guide">
+            <div class="guide-box" id="guideContent">
+              <h3>પ્રોજેક્ટ કેવી રીતે રન કરવો?</h3>
+              <p>કોડ જનરેટ થયા પછી અહીં ગુજરાતી અને અંગ્રેજીમાં સ્ટેપ-બાય-સ્ટેપ ગાઈડ દેખાશે.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- VIEW 2: AI Video 30s Reels & Auto-Post Studio -->
+    <main class="main-container hidden" id="videoStudioView">
+      <!-- Left Column: Video Upload & AI Director Settings -->
+      <section class="prompt-panel glass-card">
+        <div class="panel-header">
+          <h2><i class="fa-solid fa-video"></i> વિડીયો અપલોડ કરો</h2>
+          <span class="badge badge-accent">AI Video Director</span>
+        </div>
+
+        <!-- Drag & Drop Upload Zone -->
+        <div class="video-dropzone" id="videoDropzone">
+          <input type="file" id="videoFileInput" accept="video/mp4,video/quicktime,video/webm,video/mkv" class="file-input-hidden">
+          <div class="dropzone-content">
+            <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+            <h4>કોઈપણ વિડીયો અહીં Drag કરો અથવા ક્લિક કરો</h4>
+            <p class="text-muted">MP4, MOV, WEBM (ગમે તેટલી લંબાઈનો વિડીયો)</p>
+            <span class="file-name-badge hidden" id="selectedFileName"></span>
+          </div>
+        </div>
+
+        <!-- Video Settings -->
+        <div class="form-group">
+          <label for="videoNicheSelect"><i class="fa-solid fa-eye"></i> વિડીયોનો પ્રકાર (AI Vision Content Analysis):</label>
+          <select id="videoNicheSelect" class="custom-select">
+            <option value="Auto-Detect (Any Video - AI Vision will scan frames)" selected>🤖 AI Auto-Detect (ગમે તે વિડીયો: કાર, જિમ, ફૂડ, વ્લોગ, સાડી, ગેમિંગ વગેરે)</option>
+            <option value="Cars, Bikes & Supercars">🏎️ Cars, Bikes & Automobiles</option>
+            <option value="Gym, Fitness & Workout Motivation">💪 Gym, Fitness & Motivation</option>
+            <option value="Food, Cooking, Cafe & Street Food">🍔 Food, Cooking & Recipes</option>
+            <option value="Travel, Nature, Mountains & Tourism">🏔️ Travel, Nature & Scenery</option>
+            <option value="Patola Sarees, Ethnic & Traditional Wear">🥻 Patola Sarees & Traditional Fashion</option>
+            <option value="Gold & Diamond Jewellery Collection">💍 Jewellery & Luxury Goods</option>
+            <option value="Comedy, Memes & Entertainment">😂 Comedy, Acting & Entertainment</option>
+            <option value="Tech, Gadgets, Gaming & Unboxing">🎮 Tech, Gadgets & Gaming</option>
+            <option value="Business, Real Estate, Talks & Podcasts">🎙️ Business, Real Estate & Podcasts</option>
+          </select>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="videoDurationSelect"><i class="fa-solid fa-stopwatch"></i> ટાર્ગેટ લંબાઈ:</label>
+            <select id="videoDurationSelect" class="custom-select">
+              <option value="30" selected>⚡ 30 સેકન્ડ (Best for Reels/Shorts)</option>
+              <option value="15">🔥 15 સેકન્ડ (High Retention Hook)</option>
+              <option value="60">⏱️ 60 સેકન્ડ (Full Showcase)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="videoStyleSelect"><i class="fa-solid fa-palette"></i> AI કલર ગ્રેડિંગ:</label>
+            <select id="videoStyleSelect" class="custom-select">
+              <option value="auto" selected>🤖 AI Auto-Decide (Best Effects)</option>
+              <option value="royal-silk">✨ Royal Silk Glow (Rich Colors)</option>
+              <option value="heritage-gold">🌟 Heritage Warm Gold</option>
+              <option value="cinematic-vibrant">🎬 Cinematic High Contrast</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="videoCustomPrompt">વધારાની સૂચનાઓ / બ્રાન્ડ નામ (Optional):</label>
+          <input type="text" id="videoCustomPrompt" placeholder="દા.ત. Virasat Patola - Mention Handcrafted Pure Silk & Limited Stock" class="custom-input">
+        </div>
+
+        <!-- Schedule Timing Box -->
+        <div class="form-group schedule-card-box">
+          <div class="schedule-header-row">
+            <label for="videoScheduleDateTime"><i class="fa-solid fa-clock"></i> શેડ્યૂલ ટાઇમિંગ (Schedule Posting Time):</label>
+            <span class="badge badge-accent" id="badgeScheduleMode">⚡ અત્યારે (Instant)</span>
+          </div>
+
+          <!-- Schedule Mode Selector -->
+          <div class="schedule-tab-group">
+            <button type="button" class="sched-pill-btn active" id="btnSchedModeInstant">
+              <i class="fa-solid fa-bolt"></i> અત્યારે જ (Now)
+            </button>
+            <button type="button" class="sched-pill-btn" id="btnSchedModeTimed">
+              <i class="fa-regular fa-clock"></i> ૧ વાર શેડ્યૂલ (Once)
+            </button>
+            <button type="button" class="sched-pill-btn pill-everyday" id="btnSchedModeEveryDay">
+              <i class="fa-solid fa-repeat"></i> 🔁 દરરોજ આ સમયે (Every Day)
+            </button>
+          </div>
+
+          <!-- Schedule Time Picker Container -->
+          <div id="scheduleTimePickerBox" class="schedule-time-picker-box hidden">
+            <div class="schedule-input-row">
+              <input type="datetime-local" id="videoScheduleDateTime" class="custom-input schedule-dt-input">
+              <span id="videoScheduleFriendlyText" class="schedule-friendly-badge">
+                <i class="fa-solid fa-bell"></i> પસંદ કરેલ સમય: <span>આજે સાંજે 06:30 PM</span>
+              </span>
+            </div>
+
+            <!-- Every Day Recurring Banner -->
+            <div id="everyDayRecurringInfoBanner" class="recurring-info-banner hidden">
+              <i class="fa-solid fa-repeat"></i>
+              <div>
+                <strong>🔁 Every Day Auto-Pilot સક્રિય થશે:</strong>
+                <span>આ વિડીયો દરરોજ તમે પસંદ કરેલા સમયે આપમેળે Instagram (@kuldip__3868) પર Reel તરીકે અપલોડ થઈ જશે! તમારે ફરી કોઈ બટન દબાવવાની જરૂર નથી.</span>
+              </div>
+            </div>
+
+            <!-- Quick 1-Click Time Preset Chips -->
+            <div class="quick-presets-section">
+              <span class="quick-label"><i class="fa-solid fa-fire"></i> ઝડપી સમય પસંદ કરો (Quick Click):</span>
+              <div class="chips">
+                <button type="button" class="chip sched-preset-chip" data-offset="30">⏱️ +30 મિનિટ</button>
+                <button type="button" class="chip sched-preset-chip" data-preset="today-1830">🌅 સાંજે 6:30 PM</button>
+                <button type="button" class="chip sched-preset-chip" data-preset="today-2100">🌙 રાત્રે 9:00 PM</button>
+                <button type="button" class="chip sched-preset-chip" data-preset="tomorrow-0830">🌄 સવારે 8:30 AM</button>
+                <button type="button" class="chip sched-preset-chip" data-preset="tomorrow-1300">☀️ બપોરે 1:00 PM</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Run Video Button -->
+        <button id="btnProcessVideo" class="btn btn-primary btn-large">
+          <i class="fa-solid fa-wand-magic-sparkles" id="btnProcessVideoIcon"></i>
+          <span id="btnProcessVideoText">🎬 AI Auto-Edit & 30s Reel તૈયાર કરો</span>
+        </button>
+
+        <!-- Video Loader State -->
+        <div id="videoLoader" class="loader-box hidden">
+          <div class="spinner"></div>
+          <p class="loader-text" id="videoLoaderStatus">AI વિડીયોનું એનાલિસિસ અને 30s કન્વર્ઝન કરી રહ્યું છે...</p>
+          <div class="loader-steps">
+            <span class="step-badge active"><i class="fa-solid fa-check"></i> 9:16 Crop</span>
+            <span class="step-badge active"><i class="fa-solid fa-check"></i> 30s Trim</span>
+            <span class="step-badge active"><i class="fa-solid fa-check"></i> Rich Vibrance Filter</span>
+            <span class="step-badge active"><i class="fa-solid fa-check"></i> Viral Hashtags</span>
+          </div>
+        </div>
+
+        <!-- Scheduled Queue List in Left Column -->
+        <div class="scheduled-queue-card" id="scheduledQueueCard">
+          <div class="queue-header">
+            <h4><i class="fa-solid fa-calendar-days"></i> ⏰ શેડ્યૂલ થયેલી Reels (Queue)</h4>
+            <span class="badge badge-accent" id="scheduledCountBadge">0 Reels</span>
+          </div>
+          <div class="queue-list" id="scheduledQueueList">
+            <div class="empty-queue-hint">કોઈ Reel શેડ્યૂલ થયેલી નથી. ઉપરથી સમય પસંદ કરીને શેડ્યૂલ કરી શકો છો.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Video Preview & Social Auto-Publish -->
+      <section class="output-panel glass-card">
+        <div class="output-header">
+          <div class="output-meta">
+            <h2 id="videoResultTitle">✨ તૈયાર થયેલી 30s Viral Reel</h2>
+            <p id="videoResultSubtitle" class="text-muted">વિડીયો પ્રોસેસ થયા પછી અહીં લાઈવ 9:16 રીલ અને સોશિયલ મીડિયા કેપ્શન્સ દેખાશે.</p>
+          </div>
+          
+          <div class="project-actions hidden" id="videoActionButtons">
+            <a id="btnDownloadReel" href="#" download class="btn btn-success" title="30s Reel તમારા કમ્પ્યુટરમાં ડાઉનલોડ કરો">
+              <i class="fa-solid fa-download"></i> Reel ડાઉનલોડ
+            </a>
+          </div>
+        </div>
+
+        <div class="video-studio-grid">
+          <!-- Left: 9:16 Video Player -->
+          <div class="reel-player-card">
+            <div class="reel-frame">
+              <video id="renderedVideoPlayer" controls playsinline poster="" class="reel-video">
+                તમારું બ્રાઉઝર વિડીયો ટેગ સપોર્ટ નથી કરતું.
+              </video>
+              <div class="reel-placeholder" id="reelPlaceholder">
+                <i class="fa-solid fa-film"></i>
+                <p>30 સેકન્ડની એડિટ થયેલી Reel અહીં પ્લે થશે</p>
+                <span class="badge badge-accent">9:16 Vertical (1080x1920)</span>
+              </div>
+            </div>
+            
+            <div class="recipe-pills hidden" id="recipePills">
+              <span class="pill"><i class="fa-solid fa-sliders"></i> <b id="pillTheme">Royal Glow</b></span>
+              <span class="pill"><i class="fa-solid fa-clock"></i> <b id="pillDuration">30s</b></span>
+              <span class="pill"><i class="fa-solid fa-mobile-screen"></i> <b>1080x1920</b></span>
+              <span class="pill pill-sched hidden" id="pillScheduleTime"><i class="fa-solid fa-calendar-check"></i> <b id="lblPillScheduleTime">Scheduled</b></span>
+            </div>
+          </div>
+
+          <!-- Right: Social Media Auto-Post & Copy Data -->
+          <div class="social-post-card">
+            <!-- Scheduled Publish Status Banner -->
+            <div id="scheduledPublishBanner" class="scheduled-banner hidden">
+              <i class="fa-solid fa-clock-rotate-left sched-banner-icon"></i>
+              <div class="sched-banner-info">
+                <small>⏰ પબ્લિશિંગ શેડ્યૂલ સમય:</small>
+                <strong id="scheduledBannerTime">આજે સાંજે 06:30 PM</strong>
+              </div>
+              <span class="badge badge-accent" id="scheduledBannerStatus">⏰ Scheduled</span>
+            </div>
+
+            <!-- AI Vision Detection Result Banner -->
+            <div id="aiDetectedTopicBadge" class="detected-badge hidden">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <div>
+                <small>AI Vision એ વિડીયોમાં શું જોયું:</small>
+                <p id="detectedTopicText">Analyzing video frame...</p>
+              </div>
+            </div>
+
+            <!-- Viral Title -->
+            <div class="social-card-item">
+              <div class="card-item-header">
+                <h4><i class="fa-brands fa-youtube" style="color: #ef4444;"></i> YouTube Shorts Title</h4>
+                <button class="btn-copy" data-target="viralTitleText"><i class="fa-regular fa-copy"></i> કોપી</button>
+              </div>
+              <div class="copy-box" id="viralTitleText">વિડીયો પ્રોસેસ થયા પછી વાયરલ ટાઈટલ અહીં આવશે...</div>
+            </div>
+
+            <!-- Viral Caption -->
+            <div class="social-card-item">
+              <div class="card-item-header">
+                <h4><i class="fa-brands fa-instagram" style="color: #ec4899;"></i> Instagram Reel Caption</h4>
+                <button class="btn-copy" data-target="viralCaptionText"><i class="fa-regular fa-copy"></i> કોપી</button>
+              </div>
+              <div class="copy-box caption-box" id="viralCaptionText">ઈન્સ્ટાગ્રામ માટેનું પૂરું કેપ્શન અને કોલ-ટુ-એક્શન અહીં આવશે...</div>
+            </div>
+
+            <!-- Trending Hashtags -->
+            <div class="social-card-item">
+              <div class="card-item-header">
+                <h4><i class="fa-solid fa-hashtag" style="color: #38bdf8;"></i> High-Reach Hashtags</h4>
+                <button class="btn-copy" data-target="viralHashtagsText"><i class="fa-regular fa-copy"></i> કોપી</button>
+              </div>
+              <div class="copy-box hashtags-box" id="viralHashtagsText">#ViralReels #Trending #Patola #Shorts</div>
+            </div>
+
+            <!-- Direct Social Upload Buttons -->
+            <div class="social-publish-actions">
+              <button id="btnPublishYouTube" class="btn btn-youtube" disabled>
+                <i class="fa-brands fa-youtube"></i>
+                <span>YouTube Shorts પર અપલોડ</span>
+              </button>
+              <button id="btnPublishInstagram" class="btn btn-instagram" disabled>
+                <i class="fa-brands fa-instagram"></i>
+                <span>Instagram Reels પર અપલોડ</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- VIEW 3: Daily Auto-Pilot Scheduler (Long Video -> Daily 30s Reels) -->
+    <main class="main-container hidden" id="schedulerView">
+      <!-- Left Column: Master Video Setup & Daily Time Config -->
+      <section class="prompt-panel glass-card">
+        <div class="panel-header">
+          <h2><i class="fa-solid fa-clock-rotate-left"></i> લોંગ વિડીયો શેડ્યૂલર સેટઅપ</h2>
+          <span class="badge badge-accent">Zero-Duplication AI</span>
+        </div>
+
+        <p class="text-muted" style="margin-top: -0.5rem; line-height: 1.4;">
+          એક મોટો વિડીયો (દા.ત. 10 થી 30 મિનિટ) અપલોડ કરો. AI દરરોજ તમારા પસંદ કરેલા સમયે (દા.ત. સવારે 8:30) તેમાંથી <b>નવો 30 સેકન્ડનો ભાગ</b> આપમેળે કટ કરીને અપલોડ કરશે. <b>જે ભાગ એકવાર અપલોડ થશે તે ફરી ક્યારેય રીપીટ નહીં થાય!</b>
+        </p>
+
+        <!-- Master Video Dropzone -->
+        <div class="video-dropzone" id="schedulerDropzone">
+          <input type="file" id="schedulerFileInput" accept="video/mp4,video/quicktime,video/webm,video/mkv" class="file-input-hidden">
+          <div class="dropzone-content">
+            <i class="fa-solid fa-film drop-icon"></i>
+            <h4>લોંગ વિડીયો અહીં Drag કરો અથવા પસંદ કરો</h4>
+            <p class="text-muted">કોઈપણ મોટો વિડીયો (5m, 15m, 30m, 1 hour)</p>
+            <span class="file-name-badge hidden" id="schedulerFileNameBadge"></span>
+          </div>
+        </div>
+
+        <!-- Sample 15-Min Video Actions -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: -0.4rem; flex-wrap: wrap; gap: 0.5rem;">
+          <button type="button" id="btnLoadSampleVideo" class="btn btn-ghost" style="font-size: 0.8rem; padding: 0.45rem 0.85rem; border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc;">
+            <i class="fa-solid fa-bolt"></i> ⚡ ૧૫ મિનિટનો સેમ્પલ વિડીયો લોડ કરો (Quick Test)
+          </button>
+          <a href="/test-15min-sample.mp4" download="test-15min-sample.mp4" class="btn btn-ghost" style="font-size: 0.8rem; padding: 0.45rem 0.85rem;">
+            <i class="fa-solid fa-download"></i> PC માં ડાઉનલોડ કરો
+          </a>
+        </div>
+
+        <!-- Schedule Daily Time Picker -->
+        <div class="form-group">
+          <label for="scheduleDailyTime"><i class="fa-solid fa-clock"></i> દરરોજ કયા સમયે અપલોડ કરવું છે?</label>
+          <div style="display: flex; gap: 0.8rem; align-items: center;">
+            <input type="time" id="scheduleDailyTime" value="08:30" class="custom-input" style="font-size: 1.25rem; font-weight: 700; width: 180px; letter-spacing: 0.05em; text-align: center;">
+            <span id="timeDisplayHint" style="font-size: 0.88rem; font-weight: 600; color: var(--accent-cyan);">સવારે 08:30 AM વાગ્યે</span>
+          </div>
+          
+          <!-- 1-Click Quick Time Buttons -->
+          <div style="margin-top: 0.4rem;">
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 0.35rem;">ઝડપી સમય પસંદ કરો (Quick Click):</span>
+            <div class="chips">
+              <button type="button" class="chip time-chip" data-time="08:30" data-label="સવારે 08:30 AM">🌅 સવારે 8:30 AM</button>
+              <button type="button" class="chip time-chip" data-time="13:00" data-label="બપોરે 01:00 PM">☀️ બપોરે 1:00 PM</button>
+              <button type="button" class="chip time-chip" data-time="18:30" data-label="સાંજે 06:30 PM">🌆 સાંજે 6:30 PM</button>
+              <button type="button" class="chip time-chip" data-time="21:00" data-label="રાત્રે 09:00 PM">🌙 રાત્રે 9:00 PM</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 0.8rem; flex-direction: column;">
+          <button id="btnSaveSchedule" class="btn btn-primary btn-large">
+            <i class="fa-solid fa-play"></i>
+            <span>⏰ શેડ્યૂલર ચાલુ કરો (Auto-Pilot Activate)</span>
+          </button>
+          
+          <button id="btnRunNextNow" class="btn btn-success" style="justify-content: center; padding: 0.85rem;" title="આજનો ૩૦ સેકન્ડનો નવો ભાગ અત્યારે જ ટેસ્ટ કરવા માટે રન કરો">
+            <i class="fa-solid fa-forward-step"></i>
+            <span>⚡ આગામી Part (30s) અત્યારે જ કટ & પબ્લિશ કરો</span>
+          </button>
+        </div>
+
+        <!-- Scheduler Status Overview Card -->
+        <div class="status-summary-card" id="schedulerOverviewCard">
+          <h4><i class="fa-solid fa-server"></i> શેડ્યૂલર સ્ટેટસ:</h4>
+          <div class="status-rows">
+            <div class="s-row"><span>સ્થિતિ:</span> <b id="lblSchedStatus" style="color: var(--accent-emerald);">Active ✓</b></div>
+            <div class="s-row"><span>રોજિંદો સમય:</span> <b id="lblSchedTime">દરરોજ 08:30 AM</b></div>
+            <div class="s-row"><span>માસ્ટર વિડીયો:</span> <b id="lblSchedVideoName">કોઈ વિડીયો સેટ નથી</b></div>
+            <div class="s-row"><span>કુલ લંબાઈ:</span> <b id="lblSchedTotalDur">0 સેકન્ડ</b></div>
+            <div class="s-row"><span>આવનારો નવો ભાગ:</span> <b id="lblSchedNextPart" style="color: var(--accent-cyan);">Part 1</b></div>
+          </div>
+          <div class="guarantee-badge">
+            <i class="fa-solid fa-shield-halved"></i> 100% Zero-Duplication: અપલોડ થયેલો ભાગ ક્યારેય બીજી વાર નહીં આવે!
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Series Progress, Latest Part & History -->
+      <section class="output-panel glass-card">
+        <div class="output-header">
+          <div class="output-meta">
+            <h2>📈 સીરીઝ પ્રોગ્રેસ & પોસ્ટ થયેલા પાર્ટ્સ</h2>
+            <p class="text-muted" id="schedProgressLabel">0 / 0 Parts Posted (0%)</p>
+          </div>
+          
+          <button id="btnRefreshSched" class="btn btn-ghost" title="સ્ટેટસ રિફ્રેશ કરો">
+            <i class="fa-solid fa-rotate"></i> રિફ્રેશ
+          </button>
+        </div>
+
+        <!-- Progress Bar Container -->
+        <div class="progress-container">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="schedProgressBar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- History & Reel Showcase -->
+        <div class="scheduler-grid">
+          <!-- Latest Part Preview Card -->
+          <div class="reel-player-card">
+            <h4>છેલ્લે બનેલો Part (30s 9:16):</h4>
+            <div class="reel-frame" style="max-width: 260px;">
+              <video id="schedLatestPlayer" controls playsinline class="reel-video">
+                તમારું બ્રાઉઝર વિડીયો ટેગ સપોર્ટ નથી કરતું.
+              </video>
+              <div class="reel-placeholder" id="schedPlayerPlaceholder">
+                <i class="fa-solid fa-clapperboard"></i>
+                <p>કોઈપણ Part રન થયા પછી અહીં પ્લે થશે</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- History List of Chunks -->
+          <div class="parts-history-card">
+            <h4><i class="fa-solid fa-list-check"></i> પોસ્ટ થયેલા ભાગોની યાદી (No Repeat Log):</h4>
+            <div class="parts-list" id="partsHistoryList">
+              <div class="empty-parts-notice">
+                <i class="fa-regular fa-clock"></i>
+                <p>હજી સુધી કોઈ ભાગ પોસ્ટ થયો નથી. "આગામી Part અત્યારે જ કટ કરો" દબાવીને ટેસ્ટ કરો.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Settings Modal for Gemini API Key -->
+  <div id="settingsModal" class="modal-backdrop hidden">
+    <div class="modal-card glass-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-key"></i> Google Gemini API Key સેટિંગ્સ</h3>
+        <button id="btnCloseModal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted" style="margin-bottom: 1rem;">
+          તમારી Gemini API કી સર્વર પર પહેલેથી જ સેટ છે. નવી કી બદલવી હોય તો અહીં દાખલ કરી શકો છો:
+        </p>
+        <div class="form-group">
+          <label for="apiKeyInput">Gemini API Key:</label>
+          <input type="password" id="apiKeyInput" placeholder="AIzaSy... / AQ..." class="custom-input">
+        </div>
+
+        <!-- Meta Instagram Graph API Configuration -->
+        <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border-glass);">
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: #ec4899; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <i class="fa-brands fa-instagram"></i> Meta Instagram 100% Direct Auto-Publish
+          </h4>
+          <p class="text-muted" style="font-size: 0.8rem; line-height: 1.4; margin-bottom: 0.85rem;">
+            Meta Developer Graph API દ્વારા બ્રાઉઝર ખોલ્યા વગર સીધું જ 1-ક્લિકમાં અથવા દરરોજ શેડ્યૂલ મુજબ તમારા Instagram એકાઉન્ટ પર ઓટોમેટિક Reel પબ્લિશ કરો:
+          </p>
+          <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label for="metaIgUserIdInput">Instagram Account / User ID:</label>
+            <input type="text" id="metaIgUserIdInput" placeholder="દા.ત. 17841400000000000" class="custom-input">
+          </div>
+          <div class="form-group">
+            <label for="metaIgTokenInput">Meta Graph Access Token:</label>
+            <input type="password" id="metaIgTokenInput" placeholder="EAABwzLIXnz..." class="custom-input">
+          </div>
+        </div>
+
+        <!-- YouTube Data API v3 Configuration -->
+        <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border-glass);">
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: #ef4444; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <i class="fa-brands fa-youtube"></i> YouTube Shorts 100% Direct Auto-Publish
+          </h4>
+          <p class="text-muted" style="font-size: 0.8rem; line-height: 1.4; margin-bottom: 0.85rem;">
+            YouTube Data API v3 દ્વારા બ્રાઉઝર કે YouTube Studio ખોલ્યા વગર સીધું જ ૧-ક્લિકમાં તમારી YouTube ચેનલ પર Shorts ઓટોમેટિક પબ્લિશ કરો:
+          </p>
+          <div class="form-group">
+            <label for="youtubeTokenInput">YouTube OAuth Access Token (Bearer):</label>
+            <input type="password" id="youtubeTokenInput" placeholder="ya29.a0Ac..." class="custom-input">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnSaveApiKey" class="btn btn-primary"><i class="fa-solid fa-check"></i> સેટિંગ્સ સેવ કરો</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Instagram Upload Guide Modal -->
+  <div id="instagramGuideModal" class="modal-backdrop hidden">
+    <div class="modal-card glass-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 style="display: flex; align-items: center; gap: 0.6rem; color: #ec4899;">
+          <i class="fa-brands fa-instagram" style="font-size: 1.5rem;"></i> Instagram Reels Direct Upload Guide
+        </h3>
+        <button id="btnCloseIgModal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 10px; padding: 0.85rem; display: flex; align-items: center; gap: 0.75rem;">
+          <i class="fa-solid fa-circle-check" style="color: #34d399; font-size: 1.4rem;"></i>
+          <div>
+            <b style="color: #fff; font-size: 0.95rem;">વિડીયો તમારા PC માં Download થઈ ગયો છે!</b>
+            <p style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.15rem;">અને વાયરલ કેપ્શન + હેશટેગ્સ Clipboard માં કોપી થઈ ગયા છે.</p>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <h4 style="font-size: 0.9rem; color: #e2e8f0;"><i class="fa-solid fa-list-ol"></i> ફક્ત ૨ સરળ સ્ટેપ્સમાં પોસ્ટ કરો:</h4>
+          
+          <div style="display: flex; gap: 0.75rem; align-items: flex-start; background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px;">
+            <span style="background: #e11d48; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">1</span>
+            <div style="font-size: 0.86rem; color: #cbd5e1; line-height: 1.4;">
+              ખુલેલા Instagram પેજમાં ડાબી બાજુ <b>"+" (Create)</b> બટન પર ક્લિક કરો અને તમારા <b>Downloads</b> ફોલ્ડરમાંથી હમણાં ડાઉનલોડ થયેલો વિડીયો સિલેક્ટ કરો.
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; align-items: flex-start; background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px;">
+            <span style="background: #e11d48; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">2</span>
+            <div style="font-size: 0.86rem; color: #cbd5e1; line-height: 1.4;">
+              Caption બોક્સમાં <b>Ctrl + V</b> (Paste) દબાવો અને <b>"Share"</b> પર ક્લિક કરો!
+            </div>
+          </div>
+        </div>
+
+        <div style="background: rgba(236, 72, 153, 0.12); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 8px; padding: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 0.8rem; color: #fbcfe8; line-height: 1.4;">
+            <b>૧૦૦% હેન્ડ્સ-ફ્રી ઓટો-પોસ્ટ જોઈએ છે?</b><br>
+            Meta Graph Token ઉમેરી સીધા ૧-ક્લિકમાં અપલોડ કરો.
+          </div>
+          <button id="btnOpenMetaSettings" type="button" class="btn btn-ghost" style="font-size: 0.76rem; padding: 0.35rem 0.65rem; border-color: rgba(236, 72, 153, 0.5); color: #fff;">
+            <i class="fa-solid fa-gear"></i> સેટિંગ્સ
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button id="btnRedownloadReel" class="btn btn-ghost"><i class="fa-solid fa-download"></i> ફરી ડાઉનલોડ કરો</button>
+        <button id="btnOpenInstagramAgain" class="btn btn-instagram"><i class="fa-brands fa-instagram"></i> Instagram ખોલો</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

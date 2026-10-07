@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Environment variables (contains private Instagram & Gemini keys)
+.env
+
+# Rendered & Uploaded Video files (large binaries)
+uploads/
+public/rendered-reels/*.mp4
+!public/rendered-reels/.gitkeep
+
+# System & temporary logs
+*.log
+.DS_Store
+Thumbs.db

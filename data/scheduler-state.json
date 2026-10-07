@@ -1,0 +1,45 @@
+{
+  "isActive": true,
+  "scheduledTime": "08:30",
+  "masterVideo": {
+    "originalName": "15-Minute-Sample-Master.mp4",
+    "fileName": "test-15min-sample.mp4",
+    "path": "C:\\Users\\Admin\\.gemini\\antigravity-ide\\scratch\\ai-fullstack-builder\\public\\test-15min-sample.mp4",
+    "totalDurationSeconds": 900,
+    "totalDurationFormatted": "15 મિનિટ 0 સેકન્ડ",
+    "totalParts": 30
+  },
+  "currentPart": 2,
+  "lastPostedSeconds": 30,
+  "history": [
+    {
+      "part": 1,
+      "startSeconds": 0,
+      "endSeconds": 30,
+      "duration": "30s",
+      "renderedReelUrl": "/rendered-reels/daily-part1-1791359238673.mp4",
+      "fileName": "daily-part1-1791359238673.mp4",
+      "postedAt": "2026-10-07T07:47:28.527Z",
+      "displayTime": "10/7/2026, 1:17:28 PM",
+      "viralTitle": "Part 1: The Journey Begins! 🚀✨ #Shorts",
+      "viralCaption": "Part 1 is finally here! We're kicking things off with a bang. You don't want to miss where this goes—hit that follow button to stay tuned for Part 2! 🎬🔥",
+      "viralHashtags": [
+        "#Part1",
+        "#Shorts",
+        "#TrendingReels",
+        "#SeriesStart",
+        "#ViralContent",
+        "#DailySeries",
+        "#MustWatch",
+        "#CreatorJourney",
+        "#StayTuned",
+        "#NewSeries",
+        "#ContentCreator",
+        "#ExplorePage"
+      ],
+      "detectedTopic": "A solid teal background screen representing the start of a video series.",
+      "themeName": "Minimalist Solid Color",
+      "status": "Ready & Published"
+    }
+  ]
+}

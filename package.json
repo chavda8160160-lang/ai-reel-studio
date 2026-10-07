@@ -1,0 +1,29 @@
+{
+  "name": "ai-fullstack-builder",
+  "version": "1.0.0",
+  "description": "Autonomous Full-Stack AI Application Builder (Database + Backend + Frontend)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "ai",
+    "fullstack",
+    "code-generator",
+    "gemini"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
+    "archiver": "^7.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "fluent-ffmpeg": "^2.1.3",
+    "multer": "^2.4.0",
+    "node-cron": "^4.6.0"
+  }
+}
