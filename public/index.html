@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=classic-tech-fix-1">
+  <link rel="stylesheet" href="css/style.css?v=classic-video-fix-2">
 </head>
 <body>
   <!-- Background Glow & Grid -->
@@ -239,41 +239,48 @@
           </div>
         </div>
 
-        <!-- Video Settings -->
-        <div class="form-group">
-          <label for="videoNicheSelect"><i class="fa-solid fa-eye"></i> વિડીયોનો પ્રકાર (AI Vision Content Analysis):</label>
-          <select id="videoNicheSelect" class="custom-select">
-            <option value="Auto-Detect (Any Video - AI Vision will scan frames)" selected>🤖 AI Auto-Detect (ગમે તે વિડીયો: કાર, જિમ, ફૂડ, વ્લોગ, સાડી, ગેમિંગ વગેરે)</option>
-            <option value="Cars, Bikes & Supercars">🏎️ Cars, Bikes & Automobiles</option>
-            <option value="Gym, Fitness & Workout Motivation">💪 Gym, Fitness & Motivation</option>
-            <option value="Food, Cooking, Cafe & Street Food">🍔 Food, Cooking & Recipes</option>
-            <option value="Travel, Nature, Mountains & Tourism">🏔️ Travel, Nature & Scenery</option>
-            <option value="Patola Sarees, Ethnic & Traditional Wear">🥻 Patola Sarees & Traditional Fashion</option>
-            <option value="Gold & Diamond Jewellery Collection">💍 Jewellery & Luxury Goods</option>
-            <option value="Comedy, Memes & Entertainment">😂 Comedy, Acting & Entertainment</option>
-            <option value="Tech, Gadgets, Gaming & Unboxing">🎮 Tech, Gadgets & Gaming</option>
-            <option value="Business, Real Estate, Talks & Podcasts">🎙️ Business, Real Estate & Podcasts</option>
-          </select>
-        </div>
-
-        <div class="grid-2">
-          <div class="form-group">
-            <label for="videoDurationSelect"><i class="fa-solid fa-stopwatch"></i> ટાર્ગેટ લંબાઈ:</label>
-            <select id="videoDurationSelect" class="custom-select">
-              <option value="30" selected>⚡ 30 સેકન્ડ (Best for Reels/Shorts)</option>
-              <option value="15">🔥 15 સેકન્ડ (High Retention Hook)</option>
-              <option value="60">⏱️ 60 સેકન્ડ (Full Showcase)</option>
-            </select>
+        <!-- Video AI Settings Card -->
+        <div class="tech-stack-section">
+          <div class="tech-stack-header">
+            <h3><i class="fa-solid fa-sliders"></i> વિડીયો & AI સેટિંગ્સ</h3>
+            <span class="tech-stack-badge">Reel Optimization</span>
           </div>
+          
+          <div class="tech-stack-list">
+            <div class="tech-stack-row">
+              <label for="videoNicheSelect"><i class="fa-solid fa-eye"></i> વિડીયો પ્રકાર</label>
+              <select id="videoNicheSelect" class="custom-select tech-select">
+                <option value="Auto-Detect (Any Video - AI Vision will scan frames)" selected>🤖 AI Auto-Detect (ગમે તે વિડીયો)</option>
+                <option value="Cars, Bikes & Supercars">🏎️ Cars & Bikes</option>
+                <option value="Gym, Fitness & Workout Motivation">💪 Gym & Fitness</option>
+                <option value="Food, Cooking, Cafe & Street Food">🍔 Food & Cooking</option>
+                <option value="Travel, Nature, Mountains & Tourism">🏔️ Travel & Nature</option>
+                <option value="Patola Sarees, Ethnic & Traditional Wear">🥻 Patola Sarees & Fashion</option>
+                <option value="Gold & Diamond Jewellery Collection">💍 Jewellery & Luxury</option>
+                <option value="Comedy, Memes & Entertainment">😂 Comedy & Entertainment</option>
+                <option value="Tech, Gadgets, Gaming & Unboxing">🎮 Tech & Gadgets</option>
+                <option value="Business, Real Estate, Talks & Podcasts">🎙️ Business & Podcasts</option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label for="videoStyleSelect"><i class="fa-solid fa-palette"></i> AI કલર ગ્રેડિંગ:</label>
-            <select id="videoStyleSelect" class="custom-select">
-              <option value="auto" selected>🤖 AI Auto-Decide (Best Effects)</option>
-              <option value="royal-silk">✨ Royal Silk Glow (Rich Colors)</option>
-              <option value="heritage-gold">🌟 Heritage Warm Gold</option>
-              <option value="cinematic-vibrant">🎬 Cinematic High Contrast</option>
-            </select>
+            <div class="tech-stack-row">
+              <label for="videoDurationSelect"><i class="fa-solid fa-stopwatch"></i> ટાર્ગેટ લંબાઈ</label>
+              <select id="videoDurationSelect" class="custom-select tech-select">
+                <option value="30" selected>⚡ 30 સેકન્ડ (Best for Reels/Shorts)</option>
+                <option value="15">🔥 15 સેકન્ડ (High Retention Hook)</option>
+                <option value="60">⏱️ 60 સેકન્ડ (Full Showcase)</option>
+              </select>
+            </div>
+
+            <div class="tech-stack-row">
+              <label for="videoStyleSelect"><i class="fa-solid fa-palette"></i> કલર ગ્રેડિંગ</label>
+              <select id="videoStyleSelect" class="custom-select tech-select">
+                <option value="auto" selected>🤖 AI Auto-Decide (Best Effects)</option>
+                <option value="royal-silk">✨ Royal Silk Glow (Rich Colors)</option>
+                <option value="heritage-gold">🌟 Heritage Warm Gold</option>
+                <option value="cinematic-vibrant">🎬 Cinematic High Contrast</option>
+              </select>
+            </div>
           </div>
         </div>
 
