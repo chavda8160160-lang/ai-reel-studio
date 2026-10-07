@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=classic-light-2026">
+  <link rel="stylesheet" href="css/style.css?v=classic-tech-fix-1">
 </head>
 <body>
   <!-- Background Glow & Grid -->
@@ -82,12 +82,15 @@
 
         <!-- Tech Stack Configuration -->
         <div class="tech-stack-section">
-          <h3><i class="fa-solid fa-sliders"></i> ટેકનોલોજી પસંદ કરો</h3>
+          <div class="tech-stack-header">
+            <h3><i class="fa-solid fa-sliders"></i> ટેકનોલોજી પસંદ કરો</h3>
+            <span class="tech-stack-badge">Full-Stack Stack</span>
+          </div>
           
-          <div class="grid-3">
-            <div class="form-group">
+          <div class="tech-stack-list">
+            <div class="tech-stack-row">
               <label for="dbEngine"><i class="fa-solid fa-database"></i> Database</label>
-              <select id="dbEngine" class="custom-select">
+              <select id="dbEngine" class="custom-select tech-select">
                 <option value="SQL Server" selected>SQL Server (T-SQL)</option>
                 <option value="PostgreSQL">PostgreSQL</option>
                 <option value="SQLite">SQLite</option>
@@ -95,18 +98,18 @@
               </select>
             </div>
 
-            <div class="form-group">
+            <div class="tech-stack-row">
               <label for="backendFramework"><i class="fa-solid fa-server"></i> Backend</label>
-              <select id="backendFramework" class="custom-select">
+              <select id="backendFramework" class="custom-select tech-select">
                 <option value="ASP.NET Core C#" selected>ASP.NET Core (C#)</option>
                 <option value="Node.js Express">Node.js (Express)</option>
                 <option value="Python FastAPI">Python (FastAPI)</option>
               </select>
             </div>
 
-            <div class="form-group">
+            <div class="tech-stack-row">
               <label for="frontendFramework"><i class="fa-solid fa-desktop"></i> Frontend</label>
-              <select id="frontendFramework" class="custom-select">
+              <select id="frontendFramework" class="custom-select tech-select">
                 <option value="React" selected>React (Components)</option>
                 <option value="Modern HTML5/CSS/JS">Vanilla Web (HTML/JS)</option>
               </select>
