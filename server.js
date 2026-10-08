@@ -1615,20 +1615,37 @@ app.post('/api/scheduler/toggle', (req, res) => {
 // 📱 8. DIRECT 100% AUTONOMOUS SOCIAL MEDIA PUBLISHING
 // ========================================================
 
-app.get('/api/social/status', (req, res) => {
+let cachedIgUsername = process.env.META_INSTAGRAM_USERNAME || 'moving.151120';
+
+app.get('/api/social/status', async (req, res) => {
   const hasIg = !!(process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID);
+  let username = cachedIgUsername;
+
+  if (hasIg && (!username || username === 'kuldip__3868')) {
+    try {
+      const igRes = await fetch(`https://graph.facebook.com/v20.0/${process.env.META_INSTAGRAM_USER_ID}?fields=username,name&access_token=${process.env.META_INSTAGRAM_TOKEN}`).then(r => r.json());
+      if (igRes.username) {
+        username = igRes.username;
+        cachedIgUsername = igRes.username;
+        updateEnvFile({ META_INSTAGRAM_USERNAME: igRes.username });
+      }
+    } catch (_) {}
+  }
+
   res.json({
     success: true,
     instagram: {
       connected: hasIg,
       userId: process.env.META_INSTAGRAM_USER_ID || null,
-      username: hasIg ? 'kuldip__3868' : null
+      username: hasIg ? username : null
     },
     youtube: {
       connected: !!process.env.YOUTUBE_ACCESS_TOKEN
     }
   });
 });
+
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 app.post('/api/social/publish-instagram-direct', async (req, res) => {
   try {
