@@ -28,10 +28,70 @@ const REELS_DIR = path.join(__dirname, 'public', 'rendered-reels');
 const DATA_DIR = path.join(__dirname, 'data');
 const SCHEDULER_FILE = path.join(DATA_DIR, 'scheduler-state.json');
 const SCHEDULED_QUEUE_FILE = path.join(DATA_DIR, 'scheduled-queue.json');
+const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
+const INVOICES_FILE = path.join(DATA_DIR, 'invoices.json');
+const SHOP_SETTINGS_FILE = path.join(DATA_DIR, 'shop-settings.json');
+const QR_DIR = path.join(__dirname, 'public', 'uploads', 'qr');
 
-[GENERATED_DIR, UPLOADS_DIR, REELS_DIR, DATA_DIR].forEach(dir => {
+[GENERATED_DIR, UPLOADS_DIR, REELS_DIR, DATA_DIR, QR_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
+
+// Multer storage for shop UPI QR image
+const qrStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, QR_DIR),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.png';
+    cb(null, `shop-qr-${Date.now()}${ext}`);
+  }
+});
+const qrUpload = multer({ storage: qrStorage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+// Helper functions for persistent Stock, Invoices & Shop Profile
+function getShopSettings() {
+  try {
+    if (fs.existsSync(SHOP_SETTINGS_FILE)) return JSON.parse(fs.readFileSync(SHOP_SETTINGS_FILE, 'utf8'));
+  } catch (_) {}
+  return { shopName: 'My Store', businessType: 'Retail & Fashion', phone: '', upiId: '', upiQrImage: '' };
+}
+
+function saveShopSettings(settings) {
+  try {
+    fs.writeFileSync(SHOP_SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Error saving shop settings:', e);
+  }
+}
+
+function getProducts() {
+  try {
+    if (fs.existsSync(PRODUCTS_FILE)) return JSON.parse(fs.readFileSync(PRODUCTS_FILE, 'utf8'));
+  } catch (_) {}
+  return [];
+}
+
+function saveProducts(products) {
+  try {
+    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Error saving products:', e);
+  }
+}
+
+function getInvoices() {
+  try {
+    if (fs.existsSync(INVOICES_FILE)) return JSON.parse(fs.readFileSync(INVOICES_FILE, 'utf8'));
+  } catch (_) {}
+  return [];
+}
+
+function saveInvoices(invoices) {
+  try {
+    fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Error saving invoices:', e);
+  }
+}
 
 // Multer storage for video uploads
 const storage = multer.diskStorage({
@@ -399,18 +459,54 @@ setInterval(async () => {
           saveScheduledQueue(queue);
 
           try {
+            const videoPath = path.join(REELS_DIR, item.fileName);
+            const caption = `${item.viralCaption || ''}\n\n${item.viralHashtags || ''}`;
+            let igSuccess = false;
+            let ytSuccess = false;
+
             // Direct Auto-Publish to Instagram if configured
             if (process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID) {
-              const videoPath = path.join(REELS_DIR, item.fileName);
-              const caption = `${item.viralCaption || ''}\n\n${item.viralHashtags || ''}`;
-              console.log(`🚀 [Auto-Post Engine] Auto-uploading due Reel to Instagram @kuldip__3868...`);
-              const pubResult = await publishReelDirectToInstagram(videoPath, caption);
+              try {
+                console.log(`🚀 [Auto-Post Engine] Auto-uploading due Reel to Instagram...`);
+                const pubResult = await publishReelDirectToInstagram(videoPath, caption);
+                item.lastPostUrl = pubResult.postUrl;
+                item.lastPostId = pubResult.postId;
+                item.lastPostedAt = new Date().toISOString();
+                delete item.lastError;
+                igSuccess = true;
+                console.log(`🎉 [Auto-Post Engine] Reel ${item.fileName} successfully posted to Instagram: ${pubResult.postUrl}`);
+              } catch (igErr) {
+                console.error(`❌ [Auto-Post Engine] Instagram upload failed:`, igErr.message);
+                item.lastError = igErr.message;
+              }
+            }
 
-              item.lastPostUrl = pubResult.postUrl;
-              item.lastPostId = pubResult.postId;
-              item.lastPostedAt = new Date().toISOString();
+            // Direct Auto-Publish to YouTube Shorts if configured
+            if (process.env.YOUTUBE_ACCESS_TOKEN) {
+              try {
+                console.log(`🚀 [Auto-Post Engine] Auto-uploading due Reel to YouTube Shorts...`);
+                const ytTitle = (item.viralTitle || item.title || 'Viral AI Reel #Shorts').substring(0, 100);
+                const ytDesc = `${caption}\n\n#Shorts #Reels #Viral`;
+                const ytResult = await publishShortDirectToYouTube(videoPath, ytTitle, ytDesc, ['Shorts', 'Reels', 'Viral']);
+                item.youtubePostUrl = ytResult.postUrl;
+                item.youtubeVideoId = ytResult.videoId;
+                delete item.lastYoutubeError;
+                ytSuccess = true;
+                console.log(`🎉 [Auto-Post Engine] Short successfully posted to YouTube: ${ytResult.postUrl}`);
+              } catch (ytErr) {
+                console.error(`❌ [Auto-Post Engine] YouTube upload failed:`, ytErr.message);
+                item.lastYoutubeError = ytErr.message;
+              }
+            }
+
+            if (igSuccess && ytSuccess) {
+              item.status = 'Posted to IG & YouTube ✓';
+            } else if (igSuccess) {
               item.status = 'Posted to Instagram ✓';
-              console.log(`🎉 [Auto-Post Engine] Reel ${item.fileName} successfully posted: ${pubResult.postUrl}`);
+            } else if (ytSuccess) {
+              item.status = 'Posted to YouTube ✓';
+            } else if (item.lastError || item.lastYoutubeError) {
+              item.status = 'Post Failed (Ready to retry)';
             } else {
               item.status = 'Ready to Post';
               item.readyAt = new Date().toISOString();
@@ -426,7 +522,7 @@ setInterval(async () => {
               console.log(`🔁 [Every Day Auto-Pilot] Rescheduled for tomorrow at ${item.scheduledTimeFormatted}! (Cycle #${item.recurringCycle})`);
             }
           } catch (err) {
-            console.error(`❌ [Auto-Post Engine] Upload failed:`, err.message);
+            console.error(`❌ [Auto-Post Engine] Upload loop failed:`, err.message);
             item.status = 'Post Failed (Ready to retry)';
             item.lastError = err.message;
           } finally {
@@ -1041,94 +1137,248 @@ app.post('/api/social/publish-instagram-direct', async (req, res) => {
   }
 });
 
-// YouTube Data API v3 100% Direct Publishing (Shorts)
+// Cached Social Media Handles
+let cachedIgUsername = process.env.META_INSTAGRAM_USERNAME || 'moving.151120';
+let cachedYtTitle = process.env.YOUTUBE_CHANNEL_TITLE || null;
+
+// Helper to get valid YouTube Access Token (auto-refreshes if refresh_token + client_id configured)
+async function getOrRefreshYouTubeToken(customToken) {
+  let token = customToken || process.env.YOUTUBE_ACCESS_TOKEN;
+  if (process.env.YOUTUBE_REFRESH_TOKEN && process.env.YOUTUBE_CLIENT_ID && process.env.YOUTUBE_CLIENT_SECRET) {
+    try {
+      const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: process.env.YOUTUBE_CLIENT_ID,
+          client_secret: process.env.YOUTUBE_CLIENT_SECRET,
+          refresh_token: process.env.YOUTUBE_REFRESH_TOKEN,
+          grant_type: 'refresh_token'
+        })
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        token = data.access_token;
+        updateEnvFile({ YOUTUBE_ACCESS_TOKEN: data.access_token });
+        console.log('🔄 [YouTube Auto-Refresh] Successfully refreshed access token in background!');
+      }
+    } catch (e) {
+      console.warn('⚠️ [YouTube Auto-Refresh Warning]:', e.message);
+    }
+  }
+  return token;
+}
+
+// YouTube Data API v3 100% Direct Publishing Engine
+async function publishShortDirectToYouTube(videoPath, title, description, tags, customToken) {
+  const token = await getOrRefreshYouTubeToken(customToken);
+  if (!token) throw new Error('YouTube Access Token ઉપલબ્ધ નથી. કૃપા કરીને સેટિંગ્સમાં ટોકન ઉમેરો.');
+  if (!fs.existsSync(videoPath)) throw new Error('વિડીયો ફાઈલ મળી નથી.');
+
+  const fileStat = await fsp.stat(videoPath);
+  const videoBuffer = await fsp.readFile(videoPath);
+  console.log(`🚀 [YouTube API] Starting direct upload for ${path.basename(videoPath)} (${(fileStat.size / (1024*1024)).toFixed(2)} MB)...`);
+
+  const tagArray = tags ? (Array.isArray(tags) ? tags : String(tags).split(',').map(t => t.trim())) : ['Shorts', 'Viral', 'Trending'];
+
+  // Step 1: Initialize Resumable Upload Session
+  const initRes = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json; charset=UTF-8',
+      'X-Upload-Content-Length': String(fileStat.size),
+      'X-Upload-Content-Type': 'video/mp4'
+    },
+    body: JSON.stringify({
+      snippet: {
+        title: title || 'Viral AI Reel #Shorts',
+        description: description || 'Created with AI Video Director #Shorts #Reels',
+        tags: tagArray,
+        categoryId: '22'
+      },
+      status: {
+        privacyStatus: 'public',
+        selfDeclaredMadeForKids: false
+      }
+    })
+  });
+
+  if (!initRes.ok) {
+    const errData = await initRes.json().catch(() => ({}));
+    console.error('YouTube Init Failed:', errData);
+    throw new Error(errData.error?.message || 'YouTube સત્ર શરૂ કરવામાં ભૂલ આવી. ટોકન એક્સપાયર થઈ ગઈ હોઈ શકે છે.');
+  }
+
+  const uploadUrl = initRes.headers.get('location');
+  if (!uploadUrl) {
+    throw new Error('YouTube Upload URL પ્રાપ્ત થયો નથી.');
+  }
+
+  // Step 2: Upload Video Binary Bytes
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Length': String(fileStat.size),
+      'Content-Type': 'video/mp4'
+    },
+    body: videoBuffer
+  });
+
+  const uploadData = await uploadRes.json();
+  if (!uploadRes.ok || !uploadData.id) {
+    console.error('YouTube Upload Failed:', uploadData);
+    throw new Error(uploadData.error?.message || 'વિડીયો બાઈટ્સ અપલોડ કરવામાં ભૂલ આવી.');
+  }
+
+  const videoId = uploadData.id;
+  const postUrl = `https://www.youtube.com/shorts/${videoId}`;
+  console.log(`🎉 [YouTube API] Short Published Successfully! Video ID: ${videoId} -> ${postUrl}`);
+
+  return {
+    success: true,
+    videoId,
+    postUrl,
+    message: '🎉 YouTube Short સીધું તમારી ચેનલ પર પબ્લિશ થઈ ગયું છે!'
+  };
+}
+
 app.post('/api/social/publish-youtube-direct', async (req, res) => {
   try {
     const { videoFileName, title, description, tags, accessToken } = req.body;
-    const token = accessToken || process.env.YOUTUBE_ACCESS_TOKEN;
-
-    if (!token) {
-      return res.status(400).json({ 
-        error: 'YouTube Access Token જરૂરી છે. કૃપા કરીને સેટિંગ્સમાં ઉમેરો.' 
-      });
+    let videoPath = null;
+    if (videoFileName) {
+      const p1 = path.join(REELS_DIR, path.basename(videoFileName));
+      const p2 = path.join(UPLOADS_DIR, path.basename(videoFileName));
+      if (fs.existsSync(p1)) videoPath = p1;
+      else if (fs.existsSync(p2)) videoPath = p2;
+    }
+    if (!videoPath) {
+      const files = fs.readdirSync(REELS_DIR).filter(f => f.endsWith('.mp4'));
+      if (files.length > 0) {
+        files.sort((a, b) => fs.statSync(path.join(REELS_DIR, b)).mtimeMs - fs.statSync(path.join(REELS_DIR, a)).mtimeMs);
+        videoPath = path.join(REELS_DIR, files[0]);
+      }
+    }
+    if (!videoPath || !fs.existsSync(videoPath)) {
+      return res.status(404).json({ error: 'YouTube માટે વિડીયો ફાઈલ મળી નથી.' });
     }
 
-    if (!videoFileName) return res.status(400).json({ error: 'વિડીયો ફાઈલ પસંદ કરો.' });
-
-    const videoPath = path.join(REELS_DIR, path.basename(videoFileName));
-    if (!fs.existsSync(videoPath)) return res.status(404).json({ error: 'વિડીયો ફાઈલ મળી નથી.' });
-
-    const fileStat = await fsp.stat(videoPath);
-    const videoBuffer = await fsp.readFile(videoPath);
-
-    console.log(`🚀 [YouTube API] Starting direct upload for ${videoFileName} (${fileStat.size} bytes)...`);
-
-    const tagArray = tags ? (Array.isArray(tags) ? tags : String(tags).split(',').map(t => t.trim())) : ['Shorts', 'Viral', 'Trending'];
-
-    // Step 1: Initialize Resumable Upload Session
-    const initRes = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json; charset=UTF-8',
-        'X-Upload-Content-Length': String(fileStat.size),
-        'X-Upload-Content-Type': 'video/mp4'
-      },
-      body: JSON.stringify({
-        snippet: {
-          title: title || 'Viral AI Reel #Shorts',
-          description: description || 'Created with AI Video Director #Shorts #Reels',
-          tags: tagArray,
-          categoryId: '22'
-        },
-        status: {
-          privacyStatus: 'public',
-          selfDeclaredMadeForKids: false
-        }
-      })
-    });
-
-    if (!initRes.ok) {
-      const errData = await initRes.json().catch(() => ({}));
-      console.error('YouTube Init Failed:', errData);
-      throw new Error(errData.error?.message || 'YouTube સત્ર શરૂ કરવામાં ભૂલ આવી. ટોકન એક્સપાયર થઈ ગઈ હોઈ શકે છે.');
-    }
-
-    const uploadUrl = initRes.headers.get('location');
-    if (!uploadUrl) {
-      throw new Error('YouTube Upload URL પ્રાપ્ત થયો નથી.');
-    }
-
-    // Step 2: Upload Video Binary Bytes
-    const uploadRes = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Length': String(fileStat.size),
-        'Content-Type': 'video/mp4'
-      },
-      body: videoBuffer
-    });
-
-    const uploadData = await uploadRes.json();
-    if (!uploadRes.ok || !uploadData.id) {
-      console.error('YouTube Upload Failed:', uploadData);
-      throw new Error(uploadData.error?.message || 'વિડીયો બાઈટ્સ અપલોડ કરવામાં ભૂલ આવી.');
-    }
-
-    const videoId = uploadData.id;
-    const shortUrl = `https://www.youtube.com/shorts/${videoId}`;
-    console.log(`🎉 [YouTube API] Short Published Successfully! Video ID: ${videoId} -> ${shortUrl}`);
-
-    res.json({
-      success: true,
-      videoId: videoId,
-      postUrl: shortUrl,
-      message: '🎉 YouTube Short સીધું તમારા ચેનલ પર પબ્લિશ થઈ ગયું છે!'
-    });
-
+    const result = await publishShortDirectToYouTube(videoPath, title, description, tags, accessToken);
+    res.json(result);
   } catch (err) {
     console.error('YouTube Direct Publish Error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// One-Click Dual Social Media Publishing (Instagram Reels + YouTube Shorts simultaneously)
+app.post('/api/social/publish-both-direct', async (req, res) => {
+  try {
+    const { videoFileName, title, caption, hashtags, description, tags, youtubeToken, igToken, igUserId } = req.body;
+    let videoPath = null;
+    if (videoFileName) {
+      const p1 = path.join(REELS_DIR, path.basename(videoFileName));
+      const p2 = path.join(UPLOADS_DIR, path.basename(videoFileName));
+      if (fs.existsSync(p1)) videoPath = p1;
+      else if (fs.existsSync(p2)) videoPath = p2;
+    }
+    if (!videoPath) {
+      const files = fs.readdirSync(REELS_DIR).filter(f => f.endsWith('.mp4'));
+      if (files.length > 0) {
+        files.sort((a, b) => fs.statSync(path.join(REELS_DIR, b)).mtimeMs - fs.statSync(path.join(REELS_DIR, a)).mtimeMs);
+        videoPath = path.join(REELS_DIR, files[0]);
+      }
+    }
+    if (!videoPath || !fs.existsSync(videoPath)) {
+      return res.status(404).json({ error: 'વિડીયો ફાઈલ મળી નથી.' });
+    }
+
+    const fullCaption = `${caption || ''}\n\n${hashtags || ''}`.trim();
+    const results = { instagram: null, youtube: null };
+    const errors = [];
+
+    // 1. Post to Instagram
+    const hasIg = (igToken || process.env.META_INSTAGRAM_TOKEN) && (igUserId || process.env.META_INSTAGRAM_USER_ID);
+    if (hasIg) {
+      try {
+        console.log(`🚀 [Publish-Both] Publishing to Instagram @${cachedIgUsername || 'user'}...`);
+        results.instagram = await publishReelDirectToInstagram(videoPath, fullCaption, igToken, igUserId);
+      } catch (e) {
+        console.error('Publish-Both Instagram Error:', e.message);
+        errors.push(`Instagram: ${e.message}`);
+      }
+    }
+
+    // 2. Post to YouTube Shorts
+    const hasYt = !!(youtubeToken || process.env.YOUTUBE_ACCESS_TOKEN);
+    if (hasYt) {
+      try {
+        console.log('🚀 [Publish-Both] Publishing to YouTube Shorts...');
+        const ytTitle = (title || 'Viral AI Reel #Shorts').substring(0, 100);
+        const ytDesc = description || fullCaption;
+        results.youtube = await publishShortDirectToYouTube(videoPath, ytTitle, ytDesc, tags, youtubeToken);
+      } catch (e) {
+        console.error('Publish-Both YouTube Error:', e.message);
+        errors.push(`YouTube: ${e.message}`);
+      }
+    }
+
+    if (!hasIg && !hasYt) {
+      return res.status(400).json({ error: 'Instagram અથવા YouTube એકાઉન્ટ કનેક્ટ કરેલ નથી.' });
+    }
+
+    if (!results.instagram && !results.youtube) {
+      return res.status(500).json({ error: errors.join(' | ') });
+    }
+
+    res.json({
+      success: true,
+      instagram: results.instagram,
+      youtube: results.youtube,
+      errors: errors.length ? errors : undefined,
+      message: 'પબ્લિશિંગ પ્રક્રિયા સફળતાપૂર્વક પૂર્ણ થઈ ગઈ! 🎉'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Test YouTube OAuth Access Token & Retrieve Channel Info
+app.post('/api/social/test-youtube', async (req, res) => {
+  try {
+    const token = req.body.token || process.env.YOUTUBE_ACCESS_TOKEN;
+    if (!token) return res.status(400).json({ success: false, error: 'YouTube token is required' });
+
+    const ytRes = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await ytRes.json();
+    if (!ytRes.ok || !data.items || data.items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: data.error?.message || 'ચેનલ વિગતો મળી નથી. ટોકન અમાન્ય અથવા એક્સપાયર થઈ ગઈ છે.'
+      });
+    }
+
+    const channel = data.items[0];
+    const info = {
+      channelId: channel.id,
+      title: channel.snippet?.title,
+      customUrl: channel.snippet?.customUrl,
+      subscriberCount: channel.statistics?.subscriberCount,
+      videoCount: channel.statistics?.videoCount,
+      avatar: channel.snippet?.thumbnails?.default?.url
+    };
+
+    if (token === process.env.YOUTUBE_ACCESS_TOKEN) {
+      cachedYtTitle = info.title;
+      updateEnvFile({ YOUTUBE_CHANNEL_TITLE: info.title });
+    }
+
+    res.json({ success: true, channel: info });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -1157,7 +1407,7 @@ app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
     if (!item) return res.status(404).json({ error: 'Item not found in queue' });
 
     console.log(`⚡ [Manual Run Now] Triggering instant upload for "${item.fileName}"...`);
-    item.status = 'Publishing to Instagram...';
+    item.status = 'Publishing to Social Media...';
     item.startedPublishingAt = new Date().toISOString();
     saveScheduledQueue(queue);
 
@@ -1170,16 +1420,63 @@ app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
     }
 
     const caption = `${item.viralCaption || ''}\n\n${item.viralHashtags || ''}`;
-    const pubResult = await publishReelDirectToInstagram(videoPath, caption);
+    let igSuccess = false;
+    let ytSuccess = false;
 
-    item.status = 'Posted to Instagram ✓';
-    item.lastPostId = pubResult.postId;
-    item.lastPostUrl = pubResult.postUrl;
-    item.lastPostedAt = new Date().toISOString();
-    delete item.lastError;
+    // Instagram
+    if (process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID) {
+      try {
+        console.log(`🚀 [Manual Run Now] Uploading to Instagram...`);
+        const pubResult = await publishReelDirectToInstagram(videoPath, caption);
+        item.lastPostId = pubResult.postId;
+        item.lastPostUrl = pubResult.postUrl;
+        item.lastPostedAt = new Date().toISOString();
+        delete item.lastError;
+        igSuccess = true;
+      } catch (igErr) {
+        console.error('Run-now Instagram error:', igErr);
+        item.lastError = igErr.message;
+      }
+    }
+
+    // YouTube Shorts
+    if (process.env.YOUTUBE_ACCESS_TOKEN) {
+      try {
+        console.log(`🚀 [Manual Run Now] Uploading to YouTube Shorts...`);
+        const ytTitle = (item.viralTitle || item.title || 'Viral AI Reel #Shorts').substring(0, 100);
+        const ytDesc = `${caption}\n\n#Shorts #Reels #Viral`;
+        const ytResult = await publishShortDirectToYouTube(videoPath, ytTitle, ytDesc, ['Shorts', 'Reels', 'Viral']);
+        item.youtubeVideoId = ytResult.videoId;
+        item.youtubePostUrl = ytResult.postUrl;
+        delete item.lastYoutubeError;
+        ytSuccess = true;
+      } catch (ytErr) {
+        console.error('Run-now YouTube error:', ytErr);
+        item.lastYoutubeError = ytErr.message;
+      }
+    }
+
+    if (igSuccess && ytSuccess) {
+      item.status = 'Posted to IG & YouTube ✓';
+    } else if (igSuccess) {
+      item.status = 'Posted to Instagram ✓';
+    } else if (ytSuccess) {
+      item.status = 'Posted to YouTube ✓';
+    } else {
+      item.status = 'Post Failed (Ready to retry)';
+      saveScheduledQueue(queue);
+      return res.status(500).json({ error: item.lastError || item.lastYoutubeError || 'કૃપા કરીને Instagram અથવા YouTube ટોકન કનેક્ટ કરો.' });
+    }
+
     saveScheduledQueue(queue);
-
-    res.json({ success: true, queue: getScheduledQueue(), item, postUrl: pubResult.postUrl, message: 'Reel successfully posted to Instagram!' });
+    res.json({
+      success: true,
+      queue: getScheduledQueue(),
+      item,
+      postUrl: item.lastPostUrl || item.youtubePostUrl,
+      youtubePostUrl: item.youtubePostUrl,
+      message: 'રીલ સફળતાપૂર્વક પબ્લિશ થઈ ગઈ છે! 🎉'
+    });
   } catch (err) {
     console.error('Run-now error:', err);
     let queue = getScheduledQueue();
@@ -1232,16 +1529,34 @@ app.post('/api/meta/auto-refresh', async (req, res) => {
 });
 
 // Endpoint to save settings directly to server .env & process.env
-app.post('/api/settings/save', (req, res) => {
+app.post('/api/settings/save', async (req, res) => {
   try {
-    const { metaIgUserId, metaIgToken, geminiApiKey, metaAppId, metaAppSecret, youtubeToken } = req.body;
+    const { metaIgUserId, metaIgToken, geminiApiKey, metaAppId, metaAppSecret, youtubeToken, youtubeRefreshToken, youtubeClientId, youtubeClientSecret } = req.body;
     const updates = {};
-    if (metaIgToken !== undefined) updates.META_INSTAGRAM_TOKEN = metaIgToken;
-    if (metaIgUserId !== undefined) updates.META_INSTAGRAM_USER_ID = metaIgUserId;
-    if (geminiApiKey !== undefined) updates.GEMINI_API_KEY = geminiApiKey;
-    if (metaAppId !== undefined) updates.META_APP_ID = metaAppId;
-    if (metaAppSecret !== undefined) updates.META_APP_SECRET = metaAppSecret;
-    if (youtubeToken !== undefined) updates.YOUTUBE_ACCESS_TOKEN = youtubeToken;
+    if (metaIgToken && metaIgToken.trim()) updates.META_INSTAGRAM_TOKEN = metaIgToken.trim();
+    if (metaIgUserId && metaIgUserId.trim()) {
+      updates.META_INSTAGRAM_USER_ID = metaIgUserId.trim();
+    } else {
+      // Auto-discover Instagram User ID from token if not provided
+      try {
+        const activeToken = updates.META_INSTAGRAM_TOKEN || process.env.META_INSTAGRAM_TOKEN;
+        if (activeToken) {
+          const meAccounts = await fetch(`https://graph.facebook.com/v20.0/me/accounts?fields=instagram_business_account{id,username}&access_token=${activeToken}`).then(r => r.json());
+          const igAcc = meAccounts.data?.find(a => a.instagram_business_account)?.instagram_business_account;
+          if (igAcc && igAcc.id) {
+            updates.META_INSTAGRAM_USER_ID = igAcc.id;
+            console.log(`🔍 [Settings Auto-Discover] Detected Instagram ID: ${igAcc.id} (@${igAcc.username})`);
+          }
+        }
+      } catch (_) {}
+    }
+    if (geminiApiKey && geminiApiKey.trim()) updates.GEMINI_API_KEY = geminiApiKey.trim();
+    if (metaAppId && metaAppId.trim()) updates.META_APP_ID = metaAppId.trim();
+    if (metaAppSecret && metaAppSecret.trim()) updates.META_APP_SECRET = metaAppSecret.trim();
+    if (youtubeToken && youtubeToken.trim()) updates.YOUTUBE_ACCESS_TOKEN = youtubeToken.trim();
+    if (youtubeRefreshToken && youtubeRefreshToken.trim()) updates.YOUTUBE_REFRESH_TOKEN = youtubeRefreshToken.trim();
+    if (youtubeClientId && youtubeClientId.trim()) updates.YOUTUBE_CLIENT_ID = youtubeClientId.trim();
+    if (youtubeClientSecret && youtubeClientSecret.trim()) updates.YOUTUBE_CLIENT_SECRET = youtubeClientSecret.trim();
 
     updateEnvFile(updates);
     console.log('✅ Settings saved to .env & process.env:', Object.keys(updates));
@@ -1465,7 +1780,7 @@ Respond ONLY with valid JSON.`
   // 100% Autonomous Daily Auto-Publish to Instagram
   if (process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID) {
     try {
-      console.log(`🚀 [Auto-Pilot Master Video] Auto-publishing Part ${partNum} directly to Instagram @kuldip__3868...`);
+      console.log(`🚀 [Auto-Pilot Master Video] Auto-publishing Part ${partNum} directly to Instagram...`);
       const caption = `${partRecipe.viralCaption || ''}\n\n${partRecipe.viralHashtags || ''}`;
       const pubRes = await publishReelDirectToInstagram(outputPath, caption);
       historyItem.instagramPostUrl = pubRes.postUrl;
@@ -1475,6 +1790,27 @@ Respond ONLY with valid JSON.`
     } catch (e) {
       console.error(`❌ [Auto-Pilot Master Video] Instagram auto-upload error for Part ${partNum}:`, e.message);
       historyItem.lastError = e.message;
+    }
+  }
+
+  // 100% Autonomous Daily Auto-Publish to YouTube Shorts
+  if (process.env.YOUTUBE_ACCESS_TOKEN) {
+    try {
+      console.log(`🚀 [Auto-Pilot Master Video] Auto-publishing Part ${partNum} directly to YouTube Shorts...`);
+      const ytTitle = (partRecipe.viralTitle || `Part ${partNum} - Viral Short #Shorts`).substring(0, 100);
+      const ytDesc = `${partRecipe.viralCaption || ''}\n\n${partRecipe.viralHashtags || ''}\n\n#Shorts #Viral`;
+      const ytRes = await publishShortDirectToYouTube(outputPath, ytTitle, ytDesc, ['Shorts', 'Reels', 'Viral']);
+      historyItem.youtubePostUrl = ytRes.postUrl;
+      historyItem.youtubeVideoId = ytRes.videoId;
+      if (historyItem.instagramPostUrl) {
+        historyItem.status = 'Posted to IG & YouTube ✓';
+      } else {
+        historyItem.status = 'Posted to YouTube ✓';
+      }
+      console.log(`🎉 [Auto-Pilot Master Video] Part ${partNum} successfully posted to YouTube: ${ytRes.postUrl}`);
+    } catch (e) {
+      console.error(`❌ [Auto-Pilot Master Video] YouTube auto-upload error for Part ${partNum}:`, e.message);
+      historyItem.lastYoutubeError = e.message;
     }
   }
 
@@ -1615,7 +1951,6 @@ app.post('/api/scheduler/toggle', (req, res) => {
 // 📱 8. DIRECT 100% AUTONOMOUS SOCIAL MEDIA PUBLISHING
 // ========================================================
 
-let cachedIgUsername = process.env.META_INSTAGRAM_USERNAME || 'moving.151120';
 
 app.get('/api/social/status', async (req, res) => {
   const hasIg = !!(process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID);
@@ -1784,80 +2119,433 @@ app.post('/api/social/publish-instagram-direct', async (req, res) => {
   }
 });
 
-app.post('/api/social/publish-youtube-direct', async (req, res) => {
+// Endpoint to fetch current settings and social connectivity status
+app.get('/api/settings/get', async (req, res) => {
   try {
-    const { videoFileName, title, description } = req.body;
-    const token = req.body.accessToken || process.env.YOUTUBE_ACCESS_TOKEN;
+    const hasIg = !!(process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID);
+    const hasYt = !!process.env.YOUTUBE_ACCESS_TOKEN;
+    const hasGemini = !!process.env.GEMINI_API_KEY;
 
-    if (!token) {
-      return res.status(400).json({ error: 'YouTube OAuth Access Token ઉપલબ્ધ નથી.' });
-    }
-
-    let videoPath = null;
-    if (videoFileName) {
-      const p1 = path.join(REELS_DIR, videoFileName);
-      const p2 = path.join(UPLOADS_DIR, videoFileName);
-      if (fs.existsSync(p1)) videoPath = p1;
-      else if (fs.existsSync(p2)) videoPath = p2;
-    }
-
-    if (!videoPath || !fs.existsSync(videoPath)) {
-      return res.status(404).json({ error: 'YouTube માટે વિડીયો ફાઈલ મળી નથી.' });
-    }
-
-    const videoBuffer = await fsp.readFile(videoPath);
-
-    // Resumable YouTube Upload
-    const initRes = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json; charset=UTF-8',
-        'X-Upload-Content-Length': videoBuffer.length.toString(),
-        'X-Upload-Content-Type': 'video/mp4'
+    res.json({
+      success: true,
+      geminiConfigured: hasGemini,
+      meta: {
+        configured: hasIg,
+        username: cachedIgUsername || process.env.META_INSTAGRAM_USERNAME || null,
+        userId: process.env.META_INSTAGRAM_USER_ID || null
       },
-      body: JSON.stringify({
-        snippet: {
-          title: title || 'Viral AI Reel #Shorts',
-          description: description || 'Created with AI Reel Studio #Shorts',
-          tags: ['Shorts', 'Reels', 'AI', 'Viral']
-        },
-        status: {
-          privacyStatus: 'public',
-          selfDeclaredMadeForKids: false
+      youtube: {
+        configured: hasYt,
+        channelTitle: cachedYtTitle || process.env.YOUTUBE_CHANNEL_TITLE || null
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========================================================
+// 📦 9. ALL-SELLER STOCK INVENTORY, BILLING & CUSTOM UPI QR
+// ========================================================
+
+// Shop Settings & Custom UPI QR
+app.get('/api/shop/settings', (req, res) => {
+  res.json({ success: true, settings: getShopSettings() });
+});
+
+app.post('/api/shop/settings', (req, res) => {
+  try {
+    const current = getShopSettings();
+    const updated = { ...current, ...req.body };
+    saveShopSettings(updated);
+    res.json({ success: true, settings: updated, message: 'દુકાનની વિગતો સફળતાપૂર્વક સેવ થઈ ગઈ!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/shop/onboarding-setup', (req, res) => {
+  try {
+    const {
+      shopName,
+      businessType,
+      ownerName,
+      phone,
+      address,
+      upiId,
+      upiQrImage,
+      gstNumber,
+      gstEnabled,
+      defaultGstRate,
+      invoicePrefix,
+      billTerms,
+      initialProducts
+    } = req.body;
+
+    const currentSettings = getShopSettings();
+    const updatedSettings = {
+      ...currentSettings,
+      shopName: shopName ? shopName.trim() : (currentSettings.shopName || 'Retail & Fashion Store'),
+      businessType: businessType ? businessType.trim() : (currentSettings.businessType || 'General Retail'),
+      ownerName: ownerName ? ownerName.trim() : (currentSettings.ownerName || 'Shop Owner'),
+      phone: phone ? phone.trim() : (currentSettings.phone || ''),
+      address: address ? address.trim() : (currentSettings.address || ''),
+      upiId: upiId ? upiId.trim() : (currentSettings.upiId || ''),
+      upiQrImage: upiQrImage !== undefined ? upiQrImage : (currentSettings.upiQrImage || ''),
+      gstNumber: gstNumber ? gstNumber.trim() : '',
+      gstEnabled: gstEnabled !== undefined ? Boolean(gstEnabled) : !!currentSettings.gstEnabled,
+      defaultGstRate: defaultGstRate !== undefined ? Number(defaultGstRate) : (currentSettings.defaultGstRate || 5),
+      invoicePrefix: invoicePrefix ? invoicePrefix.trim() : (currentSettings.invoicePrefix || 'INV'),
+      billTerms: billTerms ? billTerms.trim() : (currentSettings.billTerms || 'માલ પાછો લેવામાં આવશે નહીં. મુલાકાત બદલ આભાર! 🙏'),
+      isConfigured: true,
+      lastSetupAt: new Date().toISOString()
+    };
+    saveShopSettings(updatedSettings);
+
+    let products = getProducts();
+    let addedCount = 0;
+
+    if (Array.isArray(initialProducts) && initialProducts.length > 0) {
+      initialProducts.forEach(ip => {
+        if (ip && ip.name && ip.name.trim()) {
+          const newProd = {
+            id: `prod-${Date.now()}-${Math.round(Math.random() * 1000)}`,
+            name: ip.name.trim(),
+            sku: ip.sku ? ip.sku.trim() : `SKU-${Math.floor(100 + Math.random() * 900)}`,
+            category: ip.category ? ip.category.trim() : (updatedSettings.businessType || 'General Product'),
+            unit: ip.unit ? ip.unit.trim() : 'Pcs (નંગ)',
+            price: Number(ip.price) || 0,
+            cost: Number(ip.cost) || 0,
+            stock: Number(ip.stock) || 10,
+            minStockAlert: 3,
+            gstRate: ip.gstRate !== undefined ? Number(ip.gstRate) : (updatedSettings.defaultGstRate || 5),
+            description: ip.description || '',
+            videoFileName: '',
+            createdAt: new Date().toISOString()
+          };
+          products.unshift(newProd);
+          addedCount++;
         }
+      });
+      saveProducts(products);
+    }
+
+    res.json({
+      success: true,
+      settings: updatedSettings,
+      products,
+      addedProductsCount: addedCount,
+      message: `વેલકમ "${updatedSettings.shopName}"! તમારી દુકાનનું સેટઅપ સફળતાપૂર્વક થઈ ગયું છે. 🎉`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/shop/upload-qr', qrUpload.single('qrImage'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'QR Code ઈમેજ ફાઈલ પસંદ કરો.' });
+    const qrRelativeUrl = `/uploads/qr/${req.file.filename}`;
+    const settings = getShopSettings();
+    settings.upiQrImage = qrRelativeUrl;
+    saveShopSettings(settings);
+    res.json({ success: true, qrUrl: qrRelativeUrl, message: 'તમારો UPI QR Code સફળતાપૂર્વક અપલોડ થઈ ગયો! 🎉' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Products & Inventory CRUD
+app.get('/api/products', (req, res) => {
+  res.json({ success: true, products: getProducts() });
+});
+
+app.post('/api/products', (req, res) => {
+  try {
+    const { id, name, sku, category, unit, price, cost, stock, minStockAlert, gstRate, description, videoFileName } = req.body;
+    if (!name || price === undefined) {
+      return res.status(400).json({ error: 'પ્રોડક્ટનું નામ અને કિંમત જરૂરી છે.' });
+    }
+
+    let products = getProducts();
+    let product;
+
+    if (id) {
+      // Update existing
+      const idx = products.findIndex(p => p.id === id);
+      if (idx !== -1) {
+        products[idx] = {
+          ...products[idx],
+          name: name.trim(),
+          sku: sku || products[idx].sku,
+          category: category || products[idx].category,
+          unit: unit || products[idx].unit || 'Pcs (નંગ)',
+          price: Number(price),
+          cost: Number(cost) || 0,
+          stock: Number(stock) || 0,
+          minStockAlert: Number(minStockAlert) || 3,
+          gstRate: gstRate !== undefined ? Number(gstRate) : (products[idx].gstRate || 0),
+          description: description || '',
+          videoFileName: videoFileName !== undefined ? videoFileName : products[idx].videoFileName,
+          updatedAt: new Date().toISOString()
+        };
+        product = products[idx];
+      }
+    }
+
+    if (!product) {
+      // Create new
+      product = {
+        id: `prod-${Date.now()}-${Math.round(Math.random() * 1000)}`,
+        name: name.trim(),
+        sku: sku || `SKU-${Math.floor(100 + Math.random() * 900)}`,
+        category: category || 'General Product',
+        unit: unit || 'Pcs (નંગ)',
+        price: Number(price),
+        cost: Number(cost) || 0,
+        stock: Number(stock) || 0,
+        minStockAlert: Number(minStockAlert) || 3,
+        gstRate: Number(gstRate) || 0,
+        description: description || '',
+        videoFileName: videoFileName || '',
+        createdAt: new Date().toISOString()
+      };
+      products.unshift(product);
+    }
+
+    saveProducts(products);
+    res.json({ success: true, product, products, message: 'પ્રોડક્ટ સ્ટોકમાં સફળતાપૂર્વક સેવ થઈ ગઈ! ✓' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/products/:id', (req, res) => {
+  try {
+    let products = getProducts();
+    products = products.filter(p => p.id !== req.params.id);
+    saveProducts(products);
+    res.json({ success: true, products, message: 'પ્રોડક્ટ ડિલીટ થઈ ગઈ.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Invoicing & Billing (with Auto-Stock Deduction)
+app.get('/api/invoices', (req, res) => {
+  res.json({ success: true, invoices: getInvoices() });
+});
+
+app.post('/api/invoices', (req, res) => {
+  try {
+    const { customerName, customerPhone, customerAddress, items, discount = 0, paymentMethod = 'UPI QR', notes } = req.body;
+    if (!items || !items.length) {
+      return res.status(400).json({ error: 'બિલ બનાવવા માટે ઓછામાં ઓછી ૧ આઇટમ ઉમેરો.' });
+    }
+
+    let products = getProducts();
+    const shopSettings = getShopSettings();
+    let subtotal = 0;
+    let totalTax = 0;
+
+    // Validate items and deduct stock
+    const billedItems = items.map((it, idx) => {
+      const prod = it.productId ? products.find(p => p.id === it.productId) : null;
+      const qty = Number(it.qty || it.quantity) || 1;
+      const unitPrice = Number(it.price) || (prod ? prod.price : 0);
+      const rowTaxRate = Number(it.gstRate !== undefined ? it.gstRate : (prod ? prod.gstRate : (shopSettings.gstEnabled ? shopSettings.defaultGstRate : 0))) || 0;
+      
+      const itemSubtotal = unitPrice * qty;
+      const rowTax = shopSettings.gstEnabled ? (itemSubtotal * (rowTaxRate / 100)) : 0;
+      const total = itemSubtotal + rowTax;
+      
+      subtotal += itemSubtotal;
+      totalTax += rowTax;
+
+      // Auto-deduct stock if catalog product exists
+      if (prod) {
+        prod.stock = Math.max(0, (Number(prod.stock) || 0) - qty);
+      }
+
+      return {
+        srNo: idx + 1,
+        productId: it.productId || '',
+        name: it.name || (prod ? prod.name : 'Custom Item'),
+        sku: prod ? prod.sku : (it.sku || ''),
+        unit: it.unit || (prod ? prod.unit : 'Pcs'),
+        price: unitPrice,
+        qty: qty,
+        gstRate: rowTaxRate,
+        taxAmount: Math.round(rowTax * 100) / 100,
+        total: Math.round((itemSubtotal) * 100) / 100
+      };
+    });
+
+    const disc = Number(discount) || 0;
+    const cgst = shopSettings.gstEnabled ? Math.round((totalTax / 2) * 100) / 100 : 0;
+    const sgst = shopSettings.gstEnabled ? Math.round((totalTax / 2) * 100) / 100 : 0;
+    const grandTotal = Math.round(Math.max(0, subtotal + (shopSettings.gstEnabled ? totalTax : 0) - disc));
+
+    const invoices = getInvoices();
+    const prefix = shopSettings.invoicePrefix || 'INV';
+    const invoiceNo = `${prefix}-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(3, '0')}`;
+
+    const newInvoice = {
+      id: `inv-${Date.now()}`,
+      invoiceNo,
+      invoiceNumber: invoiceNo,
+      customerName: customerName ? customerName.trim() : 'Walk-in Customer',
+      customerPhone: customerPhone ? customerPhone.trim() : '',
+      customerAddress: customerAddress ? customerAddress.trim() : '',
+      items: billedItems,
+      subtotal: Math.round(subtotal * 100) / 100,
+      discount: disc,
+      gstEnabled: !!shopSettings.gstEnabled,
+      gstNumber: shopSettings.gstNumber || '',
+      cgst,
+      sgst,
+      taxAmount: Math.round(totalTax * 100) / 100,
+      grandTotal,
+      paymentMethod,
+      paymentStatus: 'Paid',
+      notes: notes || shopSettings.billTerms || 'Thank you for your business! 🙏',
+      shopDetails: { ...shopSettings },
+      createdAt: new Date().toISOString()
+    };
+
+    invoices.unshift(newInvoice);
+    saveInvoices(invoices);
+    saveProducts(products); // Persist updated stock
+
+    res.json({
+      success: true,
+      invoice: newInvoice,
+      invoices,
+      products,
+      shopSettings,
+      message: `બિલ #${invoiceNo} સફળતાપૂર્વક બની ગયું અને સ્ટોક આપોઆપ માઈનસ થઈ ગયો! 🎉`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========================================================
+// 🤖 10. AI STORE COPILOT (SELLER CONVERSATIONAL MANAGER)
+// ========================================================
+
+function generateAlgorithmicCopilotResponse(message, data) {
+  const q = (message || '').toLowerCase();
+  const { products, totalItems, lowStockProducts, todaysRevenue, topSellingProducts, shopSettings } = data;
+
+  if (q.includes('ઓછો') || q.includes('ખલાસ') || q.includes('low') || q.includes('alert') || q.includes('પતી ગય')) {
+    if (lowStockProducts.length > 0) {
+      const items = lowStockProducts.map(p => `• **${p.name}**: ફક્ત **${p.stock} નંગ** બાકી! (મિનિમમ એલર્ટ: ${p.minStockAlert || 3})`).join('\n');
+      return `⚠️ **સ્ટોક એલર્ટ (ઓછો સ્ટોક):**\n\nનીચેની આઇટમ્સ ખલાસ થવાની તૈયારીમાં છે, નવો માલ મંગાવી લેવો જોઈએ:\n\n${items}`;
+    }
+    return `✅ **ખુશખબર:** તમારી દુકાનમાં કોઈપણ આઇટમનો સ્ટોક ઓછો નથી, બધી આઇટમ્સ પૂરતા પ્રમાણમાં છે!`;
+  }
+
+  if (q.includes('વેચાણ') || q.includes('સૌથી') || q.includes('selling') || q.includes('best') || q.includes('વેચાણું') || q.includes('વેચાણી') || q.includes('top')) {
+    if (topSellingProducts.length > 0) {
+      return `🔥 **સૌથી વધુ વેચાતી પ્રોડક્ટ્સ:**\n\n1. **${topSellingProducts[0]}** સૌથી ટોપ પર છે!\n${topSellingProducts.slice(1, 4).map((p, i) => `${i + 2}. ${p}`).join('\n')}\n\n💡 આ આઇટમની વધુ રીલ્સ બનાવીને ઇન્સ્ટાગ્રામ પર મૂકવાથી ઓર્ડર્સ હજુ વધશે!`;
+    }
+    return `🔥 અત્યાર સુધીના ડેટા મુજબ તમારી પ્રોડક્ટ્સ લિસ્ટમાં છે. જેમ જેમ નવા બિલ બનશે તેમ ટોપ-સેલિંગ પ્રોડક્ટ્સ અહીં લાઈવ દેખાશે!`;
+  }
+
+  if (q.includes('સ્ટોક') || q.includes('stock') || q.includes('કેટલો') || q.includes('item') || q.includes('માલ')) {
+    const list = products.slice(0, 4).map(p => `• **${p.name}**: ${p.stock} નંગ (₹${p.price})`).join('\n');
+    return `📦 **તમારી દુકાનનો સ્ટોક રિપોર્ટ (${shopSettings.shopName}):**\n\nતમારી પાસે અત્યારે કુલ **${totalItems} આઇટમ્સ** સ્ટોકમાં ઉપલબ્ધ છે (${products.length} અલગ અલગ પ્રોડક્ટ્સ).\n\n${list}\n\n${lowStockProducts.length > 0 ? `⚠️ **ધ્યાન આપો:** ${lowStockProducts.length} આઇટમ્સનો સ્ટોક ઓછો છે!` : '✅ બધી આઇટમ્સનો પૂરતો સ્ટોક છે.'}`;
+  }
+
+  if (q.includes('આજ') || q.includes('કમાણી') || q.includes('નફો') || q.includes('revenue') || q.includes('sale') || q.includes('રૂપિયા')) {
+    return `💰 **આજનું વેચાણ રિપોર્ટ:**\n\n• આજની કુલ કમાણી: **₹${todaysRevenue.toLocaleString('en-IN')}**\n• દુકાન: **${shopSettings.shopName}**\n\nનવું બિલ બનાવવા માટે બિલિંગ ટેબનો ઉપયોગ કરી શકો છો!`;
+  }
+
+  return `નમસ્તે! હું તમારો **AI Store Copilot** છું. 🤖\n\nતમે મને તમારી દુકાન વિશે કંઈપણ પૂછી શકો છો:\n• *"આજે કેટલો સ્ટોક છે?"*\n• *"સૌથી વધુ કઈ આઇટમ વેચાઈ?"*\n• *"કયો સ્ટોક ઓછો થઈ ગયો છે?"*\n• *"આજનું કુલ વેચાણ કેટલું થયું?"*`;
+}
+
+app.post('/api/ai-copilot/chat', async (req, res) => {
+  try {
+    const message = req.body.message || req.body.query;
+    if (!message) return res.status(400).json({ error: 'Message is required' });
+
+    const products = getProducts();
+    const invoices = getInvoices();
+    const shopSettings = getShopSettings();
+
+    const totalItems = products.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
+    const lowStockProducts = products.filter(p => Number(p.stock) <= (Number(p.minStockAlert) || 3));
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todaysInvoices = invoices.filter(inv => inv.createdAt && inv.createdAt.startsWith(todayStr));
+    const todaysRevenue = todaysInvoices.reduce((sum, inv) => sum + (Number(inv.grandTotal) || 0), 0);
+
+    const productSalesMap = {};
+    invoices.forEach(inv => {
+      (inv.items || []).forEach(it => {
+        productSalesMap[it.name] = (productSalesMap[it.name] || 0) + (Number(it.qty || it.quantity) || 1);
+      });
+    });
+
+    const topSellingProducts = Object.entries(productSalesMap)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, qty]) => `${name} (${qty} નંગ વેચાયા)`);
+
+    const fallbackData = { products, totalItems, lowStockProducts, todaysRevenue, topSellingProducts, shopSettings };
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      const algorithmicReply = generateAlgorithmicCopilotResponse(message, fallbackData);
+      return res.json({ success: true, reply: algorithmicReply, answer: algorithmicReply });
+    }
+
+    const systemPrompt = `You are "Store Copilot", a friendly, ultra-smart AI Business & Inventory Manager for shopkeepers and online sellers across all industries (Sarees, Fashion, Jewelry, Electronics, Retail, etc.).
+Your job is to answer the seller's questions in clear, conversational Gujarati (with helpful English terms and emojis) based on their real-time live business data below:
+
+🏪 Shop Name: "${shopSettings.shopName}" (${shopSettings.businessType || 'Retail'})
+📦 Total Unique Products: ${products.length}
+📦 Total Physical Stock Units: ${totalItems}
+⚠️ Low Stock Items (<3 units): ${lowStockProducts.map(p => `${p.name} (Stock: ${p.stock})`).join(', ') || 'None (All well-stocked)'}
+💰 Today's Invoices: ${todaysInvoices.length} orders
+💰 Today's Revenue: ₹${todaysRevenue.toLocaleString('en-IN')}
+🔥 Top Selling Items: ${topSellingProducts.slice(0, 5).join(', ') || 'No sales recorded yet'}
+
+Full Current Inventory List:
+${JSON.stringify(products.map(p => ({ name: p.name, sku: p.sku, category: p.category, price: p.price, stock: p.stock })), null, 2)}
+
+Instructions:
+1. Always respond warmly in natural Gujarati (e.g., "હા ભાઈ...", "તમારા સ્ટોકમાં અત્યારે...").
+2. Use bullet points and emojis (📦, 💰, 🔥, ⚠️) so it is super easy to read on mobile.
+3. If they ask about total stock, give the total units and highlight key categories.
+4. If they ask what sold the most today or overall, give exact numbers from the data.
+5. If they ask what is low, warn them clearly.
+6. Keep answers concise, direct, helpful, and empowering for the seller!`;
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const aiRes = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          { role: 'user', parts: [{ text: `${systemPrompt}\n\nSeller's Question: "${message}"` }] }
+        ],
+        generationConfig: { temperature: 0.3 }
       })
     });
 
-    const uploadUrl = initRes.headers.get('location');
-    if (!uploadUrl) {
-      const errBody = await initRes.json().catch(() => ({}));
-      return res.status(400).json({ error: errBody.error?.message || 'YouTube upload session init failed' });
+    if (aiRes.ok) {
+      const data = await aiRes.json();
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (reply) return res.json({ success: true, reply: reply.trim(), answer: reply.trim() });
     }
 
-    const uploadRes = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'video/mp4',
-        'Content-Length': videoBuffer.length.toString()
-      },
-      body: videoBuffer
-    }).then(r => r.json());
-
-    if (uploadRes.error) {
-      return res.status(400).json({ error: uploadRes.error.message || 'YouTube binary upload failed' });
-    }
-
-    const videoId = uploadRes.id;
-    res.json({
-      success: true,
-      videoId,
-      postUrl: `https://www.youtube.com/shorts/${videoId}`,
-      message: 'YouTube Shorts સફળતાપૂર્વક તમારી ચેનલ પર અપલોડ થઈ ગયું! 🎉'
-    });
+    const fallbackReply = generateAlgorithmicCopilotResponse(message, fallbackData);
+    res.json({ success: true, reply: fallbackReply, answer: fallbackReply });
   } catch (err) {
-    console.error('YouTube direct publish error:', err);
-    res.status(500).json({ error: err.message });
+    console.error('AI Copilot error:', err);
+    const safeReply = generateAlgorithmicCopilotResponse(req.body.message || req.body.query, { products: getProducts(), totalItems: 0, lowStockProducts: [], todaysRevenue: 0, topSellingProducts: [], shopSettings: getShopSettings() });
+    res.json({ success: true, reply: safeReply, answer: safeReply });
   }
 });
 

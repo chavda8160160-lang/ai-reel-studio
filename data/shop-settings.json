@@ -1,0 +1,17 @@
+{
+  "shopName": "શ્રી ગણેશ સાડી એમ્પાયર",
+  "businessType": "સાડી & કાપડ માર્કેટ",
+  "ownerName": "દિનેશભાઈ પટેલ",
+  "phone": "+91 98250 12345",
+  "address": "રિંગ રોડ, સુરત",
+  "upiId": "seller@okhdfcbank",
+  "upiQrImage": "",
+  "gstNumber": "24ABCDE9876F1Z2",
+  "gstEnabled": true,
+  "defaultGstRate": 5,
+  "invoicePrefix": "SGS",
+  "billTerms": "માલ પાછો લેવામાં આવશે નહીં. જય શ્રી કૃષ્ણ! 🙏",
+  "currencySymbol": "₹",
+  "isConfigured": true,
+  "lastSetupAt": "2026-10-08T10:55:47.272Z"
+}

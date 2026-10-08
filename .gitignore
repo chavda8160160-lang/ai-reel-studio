@@ -13,3 +13,8 @@ public/rendered-reels/*.mp4
 *.log
 .DS_Store
 Thumbs.db
+
+# OAuth and credentials
+*client_secret*.json
+credentials*.json
+token*.json

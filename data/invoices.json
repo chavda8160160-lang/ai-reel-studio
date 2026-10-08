@@ -1,0 +1,115 @@
+[
+  {
+    "id": "inv-1791456115274",
+    "invoiceNo": "INV-2026-004",
+    "invoiceNumber": "INV-2026-004",
+    "customerName": "Ramesh Patel",
+    "customerPhone": "9825098250",
+    "customerAddress": "Varachha, Surat",
+    "items": [
+      {
+        "srNo": 1,
+        "productId": "",
+        "name": "Bandhani Silk Saree",
+        "sku": "",
+        "unit": "Pcs (નંગ)",
+        "price": 2800,
+        "qty": 1,
+        "gstRate": 5,
+        "taxAmount": 140,
+        "total": 2800
+      }
+    ],
+    "subtotal": 2800,
+    "discount": 100,
+    "gstEnabled": true,
+    "gstNumber": "24ABCDE1234F1Z5",
+    "cgst": 70,
+    "sgst": 70,
+    "taxAmount": 140,
+    "grandTotal": 2840,
+    "paymentMethod": "UPI QR (GPay/PhonePe)",
+    "paymentStatus": "Paid",
+    "notes": "માલ પાછો લેવામાં આવશે નહીં. મુલાકાત બદલ આભાર! 🙏",
+    "shopDetails": {
+      "shopName": "Fashion & Retail Hub",
+      "businessType": "Clothing, Sarees & Retail",
+      "ownerName": "Shop Owner",
+      "phone": "+91 98765 43210",
+      "address": "Ring Road, Surat, Gujarat",
+      "upiId": "seller@okhdfcbank",
+      "upiQrImage": "",
+      "gstNumber": "24ABCDE1234F1Z5",
+      "gstEnabled": true,
+      "defaultGstRate": 5,
+      "invoicePrefix": "INV",
+      "billTerms": "માલ પાછો લેવામાં આવશે નહીં. મુલાકાત બદલ આભાર! 🙏",
+      "currencySymbol": "₹"
+    },
+    "createdAt": "2026-10-08T10:41:55.274Z"
+  },
+  {
+    "id": "inv-1791454161910",
+    "invoiceNo": "INV-2026-003",
+    "customerName": "Jignesh Shah",
+    "customerPhone": "9898012345",
+    "items": [
+      {
+        "productId": "prod-101",
+        "name": "Royal Designer Silk Saree",
+        "sku": "SKU-101",
+        "price": 3500,
+        "quantity": 1,
+        "total": 3500
+      }
+    ],
+    "subtotal": 3500,
+    "discount": 200,
+    "grandTotal": 3300,
+    "paymentMethod": "UPI QR (GPay/PhonePe)",
+    "paymentStatus": "Paid",
+    "createdAt": "2026-10-08T10:09:21.910Z"
+  },
+  {
+    "id": "inv-1001",
+    "invoiceNo": "INV-2026-001",
+    "customerName": "Ramesh Patel",
+    "customerPhone": "+91 98250 12345",
+    "items": [
+      {
+        "productId": "prod-101",
+        "name": "Royal Designer Silk Saree",
+        "price": 3500,
+        "quantity": 2,
+        "total": 7000
+      }
+    ],
+    "subtotal": 7000,
+    "discount": 200,
+    "grandTotal": 6800,
+    "paymentMethod": "UPI (PhonePe/GPay)",
+    "paymentStatus": "Paid",
+    "createdAt": "2026-10-08T10:00:00.000Z"
+  },
+  {
+    "id": "inv-1002",
+    "invoiceNo": "INV-2026-002",
+    "customerName": "Priya Sharma",
+    "customerPhone": "+91 99090 54321",
+    "items": [
+      {
+        "productId": "prod-103",
+        "name": "Wireless Ultra Bass Earbuds Pro",
+        "price": 1499,
+        "quantity": 1,
+        "total": 1499
+      }
+    ],
+    "subtotal": 1499,
+    "discount": 0,
+    "grandTotal": 1499,
+    "paymentMethod": "Cash",
+    "paymentStatus": "Paid",
+    "createdAt": "2026-10-08T11:30:00.000Z"
+  }
+]
