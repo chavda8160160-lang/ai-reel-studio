@@ -64,17 +64,219 @@ function saveScheduledQueue(queue) {
   }
 }
 
+// Helper to safely write updates to .env file and process.env
+function updateEnvFile(keyValues) {
+  try {
+    let envContent = '';
+    const envPath = path.join(__dirname, '.env');
+    if (fs.existsSync(envPath)) {
+      envContent = fs.readFileSync(envPath, 'utf8');
+    }
+    for (const [key, val] of Object.entries(keyValues)) {
+      if (val === undefined || val === null) continue;
+      const strVal = String(val).trim();
+      process.env[key] = strVal;
+      const regex = new RegExp(`^${key}=.*$`, 'm');
+      if (regex.test(envContent)) {
+        envContent = envContent.replace(regex, `${key}=${strVal}`);
+      } else {
+        envContent = envContent.trim() + (envContent.trim() ? '\n' : '') + `${key}=${strVal}\n`;
+      }
+    }
+    fs.writeFileSync(envPath, envContent.trim() + '\n', 'utf8');
+    console.log('📝 [.env Sync] Updated keys:', Object.keys(keyValues).join(', '));
+  } catch (err) {
+    console.error('⚠️ [.env Sync Error]:', err.message);
+  }
+}
+
+// Meta Token Status & Expiry Checker
+async function checkMetaTokenStatus(token = process.env.META_INSTAGRAM_TOKEN) {
+  if (!token) return { active: false, error: 'No token configured' };
+
+  try {
+    // 1. Check direct profile access
+    const meRes = await fetch(`https://graph.facebook.com/v20.0/me?fields=id,name&access_token=${token}`).then(r => r.json());
+    if (meRes.error) {
+      return {
+        active: false,
+        error: meRes.error.message,
+        code: meRes.error.code,
+        subcode: meRes.error.error_subcode
+      };
+    }
+
+    // 2. Query debug_token to inspect token type & permanent/expiry flag
+    let debugInfo = null;
+    const appId = process.env.META_APP_ID;
+    const appSecret = process.env.META_APP_SECRET;
+    const inspectToken = (appId && appSecret) ? `${appId}|${appSecret}` : token;
+    try {
+      const debugRes = await fetch(`https://graph.facebook.com/debug_token?input_token=${token}&access_token=${inspectToken}`).then(r => r.json());
+      if (debugRes.data) {
+        debugInfo = debugRes.data;
+      }
+    } catch (_) {}
+
+    // In Meta Graph API: expires_at === 0 or type === 'PAGE' indicates Never-Expiring Permanent Token!
+    const isNeverExpiring = debugInfo ? (debugInfo.expires_at === 0 || debugInfo.type === 'PAGE') : false;
+    let expiresAtFormatted = isNeverExpiring ? 'Never Expires (Permanent Page Token)' : null;
+
+    if (!isNeverExpiring && debugInfo?.expires_at) {
+      expiresAtFormatted = new Date(debugInfo.expires_at * 1000).toLocaleString('gu-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    return {
+      active: true,
+      name: meRes.name,
+      id: meRes.id,
+      isNeverExpiring: !!isNeverExpiring,
+      expiresAt: expiresAtFormatted || 'Active Session',
+      type: debugInfo?.type || 'TOKEN',
+      scopes: debugInfo?.scopes || []
+    };
+  } catch (err) {
+    return { active: false, error: err.message };
+  }
+}
+
+// Auto-Refresh & Upgrade to Never-Expiring Page Token
+async function refreshOrUpgradeMetaToken(providedToken) {
+  const currentToken = providedToken || process.env.META_INSTAGRAM_TOKEN;
+  const appId = process.env.META_APP_ID;
+  const appSecret = process.env.META_APP_SECRET;
+
+  if (!currentToken) {
+    throw new Error('Meta Instagram Access Token ઉપલબ્ધ નથી.');
+  }
+
+  console.log('🔄 [Meta Token Refresher] Attempting token refresh / upgrade to permanent Page token...');
+
+  let userToken = currentToken;
+
+  // Step 1: If App ID and Secret are provided, exchange short/long token with fb_exchange_token for 60-day token
+  if (appId && appSecret) {
+    try {
+      const exchangeUrl = `https://graph.facebook.com/v20.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${currentToken}`;
+      const exchangeRes = await fetch(exchangeUrl).then(r => r.json());
+      if (exchangeRes.access_token) {
+        userToken = exchangeRes.access_token;
+        console.log('✅ [Meta Token Refresher] Successfully refreshed 60-day User Token.');
+      } else if (exchangeRes.error) {
+        console.warn('⚠️ [Meta Token Refresher] fb_exchange_token notice:', exchangeRes.error.message);
+      }
+    } catch (e) {
+      console.warn('⚠️ [Meta Token Refresher] Exchange request error:', e.message);
+    }
+  }
+
+  // Step 2: Query /me/accounts using userToken to extract NEVER-EXPIRING Page Token
+  let finalToken = userToken;
+  let finalUserId = process.env.META_INSTAGRAM_USER_ID;
+  let finalPageId = process.env.META_INSTAGRAM_PAGE_ID;
+  let isNeverExpiring = false;
+  let pageName = '';
+
+  try {
+    const accountsUrl = `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&access_token=${userToken}`;
+    const accountsRes = await fetch(accountsUrl).then(r => r.json());
+
+    if (accountsRes.data && accountsRes.data.length > 0) {
+      // Find page linked to Instagram Business Account
+      const matchedPage = accountsRes.data.find(p => p.instagram_business_account?.id) || accountsRes.data[0];
+      if (matchedPage) {
+        pageName = matchedPage.name;
+        finalPageId = matchedPage.id;
+        if (matchedPage.instagram_business_account?.id) {
+          finalUserId = matchedPage.instagram_business_account.id;
+        }
+        if (matchedPage.access_token) {
+          finalToken = matchedPage.access_token;
+          isNeverExpiring = true;
+          console.log(`🌟 [Meta Token Refresher] Extracted NEVER-EXPIRING Page Token for "${pageName}" (IG: ${finalUserId || 'linked'})!`);
+        }
+      }
+    } else if (accountsRes.error) {
+      console.warn('⚠️ [Meta Token Refresher] /me/accounts warning:', accountsRes.error.message);
+    }
+  } catch (accErr) {
+    console.warn('⚠️ [Meta Token Refresher] Accounts lookup failed:', accErr.message);
+  }
+
+  // Step 3: Persist newly generated credentials
+  updateEnvFile({
+    META_INSTAGRAM_TOKEN: finalToken,
+    ...(finalUserId ? { META_INSTAGRAM_USER_ID: finalUserId } : {}),
+    ...(finalPageId ? { META_INSTAGRAM_PAGE_ID: finalPageId } : {})
+  });
+
+  // Verify the new token
+  const testRes = await checkMetaTokenStatus(finalToken);
+  if (!testRes.active) {
+    throw new Error(`ટોકન રિફ્રેશ થઈ શક્યો નથી: ${testRes.error}`);
+  }
+
+  return {
+    success: true,
+    token: finalToken,
+    userId: finalUserId,
+    pageId: finalPageId,
+    pageName,
+    isNeverExpiring: testRes.isNeverExpiring || isNeverExpiring,
+    expiresAt: testRes.expiresAt,
+    message: (testRes.isNeverExpiring || isNeverExpiring)
+      ? `Never-Expiring Permanent Token સક્રિય થઈ ગયો છે! (Page: ${pageName || 'Connected Page'}) 🎉`
+      : 'ટોકન 60 દિવસ માટે સફળતાપૂર્વક રિન્યુ થઈ ગયો છે! ✓'
+  };
+}
+
+// 🛡️ PRE-UPLOAD GUARD: Check Token Before Every Reel Upload & Auto-Refresh If Invalid
+async function ensureValidInstagramToken(customToken) {
+  let token = customToken || process.env.META_INSTAGRAM_TOKEN;
+  if (!token) {
+    throw new Error('Meta Instagram Access Token ઉપલબ્ધ નથી. કૃપા કરીને Settings માં ટોકન ઉમેરો.');
+  }
+
+  console.log('🔍 [Meta Pre-Check] Validating Instagram Access Token before upload...');
+  const status = await checkMetaTokenStatus(token);
+
+  if (status.active) {
+    console.log(`✅ [Meta Pre-Check] Token is valid and ready! (${status.isNeverExpiring ? 'Lifetime Never-Expiring' : 'Active'})`);
+    return token;
+  }
+
+  console.warn(`⚠️ [Meta Pre-Check] Token invalid or expired (${status.error}). Triggering automatic refresh...`);
+
+  // Attempt auto-refresh on the fly!
+  try {
+    const refreshed = await refreshOrUpgradeMetaToken(token);
+    if (refreshed.success && refreshed.token) {
+      console.log(`🎉 [Meta Pre-Check] Token automatically refreshed & upgraded! New token is active. Proceeding with Reel upload...`);
+      return refreshed.token;
+    }
+  } catch (refreshErr) {
+    console.error(`❌ [Meta Pre-Check] Automatic token refresh failed:`, refreshErr.message);
+    throw new Error(`ઇન્સ્ટાગ્રામ એક્સેસ ટોકન એક્સપાયર થયેલ છે અને ઓટો-રિફ્રેશ પણ નિષ્ફળ રહ્યો: ${refreshErr.message}. કૃપા કરીને Settings માં નવો Token અથવા Meta App ID & Secret ચકાસો.`);
+  }
+
+  throw new Error(`ઇન્સ્ટાગ્રામ ટોકન માન્ય નથી: ${status.error}`);
+}
+
 // Core Engine: Publish Reel to Instagram Graph API Direct
 async function publishReelDirectToInstagram(videoPath, caption, customToken, customUserId) {
-  const token = customToken || process.env.META_INSTAGRAM_TOKEN;
+  // 🛡️ STEP 0: Check token validity first. Auto-refresh if expired!
+  const token = await ensureValidInstagramToken(customToken);
   let userId = customUserId || process.env.META_INSTAGRAM_USER_ID;
 
-  if (!token) throw new Error('Meta Instagram Access Token ઉપલબ્ધ નથી.');
   if (!userId) {
     const meAccounts = await fetch(`https://graph.facebook.com/v20.0/me/accounts?fields=instagram_business_account{id,username}&access_token=${token}`).then(r => r.json());
     const igAcc = meAccounts.data?.find(a => a.instagram_business_account)?.instagram_business_account;
-    if (igAcc && igAcc.id) userId = igAcc.id;
-    else throw new Error('Instagram Business Account ID મળ્યો નથી.');
+    if (igAcc && igAcc.id) {
+      userId = igAcc.id;
+      updateEnvFile({ META_INSTAGRAM_USER_ID: userId });
+    } else {
+      throw new Error('Instagram Business Account ID મળ્યો નથી.');
+    }
   }
 
   if (!fs.existsSync(videoPath)) throw new Error('વિડીયો ફાઈલ મળી નથી.');
@@ -991,45 +1193,77 @@ app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
   }
 });
 
+// Endpoint to get Meta Instagram Token Health & Expiry Status
+app.get('/api/meta/token-status', async (req, res) => {
+  try {
+    const token = req.query.token || process.env.META_INSTAGRAM_TOKEN;
+    const status = await checkMetaTokenStatus(token);
+    res.json({
+      success: true,
+      ...status,
+      appIdConfigured: !!process.env.META_APP_ID,
+      appSecretConfigured: !!process.env.META_APP_SECRET,
+      metaAppId: process.env.META_APP_ID || '',
+      userId: process.env.META_INSTAGRAM_USER_ID || null,
+      pageId: process.env.META_INSTAGRAM_PAGE_ID || null
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Endpoint to trigger manual or on-demand token refresh & lifetime upgrade
+app.post('/api/meta/auto-refresh', async (req, res) => {
+  try {
+    const { token, appId, appSecret } = req.body;
+    if (appId || appSecret) {
+      updateEnvFile({
+        ...(appId ? { META_APP_ID: appId } : {}),
+        ...(appSecret ? { META_APP_SECRET: appSecret } : {})
+      });
+    }
+
+    const result = await refreshOrUpgradeMetaToken(token);
+    res.json(result);
+  } catch (err) {
+    console.error('Meta auto-refresh API error:', err);
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
 // Endpoint to save settings directly to server .env & process.env
 app.post('/api/settings/save', (req, res) => {
   try {
-    const { metaIgUserId, metaIgToken, geminiApiKey } = req.body;
-    let envContent = '';
-    if (fs.existsSync('.env')) {
-      envContent = fs.readFileSync('.env', 'utf8');
-    }
+    const { metaIgUserId, metaIgToken, geminiApiKey, metaAppId, metaAppSecret, youtubeToken } = req.body;
+    const updates = {};
+    if (metaIgToken !== undefined) updates.META_INSTAGRAM_TOKEN = metaIgToken;
+    if (metaIgUserId !== undefined) updates.META_INSTAGRAM_USER_ID = metaIgUserId;
+    if (geminiApiKey !== undefined) updates.GEMINI_API_KEY = geminiApiKey;
+    if (metaAppId !== undefined) updates.META_APP_ID = metaAppId;
+    if (metaAppSecret !== undefined) updates.META_APP_SECRET = metaAppSecret;
+    if (youtubeToken !== undefined) updates.YOUTUBE_ACCESS_TOKEN = youtubeToken;
 
-    if (metaIgToken) {
-      process.env.META_INSTAGRAM_TOKEN = metaIgToken;
-      if (envContent.includes('META_INSTAGRAM_TOKEN=')) {
-        envContent = envContent.replace(/META_INSTAGRAM_TOKEN=.*/, `META_INSTAGRAM_TOKEN=${metaIgToken}`);
-      } else {
-        envContent += `\nMETA_INSTAGRAM_TOKEN=${metaIgToken}`;
-      }
-    }
-    if (metaIgUserId) {
-      process.env.META_INSTAGRAM_USER_ID = metaIgUserId;
-      if (envContent.includes('META_INSTAGRAM_USER_ID=')) {
-        envContent = envContent.replace(/META_INSTAGRAM_USER_ID=.*/, `META_INSTAGRAM_USER_ID=${metaIgUserId}`);
-      } else {
-        envContent += `\nMETA_INSTAGRAM_USER_ID=${metaIgUserId}`;
-      }
-    }
-    if (geminiApiKey) {
-      process.env.GEMINI_API_KEY = geminiApiKey;
-      if (envContent.includes('GEMINI_API_KEY=')) {
-        envContent = envContent.replace(/GEMINI_API_KEY=.*/, `GEMINI_API_KEY=${geminiApiKey}`);
-      } else {
-        envContent += `\nGEMINI_API_KEY=${geminiApiKey}`;
-      }
-    }
-
-    fs.writeFileSync('.env', envContent.trim() + '\n', 'utf8');
-    console.log('✅ Settings saved to .env & process.env');
+    updateEnvFile(updates);
+    console.log('✅ Settings saved to .env & process.env:', Object.keys(updates));
     res.json({ success: true, message: 'Settings saved successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ⏰ Background Cron: Check & Auto-Refresh Token Daily at 03:00 AM
+cron.schedule('0 3 * * *', async () => {
+  try {
+    if (process.env.META_INSTAGRAM_TOKEN) {
+      console.log('⏰ [Daily Cron] Checking Meta Token Health & Auto-Refresh status...');
+      const status = await checkMetaTokenStatus(process.env.META_INSTAGRAM_TOKEN);
+      if (!status.active || (!status.isNeverExpiring && process.env.META_APP_ID && process.env.META_APP_SECRET)) {
+        console.log('🔄 [Daily Cron] Refreshing/Upgrading Meta Token in background...');
+        await refreshOrUpgradeMetaToken();
+      }
+    }
+  } catch (cronErr) {
+    console.error('⚠️ [Daily Cron] Auto-refresh cron error:', cronErr.message);
   }
 });
 

@@ -624,19 +624,53 @@
 
         <!-- Meta Instagram Graph API Configuration -->
         <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border-glass);">
-          <h4 style="font-size: 0.95rem; font-weight: 700; color: #ec4899; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-            <i class="fa-brands fa-instagram"></i> Meta Instagram 100% Direct Auto-Publish
-          </h4>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: #ec4899; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+              <i class="fa-brands fa-instagram"></i> Meta Instagram 100% Direct Auto-Publish
+            </h4>
+            <span id="tokenTypeBadge" class="status-badge" style="font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; background: rgba(236,72,153,0.15); color: #f472b6; border: 1px solid rgba(236,72,153,0.3);">
+              Lifetime Guard Active
+            </span>
+          </div>
           <p class="text-muted" style="font-size: 0.8rem; line-height: 1.4; margin-bottom: 0.85rem;">
-            Directly auto-publish Reels to your Instagram account via Meta Developer Graph API without opening a browser:
+            Directly auto-publish Reels to Instagram. Pre-flight check validates tokens before every upload and auto-refreshes seamlessly:
           </p>
+
+          <!-- Live Token Health & Auto-Refresh Card -->
+          <div id="metaTokenStatusCard" style="background: rgba(236, 72, 153, 0.08); border: 1px solid rgba(236, 72, 153, 0.25); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+            <div>
+              <div style="font-size: 0.82rem; font-weight: 700; color: #f472b6; display: flex; align-items: center; gap: 0.4rem;">
+                <span id="tokenStatusDot" style="width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; display: inline-block;"></span>
+                <span id="metaTokenStatusTitle">Checking Token Status...</span>
+              </div>
+              <div id="metaTokenExpiryText" style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.2rem;">Checking expiration & lifetime status...</div>
+            </div>
+            <button id="btnUpgradePermanentToken" type="button" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.4rem 0.75rem; white-space: nowrap; background: linear-gradient(135deg, #ec4899, #8b5cf6); border: none;">
+              <i class="fa-solid fa-bolt"></i> Auto-Refresh / Make Permanent
+            </button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="metaAppIdInput">Meta App ID (For Never-Expire Auto-Refresh):</label>
+              <input type="text" id="metaAppIdInput" placeholder="e.g. 158392019..." class="custom-input">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="metaAppSecretInput">Meta App Secret:</label>
+              <input type="password" id="metaAppSecretInput" placeholder="e.g. 8f3a9b21c..." class="custom-input">
+            </div>
+          </div>
+
           <div class="form-group" style="margin-bottom: 0.75rem;">
             <label for="metaIgUserIdInput">Instagram Account / User ID:</label>
             <input type="text" id="metaIgUserIdInput" placeholder="e.g. 17841400000000000" class="custom-input">
           </div>
-          <div class="form-group">
-            <label for="metaIgTokenInput">Meta Graph Access Token:</label>
+          <div class="form-group" style="margin-bottom: 0.4rem;">
+            <label for="metaIgTokenInput">Meta Graph Access Token (User or Page):</label>
             <input type="password" id="metaIgTokenInput" placeholder="EAABwzLIXnz..." class="custom-input">
+          </div>
+          <div style="font-size: 0.73rem; color: #94a3b8; line-height: 1.4;">
+            💡 <b>Permanent Token Rule:</b> With App ID & Secret saved, the system automatically converts your token into a permanent Page token that never expires and auto-refreshes before any reel upload!
           </div>
         </div>
 

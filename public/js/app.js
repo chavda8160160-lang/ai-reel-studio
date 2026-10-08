@@ -62,57 +62,196 @@ function showToast(message, isError = false) {
   }, 4000);
 }
 
-// API Key Management
+// API Key & Meta Credentials Management
 function getSavedApiKey() {
   return localStorage.getItem('GEMINI_API_KEY') || '';
+}
+
+// Live Meta Token Health Checker
+async function checkLiveTokenHealth() {
+  const tokenDot = document.getElementById('tokenStatusDot');
+  const tokenTitle = document.getElementById('metaTokenStatusTitle');
+  const tokenExpiry = document.getElementById('metaTokenExpiryText');
+  const tokenBadge = document.getElementById('tokenTypeBadge');
+  const metaIgTokenInput = document.getElementById('metaIgTokenInput');
+  const metaAppIdInput = document.getElementById('metaAppIdInput');
+  const metaIgUserIdInput = document.getElementById('metaIgUserIdInput');
+
+  if (!tokenDot || !tokenTitle) return;
+
+  const currentToken = metaIgTokenInput?.value.trim() || localStorage.getItem('META_IG_TOKEN') || '';
+
+  try {
+    const res = await fetch(`/api/meta/token-status?token=${encodeURIComponent(currentToken)}`);
+    const data = await res.json();
+
+    if (data.success && data.active) {
+      tokenDot.style.background = '#10b981'; // Green
+      tokenDot.style.boxShadow = '0 0 8px #10b981';
+
+      if (data.isNeverExpiring) {
+        tokenTitle.textContent = `Lifetime Never-Expiring Token Active ✓ (${data.name || 'Account'})`;
+        tokenTitle.style.color = '#10b981';
+        tokenExpiry.textContent = 'Expires: NEVER (Permanent Page Token). Zero expiration, 100% hands-free!';
+        if (tokenBadge) {
+          tokenBadge.textContent = 'Lifetime Token ✓';
+          tokenBadge.style.color = '#34d399';
+          tokenBadge.style.borderColor = 'rgba(52,211,153,0.4)';
+          tokenBadge.style.background = 'rgba(16,185,129,0.15)';
+        }
+      } else {
+        tokenTitle.textContent = `Token Active ✓ (${data.name || 'Connected'})`;
+        tokenTitle.style.color = '#38bdf8';
+        tokenExpiry.textContent = `Valid Session. Expiry: ${data.expiresAt}. Pre-flight auto-refresh active.`;
+        if (tokenBadge) {
+          tokenBadge.textContent = 'Auto-Refresh Guard Active';
+          tokenBadge.style.color = '#38bdf8';
+          tokenBadge.style.borderColor = 'rgba(56,189,248,0.4)';
+          tokenBadge.style.background = 'rgba(56,189,248,0.15)';
+        }
+      }
+
+      if (data.metaAppId && metaAppIdInput && !metaAppIdInput.value) {
+        metaAppIdInput.value = data.metaAppId;
+      }
+      if (data.userId && metaIgUserIdInput && !metaIgUserIdInput.value) {
+        metaIgUserIdInput.value = data.userId;
+      }
+    } else {
+      tokenDot.style.background = '#ef4444'; // Red
+      tokenDot.style.boxShadow = '0 0 8px #ef4444';
+      tokenTitle.textContent = 'Token Inactive / Expired ⚠️';
+      tokenTitle.style.color = '#ef4444';
+      tokenExpiry.textContent = data.error || 'Token expired. Click "Auto-Refresh / Make Permanent" or paste new token.';
+      if (tokenBadge) {
+        tokenBadge.textContent = 'Needs Refresh ⚠️';
+        tokenBadge.style.color = '#f87171';
+        tokenBadge.style.borderColor = 'rgba(248,113,113,0.4)';
+        tokenBadge.style.background = 'rgba(239,68,68,0.15)';
+      }
+    }
+  } catch (err) {
+    if (tokenTitle) tokenTitle.textContent = 'Status check offline';
+  }
 }
 
 async function loadApiKeyStatus() {
   const localKey = getSavedApiKey();
   const metaIgUserIdInput = document.getElementById('metaIgUserIdInput');
   const metaIgTokenInput = document.getElementById('metaIgTokenInput');
+  const metaAppIdInput = document.getElementById('metaAppIdInput');
+  const metaAppSecretInput = document.getElementById('metaAppSecretInput');
   const youtubeTokenInput = document.getElementById('youtubeTokenInput');
 
   if (metaIgUserIdInput) metaIgUserIdInput.value = localStorage.getItem('META_IG_USER_ID') || '';
   if (metaIgTokenInput) metaIgTokenInput.value = localStorage.getItem('META_IG_TOKEN') || '';
+  if (metaAppIdInput) metaAppIdInput.value = localStorage.getItem('META_APP_ID') || '';
+  if (metaAppSecretInput) metaAppSecretInput.value = localStorage.getItem('META_APP_SECRET') || '';
   if (youtubeTokenInput) youtubeTokenInput.value = localStorage.getItem('YOUTUBE_ACCESS_TOKEN') || '';
 
   if (localKey) {
     apiKeyStatusLabel.textContent = 'API Key Active ✓';
     apiKeyStatusLabel.style.color = 'var(--accent-emerald)';
     apiKeyInput.value = localKey;
-    return;
+  } else {
+    // Check if server .env has key
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      if (data.hasEnvKey) {
+        apiKeyStatusLabel.textContent = 'API Key Active ✓';
+        apiKeyStatusLabel.style.color = 'var(--accent-emerald)';
+      } else {
+        apiKeyStatusLabel.textContent = 'API Key Required ⚠️';
+        apiKeyStatusLabel.style.color = 'var(--accent-rose)';
+      }
+    } catch (_) {
+      apiKeyStatusLabel.textContent = 'API Key Required ⚠️';
+      apiKeyStatusLabel.style.color = 'var(--accent-rose)';
+    }
   }
 
-  // Check if server .env has key
-  try {
-    const res = await fetch('/api/status');
-    const data = await res.json();
-    if (data.hasEnvKey) {
-      apiKeyStatusLabel.textContent = 'API Key Active ✓';
-      apiKeyStatusLabel.style.color = 'var(--accent-emerald)';
-      return;
-    }
-  } catch (_) {}
-
-  apiKeyStatusLabel.textContent = 'API Key Required ⚠️';
-  apiKeyStatusLabel.style.color = 'var(--accent-rose)';
+  // Check token health on load
+  checkLiveTokenHealth();
 }
 
 btnSettings.addEventListener('click', () => {
   apiKeyInput.value = getSavedApiKey();
   const metaIgUserIdInput = document.getElementById('metaIgUserIdInput');
   const metaIgTokenInput = document.getElementById('metaIgTokenInput');
+  const metaAppIdInput = document.getElementById('metaAppIdInput');
+  const metaAppSecretInput = document.getElementById('metaAppSecretInput');
   const youtubeTokenInput = document.getElementById('youtubeTokenInput');
+
   if (metaIgUserIdInput) metaIgUserIdInput.value = localStorage.getItem('META_IG_USER_ID') || '';
   if (metaIgTokenInput) metaIgTokenInput.value = localStorage.getItem('META_IG_TOKEN') || '';
+  if (metaAppIdInput) metaAppIdInput.value = localStorage.getItem('META_APP_ID') || '';
+  if (metaAppSecretInput) metaAppSecretInput.value = localStorage.getItem('META_APP_SECRET') || '';
   if (youtubeTokenInput) youtubeTokenInput.value = localStorage.getItem('YOUTUBE_ACCESS_TOKEN') || '';
+
   settingsModal.classList.remove('hidden');
+  checkLiveTokenHealth();
 });
 
 btnCloseModal.addEventListener('click', () => {
   settingsModal.classList.add('hidden');
 });
+
+// One-Click Convert to Never-Expiring Token / Auto-Refresh Handler
+const btnUpgradePermanentToken = document.getElementById('btnUpgradePermanentToken');
+if (btnUpgradePermanentToken) {
+  btnUpgradePermanentToken.addEventListener('click', async () => {
+    const metaIgTokenInput = document.getElementById('metaIgTokenInput');
+    const metaAppIdInput = document.getElementById('metaAppIdInput');
+    const metaAppSecretInput = document.getElementById('metaAppSecretInput');
+    const metaIgUserIdInput = document.getElementById('metaIgUserIdInput');
+
+    const token = metaIgTokenInput?.value.trim() || localStorage.getItem('META_IG_TOKEN') || '';
+    const appId = metaAppIdInput?.value.trim() || localStorage.getItem('META_APP_ID') || '';
+    const appSecret = metaAppSecretInput?.value.trim() || localStorage.getItem('META_APP_SECRET') || '';
+
+    if (!token) {
+      showToast('⚠️ Please enter an Access Token first to refresh/upgrade.', 'error');
+      return;
+    }
+
+    const origHtml = btnUpgradePermanentToken.innerHTML;
+    btnUpgradePermanentToken.disabled = true;
+    btnUpgradePermanentToken.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Refreshing...';
+
+    try {
+      const res = await fetch('/api/meta/auto-refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, appId, appSecret })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.token) {
+          metaIgTokenInput.value = data.token;
+          localStorage.setItem('META_IG_TOKEN', data.token);
+        }
+        if (data.userId) {
+          metaIgUserIdInput.value = data.userId;
+          localStorage.setItem('META_IG_USER_ID', data.userId);
+        }
+        if (appId) localStorage.setItem('META_APP_ID', appId);
+        if (appSecret) localStorage.setItem('META_APP_SECRET', appSecret);
+
+        showToast(data.message || 'Token upgraded successfully! 🎉', 'success');
+        await checkLiveTokenHealth();
+      } else {
+        showToast(`❌ Refresh failed: ${data.error}`, 'error');
+      }
+    } catch (err) {
+      showToast(`❌ Request error: ${err.message}`, 'error');
+    } finally {
+      btnUpgradePermanentToken.disabled = false;
+      btnUpgradePermanentToken.innerHTML = origHtml;
+    }
+  });
+}
 
 btnSaveApiKey.addEventListener('click', async () => {
   const val = apiKeyInput.value.trim();
@@ -124,6 +263,8 @@ btnSaveApiKey.addEventListener('click', async () => {
 
   const metaIgUser = document.getElementById('metaIgUserIdInput')?.value.trim();
   const metaIgTok = document.getElementById('metaIgTokenInput')?.value.trim();
+  const metaAppId = document.getElementById('metaAppIdInput')?.value.trim();
+  const metaAppSecret = document.getElementById('metaAppSecretInput')?.value.trim();
   const ytTok = document.getElementById('youtubeTokenInput')?.value.trim();
 
   if (metaIgUser) localStorage.setItem('META_IG_USER_ID', metaIgUser);
@@ -131,6 +272,12 @@ btnSaveApiKey.addEventListener('click', async () => {
 
   if (metaIgTok) localStorage.setItem('META_IG_TOKEN', metaIgTok);
   else localStorage.removeItem('META_IG_TOKEN');
+
+  if (metaAppId) localStorage.setItem('META_APP_ID', metaAppId);
+  else localStorage.removeItem('META_APP_ID');
+
+  if (metaAppSecret) localStorage.setItem('META_APP_SECRET', metaAppSecret);
+  else localStorage.removeItem('META_APP_SECRET');
 
   if (ytTok) localStorage.setItem('YOUTUBE_ACCESS_TOKEN', ytTok);
   else localStorage.removeItem('YOUTUBE_ACCESS_TOKEN');
@@ -143,7 +290,10 @@ btnSaveApiKey.addEventListener('click', async () => {
       body: JSON.stringify({
         geminiApiKey: val,
         metaIgUserId: metaIgUser,
-        metaIgToken: metaIgTok
+        metaIgToken: metaIgTok,
+        metaAppId: metaAppId,
+        metaAppSecret: metaAppSecret,
+        youtubeToken: ytTok
       })
     });
   } catch (err) {
@@ -151,7 +301,7 @@ btnSaveApiKey.addEventListener('click', async () => {
   }
 
   showToast('Settings saved successfully!');
-  loadApiKeyStatus();
+  await loadApiKeyStatus();
   settingsModal.classList.add('hidden');
 });
 
