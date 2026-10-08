@@ -351,7 +351,8 @@ function initCopyButtons() {
 }
 
 // Generate Full-Stack App
-btnGenerate.addEventListener('click', async () => {
+if (btnGenerate) {
+  btnGenerate.addEventListener('click', async () => {
   const prompt = promptInput.value.trim();
   if (!prompt) {
     showToast('Please enter your project requirements.', true);
@@ -401,7 +402,8 @@ btnGenerate.addEventListener('click', async () => {
     btnGenerate.disabled = false;
     generationLoader.classList.add('hidden');
   }
-});
+  });
+}
 
 // Render Generated Project to UI
 function renderProject(project) {
@@ -506,62 +508,66 @@ function renderGuide(project) {
 }
 
 // Save Project directly to PC Disk
-btnSaveToDisk.addEventListener('click', async () => {
-  if (!currentProject) return;
-  btnSaveToDisk.disabled = true;
-  btnSaveToDisk.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving to PC...';
+if (btnSaveToDisk) {
+  btnSaveToDisk.addEventListener('click', async () => {
+    if (!currentProject) return;
+    btnSaveToDisk.disabled = true;
+    btnSaveToDisk.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving to PC...';
 
-  try {
-    const res = await fetch('/api/save-project', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project: currentProject })
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      throw new Error(data.error || 'Failed to save project.');
+    try {
+      const res = await fetch('/api/save-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: currentProject })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save project.');
+      }
+      showToast(`✅ Project saved to PC:\n${data.savedPath}`);
+      alert(`Project has been saved to your PC at:\n\n${data.savedPath}`);
+    } catch (err) {
+      showToast(`Error: ${err.message}`, true);
+    } finally {
+      btnSaveToDisk.disabled = false;
+      btnSaveToDisk.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save to PC';
     }
-    showToast(`✅ Project saved to PC:\n${data.savedPath}`);
-    alert(`Project has been saved to your PC at:\n\n${data.savedPath}`);
-  } catch (err) {
-    showToast(`Error: ${err.message}`, true);
-  } finally {
-    btnSaveToDisk.disabled = false;
-    btnSaveToDisk.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save to PC';
-  }
-});
+  });
+}
 
 // Download ZIP
-btnDownloadZip.addEventListener('click', async () => {
-  if (!currentProject) return;
-  btnDownloadZip.disabled = true;
-  btnDownloadZip.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating ZIP...';
+if (btnDownloadZip) {
+  btnDownloadZip.addEventListener('click', async () => {
+    if (!currentProject) return;
+    btnDownloadZip.disabled = true;
+    btnDownloadZip.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating ZIP...';
 
-  try {
-    const res = await fetch('/api/download-zip', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project: currentProject })
-    });
-    if (!res.ok) throw new Error('Failed to download ZIP file.');
+    try {
+      const res = await fetch('/api/download-zip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: currentProject })
+      });
+      if (!res.ok) throw new Error('Failed to download ZIP file.');
 
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentProject.projectName || 'project'}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-    showToast('📦 ZIP file downloaded successfully!');
-  } catch (err) {
-    showToast(`Error: ${err.message}`, true);
-  } finally {
-    btnDownloadZip.disabled = false;
-    btnDownloadZip.innerHTML = '<i class="fa-solid fa-file-zipper"></i> Download ZIP';
-  }
-});
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentProject.projectName || 'project'}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('📦 ZIP file downloaded successfully!');
+    } catch (err) {
+      showToast(`Error: ${err.message}`, true);
+    } finally {
+      btnDownloadZip.disabled = false;
+      btnDownloadZip.innerHTML = '<i class="fa-solid fa-file-zipper"></i> Download ZIP';
+    }
+  });
+}
 
 // ==========================================
 // 🎬 MODE SWITCHER & VIDEO STUDIO IMPLEMENTATION
@@ -569,7 +575,6 @@ btnDownloadZip.addEventListener('click', async () => {
 
 function initModeSwitcher() {
   const navTabs = document.querySelectorAll('.mode-tab');
-  const appView = document.getElementById('appBuilderView');
   const videoView = document.getElementById('videoStudioView');
   const schedView = document.getElementById('schedulerView');
 
@@ -579,9 +584,8 @@ function initModeSwitcher() {
       tab.classList.add('active');
 
       const targetId = tab.getAttribute('data-target');
-      appView.classList.add('hidden');
-      videoView.classList.add('hidden');
-      schedView.classList.add('hidden');
+      if (videoView) videoView.classList.add('hidden');
+      if (schedView) schedView.classList.add('hidden');
 
       const targetEl = document.getElementById(targetId);
       if (targetEl) targetEl.classList.remove('hidden');
