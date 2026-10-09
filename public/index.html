@@ -294,6 +294,31 @@
                 <option value="none">🚫 No Subtitles (Clean Video)</option>
               </select>
             </div>
+
+            <!-- Feature #3: AI Background Music & Audio Mixer -->
+            <div class="tech-stack-row">
+              <label for="videoBgmSelect"><i class="fa-solid fa-music" style="color: #ec4899;"></i> Background Music (BGM)</label>
+              <div style="display: flex; gap: 0.45rem; align-items: center; width: 60%;">
+                <select id="videoBgmSelect" class="custom-select tech-select" style="flex: 1;">
+                  <option value="none" selected>🔇 No BGM (Keep Original Sound)</option>
+                  <option value="royal-heritage">👑 Royal Heritage (Sitar & Classical Ambient)</option>
+                  <option value="luxury-saree">✨ Luxury Saree (Acoustic Shimmer & Flute)</option>
+                  <option value="cinematic-ambient">🎬 Cinematic Ambient Glow (Inspirational)</option>
+                  <option value="lofi-aesthetic">☕ Lo-Fi Aesthetic (Warm Beats)</option>
+                </select>
+                <button type="button" id="btnPreviewBgm" class="btn btn-ghost" title="મ્યુઝિક સાંભળો (Play / Pause)" style="padding: 0.45rem 0.65rem; font-size: 0.8rem; border: 1px solid #334155;">
+                  <i class="fa-solid fa-play"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="tech-stack-row" id="bgmVolumeRow" style="display: none;">
+              <label for="bgmVolumeSlider"><i class="fa-solid fa-volume-high" style="color: #06b6d4;"></i> BGM Volume</label>
+              <div style="display: flex; align-items: center; gap: 0.8rem; width: 60%;">
+                <input type="range" id="bgmVolumeSlider" min="0.05" max="0.75" step="0.05" value="0.25" style="flex: 1; cursor: pointer;">
+                <span id="bgmVolumeLabel" style="font-size: 0.78rem; font-weight: 700; color: var(--accent-cyan); min-width: 38px;">25%</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -423,6 +448,7 @@
               <span class="pill"><i class="fa-solid fa-sliders"></i> <b id="pillTheme">Royal Glow</b></span>
               <span class="pill"><i class="fa-solid fa-clock"></i> <b id="pillDuration">30s</b></span>
               <span class="pill" id="pillSubtitles"><i class="fa-solid fa-closed-captioning"></i> <b id="lblPillSubtitles">Hormozi Subs</b></span>
+              <span class="pill hidden" id="pillBgm"><i class="fa-solid fa-music"></i> <b id="lblPillBgm">BGM Active</b></span>
               <span class="pill"><i class="fa-solid fa-mobile-screen"></i> <b>1080x1920</b></span>
               <span class="pill pill-sched hidden" id="pillScheduleTime"><i class="fa-solid fa-calendar-check"></i> <b id="lblPillScheduleTime">Scheduled</b></span>
             </div>

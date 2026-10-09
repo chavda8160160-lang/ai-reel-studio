@@ -1183,6 +1183,66 @@ function initVideoStudio() {
     showToast(`Video loaded: ${file.name}`);
   }
 
+  // Feature #3: Background Music (BGM) UI & Preview Controls
+  const videoBgmSelect = document.getElementById('videoBgmSelect');
+  const btnPreviewBgm = document.getElementById('btnPreviewBgm');
+  const bgmVolumeRow = document.getElementById('bgmVolumeRow');
+  const bgmVolumeSlider = document.getElementById('bgmVolumeSlider');
+  const bgmVolumeLabel = document.getElementById('bgmVolumeLabel');
+  let currentBgmAudio = null;
+
+  if (videoBgmSelect) {
+    videoBgmSelect.addEventListener('change', () => {
+      if (currentBgmAudio) {
+        currentBgmAudio.pause();
+        currentBgmAudio = null;
+        if (btnPreviewBgm) btnPreviewBgm.innerHTML = '<i class="fa-solid fa-play"></i>';
+      }
+      if (videoBgmSelect.value !== 'none') {
+        if (bgmVolumeRow) bgmVolumeRow.style.display = 'flex';
+      } else {
+        if (bgmVolumeRow) bgmVolumeRow.style.display = 'none';
+      }
+    });
+  }
+
+  if (bgmVolumeSlider && bgmVolumeLabel) {
+    bgmVolumeSlider.addEventListener('input', (e) => {
+      bgmVolumeLabel.textContent = `${Math.round(e.target.value * 100)}%`;
+      if (currentBgmAudio) {
+        currentBgmAudio.volume = parseFloat(e.target.value);
+      }
+    });
+  }
+
+  if (btnPreviewBgm && videoBgmSelect) {
+    btnPreviewBgm.addEventListener('click', () => {
+      const track = videoBgmSelect.value;
+      if (track === 'none') {
+        showToast('કૃપા કરીને પહેલા મ્યુઝિક ટ્રેક પસંદ કરો.');
+        return;
+      }
+      if (currentBgmAudio && !currentBgmAudio.paused) {
+        currentBgmAudio.pause();
+        btnPreviewBgm.innerHTML = '<i class="fa-solid fa-play"></i>';
+        return;
+      }
+      if (!currentBgmAudio || currentBgmAudio.dataset.track !== track) {
+        currentBgmAudio = new Audio(`/audio/bgm/${track}.mp3`);
+        currentBgmAudio.dataset.track = track;
+        currentBgmAudio.volume = bgmVolumeSlider ? parseFloat(bgmVolumeSlider.value) : 0.25;
+        currentBgmAudio.addEventListener('ended', () => {
+          btnPreviewBgm.innerHTML = '<i class="fa-solid fa-play"></i>';
+        });
+      }
+      currentBgmAudio.play().then(() => {
+        btnPreviewBgm.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      }).catch(err => {
+        console.warn('Audio preview error:', err);
+      });
+    });
+  }
+
   // Process Video with AI Auto-Editing & Effects
   btnProcessVideo.addEventListener('click', async () => {
     if (!selectedVideoFile) {
@@ -1206,6 +1266,14 @@ function initVideoStudio() {
     const videoSubtitlesSelect = document.getElementById('videoSubtitlesSelect');
     if (videoSubtitlesSelect) {
       formData.append('subtitlesStyle', videoSubtitlesSelect.value);
+    }
+
+    // Feature #3: Append BGM Settings
+    if (videoBgmSelect) {
+      formData.append('bgmTrack', videoBgmSelect.value);
+    }
+    if (bgmVolumeSlider) {
+      formData.append('bgmVolume', bgmVolumeSlider.value);
     }
 
     if (isScheduleModeActive && videoScheduleDateTime && videoScheduleDateTime.value) {
@@ -1255,6 +1323,23 @@ function initVideoStudio() {
           pillSubtitles.style.display = 'inline-flex';
         } else {
           pillSubtitles.style.display = 'none';
+        }
+      }
+
+      const pillBgm = document.getElementById('pillBgm');
+      const lblPillBgm = document.getElementById('lblPillBgm');
+      if (pillBgm && lblPillBgm) {
+        if (data.bgmEnabled) {
+          const bgmLabels = {
+            'royal-heritage': 'Royal Sitar BGM',
+            'luxury-saree': 'Luxury Flute BGM',
+            'cinematic-ambient': 'Ambient BGM',
+            'lofi-aesthetic': 'Lo-Fi BGM'
+          };
+          lblPillBgm.textContent = bgmLabels[data.bgmTrack] || 'BGM Active';
+          pillBgm.classList.remove('hidden');
+        } else {
+          pillBgm.classList.add('hidden');
         }
       }
 

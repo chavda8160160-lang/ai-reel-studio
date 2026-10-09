@@ -1413,30 +1413,93 @@ Respond ONLY with valid JSON:`;
       }
     }
 
-    // FFmpeg execution
-    await new Promise((resolve, reject) => {
-      ffmpeg(inputPath)
-        .setStartTime(0)
-        .duration(maxSec)
-        .videoFilters(vFilters)
-        .outputOptions([
-          '-c:v libx264',
-          '-preset fast',
-          '-crf 22',
-          '-pix_fmt yuv420p',
-          '-c:a aac',
-          '-b:a 192k',
-          '-movflags +faststart'
-        ])
-        .save(outputPath)
-        .on('end', () => {
-          console.log(`✅ 30-sec Reel render completed: ${outputFileName}`);
-          resolve();
-        })
-        .on('error', (err) => {
-          console.error('FFmpeg render error:', err);
-          reject(err);
+    // Feature #3: Background Music (BGM) Engine
+    const bgmTrack = req.body.bgmTrack || 'none';
+    const bgmVolume = Math.max(0.05, Math.min(1.0, parseFloat(req.body.bgmVolume) || 0.25));
+    const bgmFilePath = bgmTrack !== 'none' ? path.join(__dirname, 'public', 'audio', 'bgm', `${bgmTrack}.mp3`) : null;
+    const hasValidBgm = bgmFilePath && fs.existsSync(bgmFilePath);
+
+    let hasVideoAudio = false;
+    try {
+      await new Promise((resProbe) => {
+        ffmpeg.ffprobe(inputPath, (err, meta) => {
+          if (!err && meta.streams) {
+            hasVideoAudio = meta.streams.some(s => s.codec_type === 'audio');
+          }
+          resProbe();
         });
+      });
+    } catch (_) {}
+
+    // FFmpeg execution with optional BGM Audio Mixing
+    await new Promise((resolve, reject) => {
+      if (hasValidBgm) {
+        console.log(`🎵 [BGM Audio Mixer] Mixing "${bgmTrack}" at volume ${Math.round(bgmVolume * 100)}% (Video Audio: ${hasVideoAudio ? 'Yes' : 'None'})`);
+        const complexFilters = [
+          `[0:v]${vFilters.join(',')}[vout]`
+        ];
+
+        if (hasVideoAudio) {
+          complexFilters.push(
+            `[0:a]volume=1.0[voice]`,
+            `[1:a]volume=${bgmVolume},afade=t=in:st=0:d=1.5,afade=t=out:st=${Math.max(1, maxSec - 2.5)}:d=2.5[bgm_mix]`,
+            `[voice][bgm_mix]amix=inputs=2:duration=first:dropout_transition=2[aout]`
+          );
+        } else {
+          complexFilters.push(
+            `[1:a]volume=${bgmVolume},afade=t=in:st=0:d=1.5,afade=t=out:st=${Math.max(1, maxSec - 2.5)}:d=2.5[aout]`
+          );
+        }
+
+        ffmpeg(inputPath)
+          .setStartTime(0)
+          .duration(maxSec)
+          .input(bgmFilePath)
+          .complexFilter(complexFilters)
+          .outputOptions([
+            '-map [vout]',
+            '-map [aout]',
+            '-c:v libx264',
+            '-preset fast',
+            '-crf 22',
+            '-pix_fmt yuv420p',
+            '-c:a aac',
+            '-b:a 192k',
+            '-movflags +faststart'
+          ])
+          .save(outputPath)
+          .on('end', () => {
+            console.log(`✅ 30-sec Reel render completed with BGM: ${outputFileName}`);
+            resolve();
+          })
+          .on('error', (err) => {
+            console.error('FFmpeg render error with BGM:', err);
+            reject(err);
+          });
+      } else {
+        ffmpeg(inputPath)
+          .setStartTime(0)
+          .duration(maxSec)
+          .videoFilters(vFilters)
+          .outputOptions([
+            '-c:v libx264',
+            '-preset fast',
+            '-crf 22',
+            '-pix_fmt yuv420p',
+            '-c:a aac',
+            '-b:a 192k',
+            '-movflags +faststart'
+          ])
+          .save(outputPath)
+          .on('end', () => {
+            console.log(`✅ 30-sec Reel render completed: ${outputFileName}`);
+            resolve();
+          })
+          .on('error', (err) => {
+            console.error('FFmpeg render error:', err);
+            reject(err);
+          });
+      }
     });
 
     // Cleanup raw uploaded video and temporary subtitle file after render
@@ -1510,6 +1573,8 @@ Respond ONLY with valid JSON:`;
       thumbnailUrl: `/rendered-reels/${thumbFileName}`,
       subtitlesEnabled: subtitlesStyle !== 'none',
       subtitlesStyle,
+      bgmEnabled: hasValidBgm,
+      bgmTrack,
       fileName: outputFileName,
       duration: `${maxSec} સેકન્ડ`,
       aspectRatio: '9:16 (1080x1920) - Instagram Reels / YouTube Shorts',
