@@ -474,18 +474,18 @@ async function generateViralThumbnail({
   hookBadge,
   bottomText,
   positionMode = 'title-only', // 'title-only' (1 classic title), 'both', 'top', 'bottom', 'center', 'none' (clean frame)
-  fontStyle = 'classic',       // 'classic' (Georgia Luxury Serif), 'modern' (Segoe UI), 'bold' (Arial Hormozi)
-  colorStyle = 'gold',         // 'gold' (Royal Gold), 'white' (Pure White), 'rose-gold', 'yellow', 'cyan'
-  timestamp = 1.5
+  fontStyle = 'classic',       // 'classic' (Constantia / Georgia Luxury Serif), 'modern' (Segoe UI), 'bold' (Arial Hormozi)
+  colorStyle = 'gold',         // 'gold' (Royal Champagne Gold), 'white' (Silk Ivory), 'rose-gold', 'yellow', 'cyan'
+  timestamp = 6.0
 }) {
-  const safeTime = Math.max(0.1, Number(timestamp) || 1.5);
+  const safeTime = Math.max(0.1, Number(timestamp) || 6.0);
 
   // If user selected 'none' or all text inputs are empty, render a pristine clean 9:16 frame!
   const hasHeadline = headlineText && String(headlineText).trim().length > 0;
   const hasBottom = (bottomText !== undefined ? bottomText : hookBadge) && String(bottomText || hookBadge).trim().length > 0;
   
   if (positionMode === 'none' || (!hasHeadline && !hasBottom)) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       ffmpeg()
         .input(videoPath)
         .inputOptions([`-ss ${safeTime}`])
@@ -507,69 +507,82 @@ async function generateViralThumbnail({
     });
   }
 
-  // Color mappings for ASS subtitle format (&HAABBGGRR&)
-  let primaryCol = '&H0075D4FF&'; // Default Royal Champagne Gold
-  let accentCol = '&H00FFFFFF&';  // Classic White
+  // Luxury Color mappings for ASS subtitle format (&HAABBGGRR&)
+  let primaryCol = '&H0070C8E5&'; // Royal Champagne Gold (Soft antique gold)
+  let accentCol = '&H00F0F8FF&';  // Silk Ivory White
+  let outlineCol = '&H00101015&'; // Very soft dark stroke
+  let shadowCol = '&H60000000&';  // Translucent subtle shadow
 
   if (colorStyle === 'gold') {
-    primaryCol = '&H0075D4FF&'; // Luxury Champagne Gold
-    accentCol = '&H00E2F3FF&';
+    primaryCol = '&H0070C8E5&'; // Luxury Champagne Gold
+    accentCol = '&H00F0F8FF&';
   } else if (colorStyle === 'white') {
-    primaryCol = '&H00FFFFFF&'; // Pure Diamond White
-    accentCol = '&H00E2E8F0&';
+    primaryCol = '&H00F0F8FF&'; // Silk Ivory White
+    accentCol = '&H00D0E8F5&';
   } else if (colorStyle === 'rose-gold') {
-    primaryCol = '&H00B5B0FF&'; // Rose Gold
-    accentCol = '&H00FFFFFF&';
+    primaryCol = '&H00C5C0F5&'; // Soft Rose Gold
+    accentCol = '&H00F0F8FF&';
   } else if (colorStyle === 'yellow') {
-    primaryCol = '&H0000FFFF&'; // Hormozi Yellow
+    primaryCol = '&H0000FFFF&'; // Yellow
     accentCol = '&H00FFFFFF&';
   } else if (colorStyle === 'cyan') {
-    primaryCol = '&H00FFFF00&';
+    primaryCol = '&H00FFFF00&'; // Cyan
     accentCol = '&H00FFFFFF&';
   }
 
-  // Font family and letter spacing
-  let fontName = 'Georgia';
-  let fontSpacing = 3; // Classic luxury wide letter-spacing
-  let isBold = -1;
-  let outlineSize = 5;
-  let shadowSize = 3;
+  // Font family, letter spacing and refined weights
+  let fontName = 'Constantia';
+  let fontSpacing = 5; // Luxury tracked capitals
+  let isBold = 0;      // Regular weight (High-fashion editorial, NEVER bulky bold!)
+  let outlineSize = 2; // Delicate fine stroke
+  let shadowSize = 2;  // Soft shadow
+  let headlineFontSize = 58; // Refined luxury headline size
+  let hookFontSize = 34;
 
   if (fontStyle === 'classic') {
-    fontName = 'Georgia'; // Luxury Royal Serif
-    fontSpacing = 3;
-    isBold = -1;
-    outlineSize = 5;
-    shadowSize = 3;
+    fontName = 'Constantia'; // Ultra-luxurious editorial book serif (falls back to Georgia)
+    fontSpacing = 5;
+    isBold = 0;              // Regular weight for pure classic elegance
+    outlineSize = 2;
+    shadowSize = 2;
+    headlineFontSize = 58;
+    hookFontSize = 34;
   } else if (fontStyle === 'modern') {
     fontName = 'Segoe UI';
-    fontSpacing = 2;
-    isBold = -1;
-    outlineSize = 6;
-    shadowSize = 3;
+    fontSpacing = 3;
+    isBold = 0;
+    outlineSize = 2;
+    shadowSize = 2;
+    headlineFontSize = 62;
+    hookFontSize = 36;
   } else if (fontStyle === 'bold') {
     fontName = 'Arial';
     fontSpacing = 0;
     isBold = -1;
-    outlineSize = 8;
-    shadowSize = 4;
+    outlineSize = 6;
+    shadowSize = 3;
+    headlineFontSize = 72;
+    hookFontSize = 46;
   }
 
-  // Clean Headline (Strip hashtags and colons)
+  // Clean Headline (Strip hashtags, colons, and tacky emojis!)
   let formattedHeadline = '';
   if (hasHeadline) {
     const clean = String(headlineText)
       .replace(/#\w+/g, '') // remove #Shorts, #Patola, etc.
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}★✦✧✨🔥⚡👑🧵😱❌💡]/gu, '') // Strip emojis
       .replace(/[:]/g, '')
       .replace(/\s+/g, ' ')
       .trim()
       .replace(/[{}]/g, '')
       .toUpperCase();
+
+    // Word wrap cleanly (max 2 lines, elegant balance)
     const words = clean.split(/\s+/).filter(Boolean);
     const lines = [];
     let curLine = '';
     for (const w of words) {
-      if ((curLine + ' ' + w).trim().length > 20) {
+      if ((curLine + ' ' + w).trim().length > 22) {
         if (curLine) lines.push(curLine.trim());
         curLine = w;
       } else {
@@ -580,25 +593,27 @@ async function generateViralThumbnail({
     formattedHeadline = lines.slice(0, 2).join('\\N');
   }
 
-  // Clean Hook / Bottom text (only if not 'title-only' and text is provided)
+  // Clean Hook / Bottom text (ONLY if user explicitly requested 'both' and not 'title-only')
   let formattedHook = '';
-  if (positionMode !== 'title-only') {
+  if (positionMode === 'both') {
     const rawHook = bottomText !== undefined ? bottomText : hookBadge;
     if (rawHook && String(rawHook).trim()) {
       const cleanHook = String(rawHook)
         .replace(/#\w+/g, '')
+        .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}★✦✧✨🔥⚡👑🧵😱❌💡]/gu, '')
         .replace(/[:]/g, '')
         .replace(/[{}]/g, '')
         .trim()
         .toUpperCase();
 
-      // DEDUPLICATION: If hook contains similar words as headline, do NOT duplicate it!
+      // DEDUPLICATION: Suppress hook if it shares identical or subset words with headline!
       const normHead = formattedHeadline.replace(/[^A-Z]/g, '');
       const normHook = cleanHook.replace(/[^A-Z]/g, '');
       const isDuplicate = normHead && normHook && (normHead.includes(normHook) || normHook.includes(normHead));
 
       if (cleanHook && !isDuplicate) {
-        formattedHook = cleanHook.startsWith('★') || cleanHook.startsWith('◆') ? cleanHook : `◆ ${cleanHook} ◆`;
+        // High-fashion clean divider instead of tacky stars
+        formattedHook = `— ${cleanHook} —`;
       }
     }
   }
@@ -608,47 +623,36 @@ async function generateViralThumbnail({
   const sEnd = '0:05:00.00';
 
   let headlineAlign = 8;
-  let headlineMarginV = 180;
-  let headlineFontSize = 74;
+  let headlineMarginV = 130;
   let hookAlign = 2;
-  let hookMarginV = 200;
-  let hookFontSize = 50;
+  let hookMarginV = 160;
   let events = '';
 
   if (positionMode === 'top') {
     headlineAlign = 8;
-    headlineMarginV = 220;
-    headlineFontSize = 72;
+    headlineMarginV = 130;
     hookAlign = 8;
-    hookMarginV = 120;
-    hookFontSize = 46;
+    hookMarginV = 75;
   } else if (positionMode === 'bottom') {
     headlineAlign = 2;
-    headlineMarginV = 220;
-    headlineFontSize = 72;
+    headlineMarginV = 160;
     hookAlign = 2;
-    hookMarginV = 130;
-    hookFontSize = 46;
+    hookMarginV = 100;
   } else if (positionMode === 'center') {
     headlineAlign = 5;
     headlineMarginV = 0;
-    headlineFontSize = 78;
-    hookAlign = 8;
-    hookMarginV = 200;
+    headlineFontSize = 66;
   } else if (positionMode === 'title-only') {
-    // Only 1 classic title at the top space, middle and bottom are 100% free!
+    // Only 1 classic title at the top, bottom is 100% untouched!
     headlineAlign = 8;
-    headlineMarginV = 180;
-    headlineFontSize = 76;
-    formattedHook = ''; // Ensure no duplicate bottom text!
+    headlineMarginV = 130;
+    formattedHook = ''; // Zero bottom text
   } else {
-    // 'both' (Top title + Bottom badge if provided)
+    // 'both'
     headlineAlign = 8;
-    headlineMarginV = 180;
-    headlineFontSize = 74;
+    headlineMarginV = 130;
     hookAlign = 2;
-    hookMarginV = 200;
-    hookFontSize = 50;
+    hookMarginV = 160;
   }
 
   if (formattedHeadline) {
@@ -669,8 +673,8 @@ PlayResY: 1920
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: ThumbHeadline,${fontName},${headlineFontSize},${primaryCol},&H00000000,&H00000000,&H80000000,${isBold},0,0,0,100,100,${fontSpacing},0,1,${outlineSize},${shadowSize},${headlineAlign},60,60,${headlineMarginV},1
-Style: ThumbHook,${fontName},${hookFontSize},${accentCol},&H00000000,&H00000000,&H80000000,0,0,0,0,100,100,${fontSpacing + 1},0,1,${outlineSize - 1},${shadowSize - 1},${hookAlign},60,60,${hookMarginV},1
+Style: ThumbHeadline,${fontName},${headlineFontSize},${primaryCol},&H00000000,${outlineCol},${shadowCol},${isBold},0,0,0,100,100,${fontSpacing},0,1,${outlineSize},${shadowSize},${headlineAlign},60,60,${headlineMarginV},1
+Style: ThumbHook,${fontName},${hookFontSize},${accentCol},&H00000000,${outlineCol},${shadowCol},0,0,0,0,100,100,${fontSpacing + 1},0,1,${outlineSize},${shadowSize},${hookAlign},60,60,${hookMarginV},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -1441,18 +1445,20 @@ Respond ONLY with valid JSON:`;
       try { await fsp.unlink(assFilePath); } catch (_) {}
     }
 
-    // Feature #4: Generate AI Smart Viral 9:16 Cover Thumbnail with Bold Headline & Hook Badge
+    // Feature #4: Generate AI Smart Viral 9:16 Cover Thumbnail (Classic & Clean Default)
     const thumbFileName = outputFileName.replace('.mp4', '-cover.jpg');
     const thumbOutputPath = path.join(REELS_DIR, thumbFileName);
     try {
       await generateViralThumbnail({
         videoPath: outputPath,
         outputPath: thumbOutputPath,
-        headlineText: aiDirectorRecipe.viralTitle || 'MUST WATCH 🔥',
-        hookBadge: aiDirectorRecipe.hookOverlay || '★ 100% PURE HANDLOOM SILK ★',
-        positionMode: 'both',
-        colorStyle: 'yellow',
-        timestamp: 1.5
+        headlineText: aiDirectorRecipe.viralTitle || 'THE ART OF PATOLA',
+        hookBadge: '',
+        bottomText: '',
+        positionMode: 'none', // Default to Clean Frame! Prevents duplicate text / title clashes!
+        fontStyle: 'classic',
+        colorStyle: 'gold',
+        timestamp: 6.5        // Extract vibrant saree frame instead of 1.5s intro card
       });
       console.log(`🖼️ [Cover Photo] AI Viral Cover photo generated: ${thumbFileName}`);
     } catch (thumbErr) {
@@ -1542,13 +1548,13 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
     const result = await generateViralThumbnail({
       videoPath,
       outputPath,
-      headlineText: headlineText !== undefined ? headlineText : 'THE ART OF PATOLA ✨',
+      headlineText: headlineText !== undefined ? headlineText : 'THE ART OF PATOLA',
       hookBadge: hookBadge !== undefined ? hookBadge : '',
       bottomText: bottomText !== undefined ? bottomText : '',
       positionMode: positionMode || 'title-only',
       fontStyle: fontStyle || 'classic',
       colorStyle: colorStyle || 'gold',
-      timestamp: parseFloat(timestamp) || 1.5
+      timestamp: parseFloat(timestamp) || 6.5
     });
 
     if (!result.success) {
@@ -1559,7 +1565,7 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
       success: true,
       thumbnailUrl: `/rendered-reels/${thumbFileName}?t=${Date.now()}`,
       fileName: thumbFileName,
-      timestamp: parseFloat(timestamp) || 1.5,
+      timestamp: parseFloat(timestamp) || 6.5,
       headlineText,
       hookBadge,
       bottomText,

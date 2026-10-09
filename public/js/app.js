@@ -1313,16 +1313,17 @@ function initVideoStudio() {
           thumbQuickBar.classList.remove('hidden');
         }
 
-        // Cache thumbnail studio state
+        // Cache thumbnail studio state (Clean Frame default to eliminate duplicate names & clutter)
         window.activeReelThumbnail = {
           fileName: data.fileName,
           thumbnailUrl: data.thumbnailUrl,
-          headlineText: cleanHeadline || 'THE ART OF PATOLA ✨',
-          hookBadge: data.recipe?.hookOverlay || '★ 100% PURE HANDLOOM SILK ★',
-          bottomText: '★ 100% PURE HANDLOOM SILK ★',
-          positionMode: 'both',
-          colorStyle: 'yellow',
-          timestamp: 1.5
+          headlineText: cleanHeadline || 'THE ART OF PATOLA',
+          hookBadge: '',
+          bottomText: '',
+          positionMode: 'none',
+          fontStyle: 'classic',
+          colorStyle: 'gold',
+          timestamp: 6.5
         };
       }
 
@@ -2017,8 +2018,13 @@ function initThumbnailStudio() {
 
   function openStudio() {
     const state = window.activeReelThumbnail || {};
-    let headline = state.headlineText || 'THE ART OF PATOLA ✨';
-    let hook = state.hookBadge || state.bottomText || '';
+    let headline = (state.headlineText || 'THE ART OF PATOLA')
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}★✦✧✨🔥⚡👑🧵😱❌💡]/gu, '')
+      .replace(/#\w+/g, '')
+      .trim();
+    let hook = (state.hookBadge || state.bottomText || '')
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}★✦✧✨🔥⚡👑🧵😱❌💡]/gu, '')
+      .trim();
 
     // DEDUPLICATION: If bottom hook is duplicate of headline or contains same words, leave it empty!
     const nHead = headline.replace(/[^A-Z]/gi, '').toLowerCase();
@@ -2030,12 +2036,13 @@ function initThumbnailStudio() {
     if (headlineInput) headlineInput.value = headline;
     if (hookBadgeInput) hookBadgeInput.value = hook;
 
+    const defaultTime = state.timestamp || 6.5;
     if (timeSlider) {
-      timeSlider.value = state.timestamp || 1.5;
-      if (timeDisplay) timeDisplay.textContent = `${state.timestamp || 1.5}s`;
+      timeSlider.value = defaultTime;
+      if (timeDisplay) timeDisplay.textContent = `${defaultTime}s`;
     }
 
-    selectedPosition = state.positionMode || 'title-only';
+    selectedPosition = state.positionMode || 'none';
     posBtns.forEach(b => {
       if (b.dataset.pos === selectedPosition) b.classList.add('active');
       else b.classList.remove('active');
@@ -2104,7 +2111,7 @@ function initThumbnailStudio() {
 
       const headlineText = headlineInput ? headlineInput.value.trim() : '';
       const hookBadge = hookBadgeInput ? hookBadgeInput.value.trim() : '';
-      const timestamp = timeSlider ? parseFloat(timeSlider.value) : 1.5;
+      const timestamp = timeSlider ? parseFloat(timeSlider.value) : 6.5;
 
       try {
         if (loadingOverlay) loadingOverlay.classList.remove('hidden');
