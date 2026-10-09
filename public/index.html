@@ -6,9 +6,9 @@
   <title>ForgeAI - Full-Stack App & AI Video Reels Automation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400;1,600&family=Noto+Sans+Gujarati:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=classic-en-2">
+  <link rel="stylesheet" href="css/style.css?v=classic-smooth-v5">
 </head>
 <body>
   <!-- Background Glow & Grid -->
@@ -45,14 +45,14 @@
         </button>
       </nav>
 
-      <div class="header-actions" style="display: flex; gap: 0.6rem; align-items: center;">
-        <button id="btnHeaderWhatsAppToggle" class="btn btn-ghost" style="border: 1px solid rgba(34,197,94,0.3); color: #16a34a; background: rgba(34,197,94,0.08); font-size: 0.82rem; padding: 0.42rem 0.85rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.4rem;" title="WhatsApp Alerts ON / OFF Toggle">
-          <i class="fa-brands fa-whatsapp" style="font-size: 1.1rem; color: #22c55e;"></i>
-          <span id="headerWhatsAppStatusLabel">WhatsApp: ON ✓</span>
+      <div class="header-actions" style="display: flex; gap: 0.65rem; align-items: center;">
+        <button id="btnHeaderWhatsAppToggle" class="btn btn-ghost" style="border: 1px solid rgba(46,125,90,0.3); color: #2e7d5a; background: rgba(46,125,90,0.06); font-size: 0.82rem; padding: 0.45rem 0.95rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.45rem;" title="WhatsApp Alerts ON / OFF Toggle">
+          <i class="fa-brands fa-whatsapp" style="font-size: 1.05rem; color: #2e7d5a;"></i>
+          <span id="headerWhatsAppStatusLabel" style="font-weight: 600;">WhatsApp: ON ✓</span>
         </button>
-        <button id="btnSettings" class="btn btn-ghost" title="API Key Settings">
-          <i class="fa-solid fa-key"></i>
-          <span id="apiKeyStatusLabel">API Key</span>
+        <button id="btnSettings" class="btn btn-ghost" style="border: 1px solid rgba(197,168,128,0.45); color: #201d1a; background: #ffffff; font-size: 0.82rem; padding: 0.45rem 0.95rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.45rem;" title="API Key Settings">
+          <i class="fa-solid fa-key" style="color: #b89758;"></i>
+          <span id="apiKeyStatusLabel" style="font-weight: 600;">API Key Active ✓</span>
         </button>
       </div>
     </header>
@@ -525,8 +525,8 @@
 
             <!-- Direct Social Upload Buttons -->
             <div class="social-publish-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button id="btnPublishBoth" class="btn" style="flex: 1 1 100%; background: linear-gradient(135deg, #ec4899, #ef4444); color: white; font-weight: 700; padding: 0.75rem 1rem; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.6rem; box-shadow: 0 4px 14px rgba(236,72,153,0.35);" disabled>
-                <i class="fa-solid fa-bolt"></i>
+              <button id="btnPublishBoth" class="btn" style="flex: 1 1 100%; background: linear-gradient(135deg, #1c1917, #2c2724); color: #f7eedb; border: 1px solid rgba(197, 168, 128, 0.45); font-weight: 700; padding: 0.8rem 1rem; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.6rem; box-shadow: 0 4px 14px rgba(28, 25, 23, 0.18);" disabled>
+                <i class="fa-solid fa-bolt" style="color: #e5c870;"></i>
                 <span>🚀 1-Click Publish to BOTH (Instagram Reels + YouTube Shorts)</span>
               </button>
               <button id="btnPublishInstagram" class="btn btn-instagram" style="flex: 1;" disabled>
@@ -677,35 +677,35 @@
     </main>
 
     <!-- VIEW 4: Live Social Analytics & Views Tracker -->
-    <main class="main-container hidden" id="analyticsView" style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 1280px; margin: 0 auto; width: 100%;">
+    <main class="main-container hidden" id="analyticsView" style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 1400px; margin: 0 auto; width: 100%;">
       
       <!-- Top Profile & Live Status Header -->
-      <section class="glass-card" style="padding: 1.25rem 1.6rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-radius: 16px;">
-        <div style="display: flex; align-items: center; gap: 1rem;">
+      <section class="analytics-header-card">
+        <div style="display: flex; align-items: center; gap: 1.2rem;">
           <div style="position: relative;">
-            <img id="analyticsProfilePic" src="https://ui-avatars.com/api/?name=Reel+Creator&background=4f46e5&color=fff" alt="Profile" style="width: 58px; height: 58px; border-radius: 50%; object-fit: cover; border: 3px solid #6366f1; box-shadow: 0 4px 12px rgba(99,102,241,0.25);">
-            <span style="position: absolute; bottom: 0; right: 0; width: 14px; height: 14px; background: #22c55e; border: 2px solid #fff; border-radius: 50%;"></span>
+            <img id="analyticsProfilePic" class="analytics-profile-avatar" src="https://ui-avatars.com/api/?name=Reel+Creator&background=1c1917&color=e5c870" alt="Profile">
+            <span style="position: absolute; bottom: 2px; right: 2px; width: 13px; height: 13px; background: #16a34a; border: 2px solid #fff; border-radius: 50%;"></span>
           </div>
           <div>
-            <div style="display: flex; align-items: center; gap: 0.6rem;">
-              <h2 id="analyticsProfileName" style="font-size: 1.3rem; font-weight: 800; color: #0f172a; margin: 0;">Reel Creator</h2>
-              <span id="analyticsUsernameBadge" style="font-size: 0.82rem; font-weight: 700; color: #ec4899; background: rgba(236,72,153,0.1); padding: 0.2rem 0.6rem; border-radius: 9999px;">
+            <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+              <h2 id="analyticsProfileName" class="analytics-profile-title">Reel Creator</h2>
+              <span id="analyticsUsernameBadge" class="analytics-profile-badge">
                 @moving.151120
               </span>
             </div>
-            <p style="font-size: 0.84rem; color: #64748b; margin: 0.25rem 0 0 0; display: flex; align-items: center; gap: 0.8rem;">
-              <span><i class="fa-brands fa-instagram" style="color: #ec4899;"></i> Instagram Reels: <b id="analyticsFollowersCount" style="color: #0f172a;">2 Followers</b></span>
+            <p style="font-size: 0.82rem; color: #78716c; margin: 0.3rem 0 0 0; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+              <span><i class="fa-brands fa-instagram" style="color: #be185d;"></i> Instagram: <b id="analyticsFollowersCount" style="color: #1c1917;">2 Followers</b></span>
               <span>•</span>
-              <span><i class="fa-brands fa-youtube" style="color: #ef4444;"></i> YouTube Shorts: <b style="color: #16a34a;">Active ✓</b></span>
+              <span><i class="fa-brands fa-youtube" style="color: #dc2626;"></i> YouTube Shorts: <b style="color: #047857;">Active ✓</b></span>
             </p>
           </div>
         </div>
 
-        <div style="display: flex; gap: 0.75rem; align-items: center;">
-          <div style="text-align: right; font-size: 0.78rem; color: #64748b;">
-            <span>છેલ્લે અપડેટ:</span> <b id="analyticsLastUpdated" style="color: #0f172a;">હમણાં જ</b>
+        <div style="display: flex; gap: 0.85rem; align-items: center;">
+          <div style="text-align: right; font-size: 0.78rem; color: #78716c;">
+            <span>છેલ્લે અપડેટ:</span> <b id="analyticsLastUpdated" style="color: #1c1917; font-family: var(--font-serif);">હમણાં જ</b>
           </div>
-          <button id="btnRefreshAnalytics" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #4f46e5, #06b6d4);">
+          <button id="btnRefreshAnalytics" type="button" class="analytics-sync-btn">
             <i class="fa-solid fa-rotate" id="analyticsSyncIcon"></i>
             <span>⚡ Sync Live Stats</span>
           </button>
@@ -713,121 +713,122 @@
       </section>
 
       <!-- 4 Top KPI Metrics Cards (100% Real Live Social Data) -->
-      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem;">
+      <section class="analytics-kpi-grid">
         <!-- Card 1: Total Real Likes -->
-        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #ec4899;">
+        <div class="analytics-kpi-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કુલ લાઇક્સ (Total Likes)</p>
-              <h3 id="kpiTotalLikes" style="font-size: 2rem; font-weight: 800; color: #ec4899; margin: 0.4rem 0 0 0;">8</h3>
+              <p class="analytics-kpi-label">કુલ લાઇક્સ (Total Likes)</p>
+              <h3 id="kpiTotalLikes" class="analytics-kpi-num">8</h3>
             </div>
-            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(236,72,153,0.12); display: flex; align-items: center; justify-content: center; color: #ec4899; font-size: 1.3rem;">
+            <div class="analytics-kpi-icon" style="color: #be185d; background: #fff1f5; border-color: #fce7f3;">
               <i class="fa-solid fa-heart"></i>
             </div>
           </div>
-          <div id="kpiLikesBreakdown" style="margin-top: 0.75rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-            <span style="color: #ec4899; background: rgba(236,72,153,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> IG: 8 Likes</span>
-            <span style="color: #ef4444; background: rgba(239,68,68,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-youtube"></i> YT: 0 Likes</span>
+          <div id="kpiLikesBreakdown" style="margin-top: 0.85rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+            <span class="analytics-pill-ig"><i class="fa-brands fa-instagram"></i> IG: 8 Likes</span>
+            <span class="analytics-pill-yt"><i class="fa-brands fa-youtube"></i> YT: 0 Likes</span>
           </div>
         </div>
 
         <!-- Card 2: Total Real Comments -->
-        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #8b5cf6;">
+        <div class="analytics-kpi-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કુલ કમેન્ટ્સ (Comments)</p>
-              <h3 id="kpiTotalComments" style="font-size: 2rem; font-weight: 800; color: #8b5cf6; margin: 0.4rem 0 0 0;">0</h3>
+              <p class="analytics-kpi-label">કુલ કમેન્ટ્સ (Comments)</p>
+              <h3 id="kpiTotalComments" class="analytics-kpi-num">0</h3>
             </div>
-            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(139,92,246,0.12); display: flex; align-items: center; justify-content: center; color: #8b5cf6; font-size: 1.3rem;">
+            <div class="analytics-kpi-icon" style="color: #6d28d9; background: #f5f3ff; border-color: #ede9fe;">
               <i class="fa-solid fa-comments"></i>
             </div>
           </div>
-          <div id="kpiCommentsBreakdown" style="margin-top: 0.75rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-            <span style="color: #8b5cf6; background: rgba(139,92,246,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-solid fa-check"></i> 100% Real API Synced</span>
+          <div id="kpiCommentsBreakdown" style="margin-top: 0.85rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+            <span class="analytics-pill-neutral"><i class="fa-solid fa-check"></i> 100% Real API Synced</span>
           </div>
         </div>
 
         <!-- Card 3: Total Real Followers -->
-        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #0284c7;">
+        <div class="analytics-kpi-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કુલ ફોલોઅર્સ (Followers)</p>
-              <h3 id="kpiTotalFollowers" style="font-size: 2rem; font-weight: 800; color: #0284c7; margin: 0.4rem 0 0 0;">2</h3>
+              <p class="analytics-kpi-label">કુલ ફોલોઅર્સ (Followers)</p>
+              <h3 id="kpiTotalFollowers" class="analytics-kpi-num">2</h3>
             </div>
-            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(2,132,199,0.12); display: flex; align-items: center; justify-content: center; color: #0284c7; font-size: 1.3rem;">
+            <div class="analytics-kpi-icon" style="color: #b89758; background: #fbf7ef; border-color: rgba(197, 168, 128, 0.4);">
               <i class="fa-solid fa-users"></i>
             </div>
           </div>
-          <div id="kpiFollowersBreakdown" style="margin-top: 0.75rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-            <span style="color: #0284c7; background: rgba(2,132,199,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> @moving.151120</span>
+          <div id="kpiFollowersBreakdown" style="margin-top: 0.85rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+            <span class="analytics-pill-neutral" style="color: #946e2b;"><i class="fa-brands fa-instagram"></i> @moving.151120</span>
           </div>
         </div>
 
         <!-- Card 4: Total Real Published Posts -->
-        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #10b981;">
+        <div class="analytics-kpi-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કુલ પબ્લિશ થયેલી રીલ્સ</p>
-              <h3 id="kpiTotalReels" style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0.4rem 0 0 0;">7</h3>
+              <p class="analytics-kpi-label">કુલ પબ્લિશ થયેલી રીલ્સ</p>
+              <h3 id="kpiTotalReels" class="analytics-kpi-num">7</h3>
             </div>
-            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(16,185,129,0.12); display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 1.3rem;">
+            <div class="analytics-kpi-icon" style="color: #047857; background: #ecfdf5; border-color: #a7f3d0;">
               <i class="fa-solid fa-clapperboard"></i>
             </div>
           </div>
-          <div id="kpiReelsBreakdown" style="margin-top: 0.75rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-            <span style="color: #ec4899; background: rgba(236,72,153,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> 7 IG Reels</span>
-            <span style="color: #ef4444; background: rgba(239,68,68,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-youtube"></i> 1 YT Short</span>
+          <div id="kpiReelsBreakdown" style="margin-top: 0.85rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+            <span class="analytics-pill-ig"><i class="fa-brands fa-instagram"></i> 7 IG Reels</span>
+            <span class="analytics-pill-yt"><i class="fa-brands fa-youtube"></i> 1 YT Short</span>
           </div>
         </div>
       </section>
 
       <!-- Storage Health & 1-Click Cleaner Banner -->
-      <section class="glass-card" style="padding: 1rem 1.4rem; border-radius: 14px; background: linear-gradient(135deg, rgba(248,250,252,0.9), rgba(241,245,249,0.9)); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border: 1px solid #e2e8f0;">
-        <div style="display: flex; align-items: center; gap: 0.85rem;">
-          <div style="width: 42px; height: 42px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+      <section class="analytics-storage-card">
+        <div style="display: flex; align-items: center; gap: 0.95rem;">
+          <div class="analytics-storage-icon">
             <i class="fa-solid fa-hard-drive"></i>
           </div>
           <div>
-            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
-              સર્વર સ્ટોરેજ વપરાશ: <span id="storageSizeLabel" style="color: #0284c7;">319 MB</span>
-              <span id="storageFilesLabel" style="font-size: 0.8rem; font-weight: 600; color: #64748b; margin-left: 0.4rem;">(47 Files)</span>
+            <h4 style="margin: 0; font-size: 0.96rem; font-weight: 700; color: #1c1917; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span>સર્વર સ્ટોરેજ વપરાશ:</span>
+              <span id="storageSizeLabel" style="color: #946e2b; font-family: var(--font-serif); font-size: 1.05rem;">319 MB</span>
+              <span id="storageFilesLabel" style="font-size: 0.8rem; font-weight: 600; color: #78716c;">(47 Files)</span>
             </h4>
-            <p style="margin: 0.2rem 0 0 0; font-size: 0.76rem; color: #64748b;">
+            <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: #78716c;">
               સર્વર ડિસ્ક ભરાઈ ન જાય તે માટે ૭ દિવસથી જૂની રેન્ડર વિડીયો ફાઈલો ઓટોમેટિક સાફ કરી શકાય છે.
             </p>
           </div>
         </div>
         <div style="display: flex; gap: 0.6rem; align-items: center;">
-          <button id="btnCleanStorage" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.45rem 0.9rem; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; font-weight: 600;">
-            <i class="fa-solid fa-broom" style="color: #f59e0b;"></i>
+          <button id="btnCleanStorage" type="button" class="btn btn-ghost" style="font-size: 0.82rem; padding: 0.5rem 1rem; border: 1px solid rgba(197, 168, 128, 0.4); background: #ffffff; color: #1c1917; font-weight: 700; border-radius: 10px;">
+            <i class="fa-solid fa-broom" style="color: #b89758;"></i>
             <span>🧹 Clean Old Videos (> 7 Days)</span>
           </button>
         </div>
       </section>
 
       <!-- Live Performance Feed / Published Reels Table -->
-      <section class="glass-card" style="padding: 1.4rem; border-radius: 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.1rem; flex-wrap: wrap; gap: 0.75rem;">
+      <section class="analytics-feed-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.3rem; flex-wrap: wrap; gap: 0.75rem;">
           <div>
-            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
-              <i class="fa-solid fa-tower-broadcast" style="color: #6366f1;"></i>
+            <h3 class="analytics-feed-title">
+              <i class="fa-solid fa-clapperboard" style="color: #b89758;"></i>
               લાઇવ રીલ્સ પર્ફોર્મન્સ ટ્રેકર (Live Performance Feed)
             </h3>
-            <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: #64748b;">
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.82rem; color: #78716c;">
               તમારા ઇન્સ્ટાગ્રામ અને યુટ્યુબ શોર્ટ્સ પર પબ્લિશ થયેલી તમામ રીલ્સનું રીઅલ-ટાઇમ લિસ્ટ
             </p>
           </div>
-          <span class="badge" style="background: rgba(34,197,94,0.12); color: #16a34a; font-weight: 700; padding: 0.35rem 0.75rem; border-radius: 9999px; font-size: 0.78rem;">
-            🟢 Real-Time API Linked
+          <span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: #16a34a;"></span> Real-Time API Linked
           </span>
         </div>
 
         <!-- Reels Cards Grid -->
-        <div id="analyticsReelsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1.2rem;">
+        <div id="analyticsReelsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(295px, 1fr)); gap: 1.3rem;">
           <!-- Dynamically Populated -->
-          <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem; color: #94a3b8;">
-            <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: #6366f1;"></i>
-            <p style="margin-top: 0.75rem; font-weight: 600;">લાઇવ એનાલિટિક્સ લોડ થઈ રહ્યું છે...</p>
+          <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #a8a29e;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: #c5a880;"></i>
+            <p style="margin-top: 0.85rem; font-weight: 600; font-family: var(--font-serif); font-size: 1.05rem; color: #44403c;">લાઇવ એનાલિટિક્સ લોડ થઈ રહ્યું છે...</p>
           </div>
         </div>
       </section>
@@ -852,28 +853,28 @@
         <!-- Meta Instagram Graph API Configuration -->
         <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #e2e8f0;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <h4 style="font-size: 0.95rem; font-weight: 700; color: #ec4899; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: #b95c6b; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
               <i class="fa-brands fa-instagram"></i> Meta Instagram 100% Direct Auto-Publish
             </h4>
-            <span id="tokenTypeBadge" class="status-badge" style="font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; background: rgba(236,72,153,0.15); color: #f472b6; border: 1px solid rgba(236,72,153,0.3);">
+            <span id="tokenTypeBadge" class="status-badge" style="font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 999px; background: #fff1f5; color: #9f1239; border: 1px solid #fce7f3; font-weight: 600;">
               Lifetime Guard Active
             </span>
           </div>
-          <p class="text-muted" style="font-size: 0.8rem; line-height: 1.4; margin-bottom: 0.85rem;">
+          <p class="text-muted" style="font-size: 0.8rem; line-height: 1.4; margin-bottom: 0.85rem; color: #78716c;">
             Directly auto-publish Reels to Instagram. Pre-flight check validates tokens before every upload and auto-refreshes seamlessly:
           </p>
 
           <!-- Live Token Health & Auto-Refresh Card -->
-          <div id="metaTokenStatusCard" style="background: rgba(236, 72, 153, 0.08); border: 1px solid rgba(236, 72, 153, 0.25); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+          <div id="metaTokenStatusCard" style="background: #faf7f2; border: 1px solid rgba(215, 206, 192, 0.7); border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
             <div>
-              <div style="font-size: 0.82rem; font-weight: 700; color: #f472b6; display: flex; align-items: center; gap: 0.4rem;">
+              <div style="font-size: 0.82rem; font-weight: 700; color: #9f1239; display: flex; align-items: center; gap: 0.4rem;">
                 <span id="tokenStatusDot" style="width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; display: inline-block;"></span>
                 <span id="metaTokenStatusTitle">Checking Token Status...</span>
               </div>
-              <div id="metaTokenExpiryText" style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.2rem;">Checking expiration & lifetime status...</div>
+              <div id="metaTokenExpiryText" style="font-size: 0.75rem; color: #78716c; margin-top: 0.2rem;">Checking expiration & lifetime status...</div>
             </div>
-            <button id="btnUpgradePermanentToken" type="button" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.4rem 0.75rem; white-space: nowrap; background: linear-gradient(135deg, #ec4899, #8b5cf6); border: none;">
-              <i class="fa-solid fa-bolt"></i> Auto-Refresh / Make Permanent
+            <button id="btnUpgradePermanentToken" type="button" class="btn" style="font-size: 0.75rem; padding: 0.45rem 0.85rem; white-space: nowrap; background: linear-gradient(135deg, #b95c6b, #9f4150); color: #fff; border: 1px solid rgba(185, 92, 107, 0.3); border-radius: 8px; font-weight: 600;">
+              <i class="fa-solid fa-bolt" style="color: #f7eedb;"></i> Auto-Refresh / Make Permanent
             </button>
           </div>
 
@@ -1023,9 +1024,9 @@
           </details>
         </div>
       </div>
-      <div class="modal-footer" style="padding: 1rem 1.4rem; border-top: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; display: flex; justify-content: flex-end; position: sticky; bottom: 0; z-index: 20;">
-        <button id="btnSaveApiKey" class="btn btn-primary" style="padding: 0.65rem 1.5rem; font-weight: 700; font-size: 0.95rem; background: linear-gradient(135deg, #4f46e5, #06b6d4);">
-          <i class="fa-solid fa-check"></i> Save Settings
+      <div class="modal-footer" style="padding: 1rem 1.4rem; border-top: 1px solid rgba(215, 206, 192, 0.7); background: #faf8f5; flex-shrink: 0; display: flex; justify-content: flex-end; position: sticky; bottom: 0; z-index: 20;">
+        <button id="btnSaveApiKey" class="btn btn-primary" style="padding: 0.65rem 1.6rem; font-weight: 700; font-size: 0.95rem; background: linear-gradient(135deg, #1c1917, #2c2724); color: #f7eedb; border: 1px solid rgba(197, 168, 128, 0.45); border-radius: 10px;">
+          <i class="fa-solid fa-check" style="color: #e5c870;"></i> Save Settings
         </button>
       </div>
     </div>
@@ -1035,8 +1036,8 @@
   <div id="instagramGuideModal" class="modal-backdrop hidden">
     <div class="modal-card glass-card" style="max-width: 520px;">
       <div class="modal-header">
-        <h3 style="display: flex; align-items: center; gap: 0.6rem; color: #ec4899;">
-          <i class="fa-brands fa-instagram" style="font-size: 1.5rem;"></i> Instagram Reels Direct Upload Guide
+        <h3 style="display: flex; align-items: center; gap: 0.6rem; color: #b95c6b; font-family: var(--font-serif);">
+          <i class="fa-brands fa-instagram" style="font-size: 1.5rem; color: #b95c6b;"></i> Instagram Reels Direct Upload Guide
         </h3>
         <button id="btnCloseIgModal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
       </div>
@@ -1090,11 +1091,11 @@
       <!-- Modal Header -->
       <div class="modal-header" style="padding: 1.1rem 1.4rem; border-bottom: 1px solid #e2e8f0; background: #ffffff; display: flex; align-items: center; justify-content: space-between;">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #f59e0b, #ef4444); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.15rem;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #1c1917, #2c2724); border: 1px solid rgba(197, 168, 128, 0.4); display: flex; align-items: center; justify-content: center; color: #e5c870; font-size: 1.15rem;">
             <i class="fa-solid fa-wand-magic-sparkles"></i>
           </div>
           <div>
-            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a;">AI Smart Thumbnail / Cover Creator</h3>
+            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #1c1917; font-family: var(--font-serif);">AI Smart Thumbnail / Cover Creator</h3>
             <p style="margin: 0; font-size: 0.76rem; color: #64748b;">Instagram Reels & YouTube Shorts માટે 1080x1920 વાયરલ કવર ફોટો (Alex Hormozi Style)</p>
           </div>
         </div>
@@ -1218,20 +1219,20 @@
           </div>
 
           <!-- 5. Regenerate Button -->
-          <button type="button" id="btnRegenerateThumbnailInModal" class="btn btn-primary" style="padding: 0.65rem 1rem; font-weight: 700; background: linear-gradient(135deg, #f59e0b, #ef4444); border: none; font-size: 0.92rem; width: 100%;">
+          <button type="button" id="btnRegenerateThumbnailInModal" class="btn btn-primary" style="padding: 0.7rem 1rem; font-weight: 700; background: linear-gradient(135deg, #b89758, #946e2b); border: 1px solid rgba(229, 200, 112, 0.4); color: #ffffff; font-size: 0.92rem; width: 100%; border-radius: 10px;">
             <i class="fa-solid fa-arrows-rotate"></i> ⚡ Re-Generate Cover (1-Sec)
           </button>
         </div>
       </div>
 
       <!-- Modal Footer -->
-      <div class="modal-footer" style="padding: 0.9rem 1.4rem; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 0.78rem; color: #64748b;">
-          <i class="fa-solid fa-shield-halved" style="color: #10b981;"></i> 100% Free • High-Res 1080x1920 JPEG
+      <div class="modal-footer" style="padding: 0.9rem 1.4rem; border-top: 1px solid rgba(215, 206, 192, 0.7); background: #faf8f5; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.78rem; color: #78716c;">
+          <i class="fa-solid fa-shield-halved" style="color: #2e7d5a;"></i> 100% Free • High-Res 1080x1920 JPEG
         </span>
         <div style="display: flex; gap: 0.6rem;">
-          <button type="button" id="btnCloseThumbnailModalFooter" class="btn btn-ghost">બંધ કરો</button>
-          <a id="btnDownloadThumbnailFinal" href="#" download class="btn btn-success" style="font-weight: 700; padding: 0.55rem 1.2rem;">
+          <button type="button" id="btnCloseThumbnailModalFooter" class="btn btn-ghost" style="border-radius: 8px;">બંધ કરો</button>
+          <a id="btnDownloadThumbnailFinal" href="#" download class="btn btn-success" style="font-weight: 700; padding: 0.55rem 1.2rem; border-radius: 8px;">
             <i class="fa-solid fa-download"></i> Download HD Cover (.jpg)
           </a>
         </div>
@@ -1240,6 +1241,6 @@
   </div>
   <div id="toast" class="toast hidden"></div>
 
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=classic-smooth-v5"></script>
 </body>
 </html>

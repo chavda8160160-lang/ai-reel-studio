@@ -2435,10 +2435,10 @@ function renderAnalyticsReelsGrid(reels) {
 
   if (!reels || reels.length === 0) {
     container.innerHTML = `
-      <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: #94a3b8; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px;">
-        <i class="fa-solid fa-clapperboard" style="font-size: 2.2rem; color: #cbd5e1; margin-bottom: 0.75rem;"></i>
-        <h4 style="color: #475569; margin: 0 0 0.35rem 0;">હજી સુધી કોઈ રીલ્સ પબ્લિશ થઈ નથી</h4>
-        <p style="font-size: 0.85rem; margin: 0;">Reel Studio અથવા Daily Auto-Pilot માંથી તમારી પ્રથમ રીલ પબ્લિશ કરો!</p>
+      <div style="grid-column: 1 / -1; text-align: center; padding: 3.5rem 1rem; color: #a8a29e; background: #faf8f5; border: 1px dashed rgba(214, 205, 189, 0.8); border-radius: 16px;">
+        <i class="fa-solid fa-clapperboard" style="font-size: 2.2rem; color: #c5a880; margin-bottom: 0.85rem;"></i>
+        <h4 style="color: #44403c; margin: 0 0 0.35rem 0; font-family: var(--font-serif); font-size: 1.15rem;">હજી સુધી કોઈ રીલ્સ પબ્લિશ થઈ નથી</h4>
+        <p style="font-size: 0.84rem; margin: 0; color: #78716c;">Reel Studio અથવા Daily Auto-Pilot માંથી તમારી પ્રથમ રીલ પબ્લિશ કરો!</p>
       </div>
     `;
     return;
@@ -2452,62 +2452,62 @@ function renderAnalyticsReelsGrid(reels) {
     const hasIg = !!(r.instagram?.url);
     const hasYt = !!(r.youtube?.url);
 
-    const likesCount = r.instagram?.likes || 0;
-    const commentsCount = r.instagram?.comments || 0;
+    const likesCount = (r.instagram?.likes || 0) + (r.youtube?.likes || 0);
+    const commentsCount = (r.instagram?.comments || 0) + (r.youtube?.comments || 0);
 
     const thumbHtml = r.thumbnailUrl
       ? `<img src="${r.thumbnailUrl}" alt="Cover" style="width: 100%; height: 100%; object-fit: cover;">`
-      : `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #1e1b4b, #312e81); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #a5b4fc; gap: 0.4rem;">
-          <i class="fa-solid fa-film" style="font-size: 1.8rem;"></i>
-          <span style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;">9:16 REEL</span>
+      : `<div class="analytics-reel-placeholder">
+          <i class="fa-solid fa-clapperboard" style="font-size: 1.8rem; color: #e5c870;"></i>
+          <span style="font-family: var(--font-serif); font-size: 0.78rem; letter-spacing: 0.05em; color: #faf7f2;">Instagram Reel</span>
          </div>`;
 
     return `
-      <div class="glass-card" style="border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #e2e8f0; background: #ffffff; transition: transform 0.2s ease, box-shadow 0.2s ease;">
-        <!-- Card Header: Visual Preview & Badges -->
-        <div style="position: relative; width: 100%; height: 160px; background: #0f172a; overflow: hidden;">
+      <div class="analytics-reel-item">
+        <!-- Card Visual Header -->
+        <div class="analytics-reel-header">
           ${thumbHtml}
-          <div style="position: absolute; top: 8px; left: 8px; display: flex; gap: 0.4rem; flex-wrap: wrap;">
-            ${hasIg ? '<span style="background: rgba(236,72,153,0.9); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 9999px; backdrop-filter: blur(4px);"><i class="fa-brands fa-instagram"></i> Reel</span>' : ''}
-            ${hasYt ? '<span style="background: rgba(239,68,68,0.9); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 9999px; backdrop-filter: blur(4px);"><i class="fa-brands fa-youtube"></i> Shorts</span>' : ''}
+          <div style="position: absolute; top: 10px; left: 10px; display: flex; gap: 0.45rem; flex-wrap: wrap;">
+            ${hasIg ? '<span style="background: rgba(185, 92, 107, 0.95); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 9999px; backdrop-filter: blur(4px);"><i class="fa-brands fa-instagram"></i> Reel</span>' : ''}
+            ${hasYt ? '<span style="background: rgba(220, 38, 38, 0.95); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 9999px; backdrop-filter: blur(4px);"><i class="fa-brands fa-youtube"></i> Shorts</span>' : ''}
           </div>
-          <span style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: #fff; font-size: 0.68rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 4px;">
+          <span style="position: absolute; bottom: 8px; right: 8px; background: rgba(28, 25, 23, 0.78); color: #f5e6ca; font-size: 0.68rem; font-weight: 600; padding: 0.18rem 0.5rem; border-radius: 6px; backdrop-filter: blur(4px); border: 1px solid rgba(197, 168, 128, 0.25);">
             ${r.niche ? r.niche.substring(0, 22) : 'Viral Reel'}
           </span>
         </div>
 
         <!-- Card Body -->
-        <div style="padding: 1rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="padding: 1.15rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
           <div>
-            <h4 style="margin: 0 0 0.35rem 0; font-size: 0.92rem; font-weight: 700; color: #0f172a; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+            <h4 style="margin: 0 0 0.45rem 0; font-size: 0.95rem; font-weight: 700; color: #201d1a; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
               ${escapeHtml(r.title || 'Untitled Reel')}
             </h4>
-            <div style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 0.35rem;">
-              <i class="fa-regular fa-clock"></i>
+            <div style="font-size: 0.74rem; color: #878077; display: flex; align-items: center; gap: 0.4rem;">
+              <i class="fa-regular fa-clock" style="color: #b89758;"></i>
               <span>${formattedDate}</span>
             </div>
           </div>
 
           <!-- Metrics Row -->
-          <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+          <div style="margin-top: 0.95rem; padding-top: 0.85rem; border-top: 1px solid rgba(215, 206, 192, 0.65); display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; gap: 0.85rem; align-items: center;">
-              <span style="font-size: 0.82rem; font-weight: 700; color: #ec4899; display: flex; align-items: center; gap: 0.25rem;" title="Likes">
+              <span style="font-size: 0.82rem; font-weight: 700; color: #b95c6b; display: flex; align-items: center; gap: 0.3rem;" title="Likes">
                 <i class="fa-solid fa-heart"></i> ${likesCount}
               </span>
-              <span style="font-size: 0.82rem; font-weight: 700; color: #6366f1; display: flex; align-items: center; gap: 0.25rem;" title="Comments">
+              <span style="font-size: 0.82rem; font-weight: 700; color: #6d597a; display: flex; align-items: center; gap: 0.3rem;" title="Comments">
                 <i class="fa-solid fa-comment"></i> ${commentsCount}
               </span>
             </div>
             
             <!-- External Links -->
-            <div style="display: flex; gap: 0.4rem;">
+            <div style="display: flex; gap: 0.45rem;">
               ${hasIg ? `
-                <a href="${r.instagram.url}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" style="padding: 0.3rem 0.6rem; font-size: 0.74rem; color: #ec4899; border: 1px solid rgba(236,72,153,0.3); border-radius: 6px; text-decoration: none;" title="Open in Instagram">
+                <a href="${r.instagram.url}" target="_blank" rel="noopener noreferrer" class="analytics-reel-btn analytics-reel-btn-ig" title="View on Instagram">
                   <i class="fa-brands fa-instagram"></i> IG ↗
                 </a>
               ` : ''}
               ${hasYt ? `
-                <a href="${r.youtube.url}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" style="padding: 0.3rem 0.6rem; font-size: 0.74rem; color: #ef4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; text-decoration: none;" title="Open in YouTube">
+                <a href="${r.youtube.url}" target="_blank" rel="noopener noreferrer" class="analytics-reel-btn analytics-reel-btn-yt" title="View on YouTube">
                   <i class="fa-brands fa-youtube"></i> YT ↗
                 </a>
               ` : ''}
