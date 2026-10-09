@@ -819,9 +819,56 @@
         </div>
       </section>
 
+      <!-- 🏆 Best Performing Video Spotlight Card (નંબર ૧ સૌથી વધુ ચાલેલો વિડીયો) -->
+      <section id="analyticsTopPerformerCard" class="hidden" style="background: linear-gradient(135deg, #ffffff 0%, #fdfbf7 100%); border: 1.5px solid rgba(197, 168, 128, 0.55); border-radius: 18px; padding: 1.25rem 1.6rem; box-shadow: 0 8px 24px -2px rgba(184, 151, 88, 0.08); position: relative; overflow: hidden;">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #b89758, #e5c870, #b89758);"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.2rem;">
+          <div style="display: flex; align-items: center; gap: 1.2rem; min-width: 0; flex: 1 1 320px;">
+            <div style="position: relative; width: 68px; height: 100px; border-radius: 12px; overflow: hidden; background: #1c1917; flex-shrink: 0; border: 1.5px solid rgba(197, 168, 128, 0.5); box-shadow: 0 4px 12px rgba(0,0,0,0.12); display: flex; align-items: center; justify-content: center;">
+              <img id="topReelThumb" src="" alt="Top Reel" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+              <div id="topReelPlaceholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #e5c870; font-size: 1.5rem;">
+                <i class="fa-solid fa-clapperboard"></i>
+              </div>
+              <span style="position: absolute; top: 4px; left: 4px; background: linear-gradient(135deg, #b89758, #946e2b); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.12rem 0.4rem; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">#1</span>
+            </div>
+            <div style="min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span class="badge" style="background: #fbf7ef; color: #946e2b; border: 1px solid rgba(197, 168, 128, 0.5); font-weight: 800; font-size: 0.74rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                  <i class="fa-solid fa-crown" style="color: #eab308;"></i> 👑 નંબર ૧ સૌથી વધુ ચાલેલો વિડીયો (Top Performer)
+                </span>
+                <span id="topReelDateBadge" style="font-size: 0.74rem; color: #78716c;"></span>
+              </div>
+              <h4 id="topReelTitle" style="margin: 0.4rem 0 0.25rem 0; font-size: 1.05rem; font-weight: 700; color: #201d1a; line-height: 1.35; font-family: var(--font-serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 550px;">
+                Loading...
+              </h4>
+              <p style="margin: 0; font-size: 0.78rem; color: #78716c;">
+                આ વિડીયો પર તમારા એકાઉન્ટમાં સૌથી વધુ લાઇક્સ અને એન્ગેજમેન્ટ મળ્યું છે.
+              </p>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.9rem; background: #faf8f5; border: 1px solid rgba(215, 206, 192, 0.7); padding: 0.55rem 1.1rem; border-radius: 12px;">
+              <div style="text-align: center;">
+                <span style="font-size: 0.68rem; font-weight: 700; color: #78716c; text-transform: uppercase; letter-spacing: 0.04em;">Likes</span>
+                <div id="topReelLikes" style="font-size: 1.35rem; font-weight: 800; color: #b95c6b; font-family: var(--font-serif); line-height: 1.1;">0</div>
+              </div>
+              <div style="width: 1px; background: rgba(215, 206, 192, 0.7);"></div>
+              <div style="text-align: center;">
+                <span style="font-size: 0.68rem; font-weight: 700; color: #78716c; text-transform: uppercase; letter-spacing: 0.04em;">Comments</span>
+                <div id="topReelComments" style="font-size: 1.35rem; font-weight: 800; color: #6d597a; font-family: var(--font-serif); line-height: 1.1;">0</div>
+              </div>
+            </div>
+            <a id="topReelLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="font-size: 0.82rem; padding: 0.55rem 1.15rem; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 0.45rem;">
+              <span>View Top Reel</span> <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </a>
+          </div>
+        </div>
+      </section>
+
       <!-- Live Performance Feed / Published Reels Table -->
       <section class="analytics-feed-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.3rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.1rem; flex-wrap: wrap; gap: 0.75rem;">
           <div>
             <h3 class="analytics-feed-title">
               <i class="fa-solid fa-clapperboard" style="color: #b89758;"></i>
@@ -833,6 +880,25 @@
           </div>
           <span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.4rem;">
             <span style="width: 7px; height: 7px; border-radius: 50%; background: #16a34a;"></span> Real-Time API Linked
+          </span>
+        </div>
+
+        <!-- Sorting & Filter Controls -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: #faf8f5; border: 1px solid rgba(215, 206, 192, 0.65); border-radius: 12px; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;">
+            <span style="font-size: 0.78rem; font-weight: 700; color: #78716c; margin-right: 0.2rem;"><i class="fa-solid fa-arrow-down-wide-short"></i> ગોઠવો (Sort):</span>
+            <button type="button" class="chip analytics-sort-btn active" data-sort="viral" style="font-weight: 700;">
+              <i class="fa-solid fa-fire" style="color: #e11d48;"></i> 🔥 સૌથી વધુ ચાલ્યા તે પહેલા (Most Viral)
+            </button>
+            <button type="button" class="chip analytics-sort-btn" data-sort="likes" style="font-weight: 600;">
+              <i class="fa-solid fa-heart" style="color: #b95c6b;"></i> ❤️ Highest Likes
+            </button>
+            <button type="button" class="chip analytics-sort-btn" data-sort="recent" style="font-weight: 600;">
+              <i class="fa-regular fa-clock" style="color: #b89758;"></i> 🕒 નવા વિડીયો પહેલા (Recent)
+            </button>
+          </div>
+          <span id="analyticsReelsCountBadge" style="font-size: 0.76rem; color: #78716c; font-weight: 600;">
+            8 Videos Found
           </span>
         </div>
 

@@ -2295,6 +2295,8 @@ if (document.readyState === 'loading') {
 // 📊 8. LIVE SOCIAL ANALYTICS & VIEWS TRACKER
 // ==========================================
 let isAnalyticsFetching = false;
+let currentAnalyticsReels = [];
+let currentAnalyticsSort = 'viral';
 
 function initAnalyticsView() {
   const btnRefresh = document.getElementById('btnRefreshAnalytics');
@@ -2303,6 +2305,18 @@ function initAnalyticsView() {
       fetchAnalyticsOverview(true);
     });
   }
+
+  // Sort buttons listeners
+  const sortButtons = document.querySelectorAll('.analytics-sort-btn');
+  sortButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      sortButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentAnalyticsSort = btn.getAttribute('data-sort') || 'viral';
+      applyAnalyticsSortingAndRender();
+    });
+  });
 
   const btnClean = document.getElementById('btnCleanStorage');
   if (btnClean) {
@@ -2419,8 +2433,61 @@ async function fetchAnalyticsOverview(showFeedback = false) {
     if (storageSize) storageSize.textContent = `${data.storage?.totalMB || 0} MB`;
     if (storageFiles) storageFiles.textContent = `(${data.storage?.totalFiles || 0} Files)`;
 
-    // 4. Render Reels Performance Grid
-    renderAnalyticsReelsGrid(data.reels || []);
+    // 4. Cache Reels Data
+    currentAnalyticsReels = Array.isArray(data.reels) ? data.reels : [];
+
+    // 5. Populate Top Performing Reel Spotlight Card (Winner Banner)
+    const topCard = document.getElementById('analyticsTopPerformerCard');
+    const topThumb = document.getElementById('topReelThumb');
+    const topPlaceholder = document.getElementById('topReelPlaceholder');
+    const topTitle = document.getElementById('topReelTitle');
+    const topDateBadge = document.getElementById('topReelDateBadge');
+    const topLikes = document.getElementById('topReelLikes');
+    const topComments = document.getElementById('topReelComments');
+    const topLink = document.getElementById('topReelLink');
+
+    const topReel = data.summary?.topReel || (currentAnalyticsReels.length > 0 ? currentAnalyticsReels[0] : null);
+
+    if (topCard && topReel) {
+      topCard.classList.remove('hidden');
+      if (topTitle) topTitle.textContent = topReel.title || topReel.caption || 'Top Performer Reel';
+
+      const tLikes = (topReel.instagram?.likes || 0) + (topReel.youtube?.likes || 0);
+      const tComments = (topReel.instagram?.comments || 0) + (topReel.youtube?.comments || 0);
+      if (topLikes) topLikes.textContent = tLikes;
+      if (topComments) topComments.textContent = tComments;
+
+      if (topDateBadge && topReel.publishedAt) {
+        const d = new Date(topReel.publishedAt);
+        topDateBadge.textContent = '• ' + d.toLocaleDateString('gu-IN', { day: 'numeric', month: 'short' });
+      }
+
+      if (topLink) {
+        topLink.href = topReel.instagram?.url || topReel.youtube?.url || '#';
+      }
+
+      if (topReel.thumbnailUrl) {
+        if (topThumb) {
+          topThumb.src = topReel.thumbnailUrl;
+          topThumb.style.display = 'block';
+        }
+        if (topPlaceholder) topPlaceholder.style.display = 'none';
+      } else {
+        if (topThumb) topThumb.style.display = 'none';
+        if (topPlaceholder) topPlaceholder.style.display = 'flex';
+      }
+    } else if (topCard) {
+      topCard.classList.add('hidden');
+    }
+
+    // 6. Update Total Count Badge
+    const countBadge = document.getElementById('analyticsReelsCountBadge');
+    if (countBadge) {
+      countBadge.textContent = `${currentAnalyticsReels.length} Videos Found`;
+    }
+
+    // 7. Render Reels Performance Grid with Sorting
+    applyAnalyticsSortingAndRender();
 
     if (showFeedback) {
       showToast('🎉 લાઈવ એનાલિટિક્સ અને વ્યુઝ સફળતાપૂર્વક અપડેટ થઈ ગયા! 📊');
@@ -2432,6 +2499,44 @@ async function fetchAnalyticsOverview(showFeedback = false) {
     if (syncIcon) syncIcon.classList.remove('fa-spin');
     isAnalyticsFetching = false;
   }
+}
+
+function applyAnalyticsSortingAndRender() {
+  if (!currentAnalyticsReels || currentAnalyticsReels.length === 0) {
+    renderAnalyticsReelsGrid([]);
+    return;
+  }
+
+  const sorted = [...currentAnalyticsReels];
+
+  if (currentAnalyticsSort === 'viral') {
+    // Sort by combined engagement: (Likes * 2) + (Comments * 3) descending
+    sorted.sort((a, b) => {
+      const likesA = (a.instagram?.likes || 0) + (a.youtube?.likes || 0);
+      const commA = (a.instagram?.comments || 0) + (a.youtube?.comments || 0);
+      const scoreA = (likesA * 2) + (commA * 3);
+
+      const likesB = (b.instagram?.likes || 0) + (b.youtube?.likes || 0);
+      const commB = (b.instagram?.comments || 0) + (b.youtube?.comments || 0);
+      const scoreB = (likesB * 2) + (commB * 3);
+
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
+    });
+  } else if (currentAnalyticsSort === 'likes') {
+    // Sort strictly by total likes descending
+    sorted.sort((a, b) => {
+      const likesA = (a.instagram?.likes || 0) + (a.youtube?.likes || 0);
+      const likesB = (b.instagram?.likes || 0) + (b.youtube?.likes || 0);
+      if (likesB !== likesA) return likesB - likesA;
+      return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
+    });
+  } else if (currentAnalyticsSort === 'recent') {
+    // Sort by publication timestamp descending
+    sorted.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+  }
+
+  renderAnalyticsReelsGrid(sorted);
 }
 
 function renderAnalyticsReelsGrid(reels) {
@@ -2449,7 +2554,18 @@ function renderAnalyticsReelsGrid(reels) {
     return;
   }
 
-  container.innerHTML = reels.map(r => {
+  // Find top performer globally across all reels
+  let topPerformerId = null;
+  let maxScore = -1;
+  currentAnalyticsReels.forEach(r => {
+    const s = ((r.instagram?.likes || 0) + (r.youtube?.likes || 0)) * 2 + ((r.instagram?.comments || 0) + (r.youtube?.comments || 0)) * 3;
+    if (s > maxScore && s > 0) {
+      maxScore = s;
+      topPerformerId = r.id;
+    }
+  });
+
+  container.innerHTML = reels.map((r, index) => {
     const formattedDate = r.publishedAt 
       ? new Date(r.publishedAt).toLocaleDateString('gu-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
       : 'હમણાં જ';
@@ -2460,6 +2576,30 @@ function renderAnalyticsReelsGrid(reels) {
     const likesCount = (r.instagram?.likes || 0) + (r.youtube?.likes || 0);
     const commentsCount = (r.instagram?.comments || 0) + (r.youtube?.comments || 0);
 
+    // Rank Badge determination
+    let rankBadge = '';
+    const isGlobalTop = (r.id === topPerformerId) || (currentAnalyticsSort !== 'recent' && index === 0 && (likesCount > 0 || commentsCount > 0));
+
+    if (isGlobalTop) {
+      rankBadge = `
+        <div style="position: absolute; top: 10px; right: 10px; background: linear-gradient(135deg, #b89758 0%, #8a6828 100%); color: #ffffff; font-size: 0.68rem; font-weight: 800; padding: 0.22rem 0.65rem; border-radius: 9999px; box-shadow: 0 4px 12px rgba(184, 151, 88, 0.45); border: 1px solid #fef08a; display: flex; align-items: center; gap: 0.35rem; z-index: 2;">
+          <i class="fa-solid fa-crown" style="color: #fef08a;"></i> #1 Top Performer
+        </div>
+      `;
+    } else if (currentAnalyticsSort !== 'recent' && index === 1 && (likesCount > 0 || commentsCount > 0)) {
+      rankBadge = `
+        <div style="position: absolute; top: 10px; right: 10px; background: rgba(30, 41, 59, 0.9); color: #f1f5f9; font-size: 0.66rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 9999px; backdrop-filter: blur(4px); border: 1px solid rgba(226, 232, 240, 0.4); display: flex; align-items: center; gap: 0.3rem; z-index: 2;">
+          <i class="fa-solid fa-medal" style="color: #cbd5e1;"></i> #2 High Reach
+        </div>
+      `;
+    } else if (currentAnalyticsSort !== 'recent' && index === 2 && (likesCount > 0 || commentsCount > 0)) {
+      rankBadge = `
+        <div style="position: absolute; top: 10px; right: 10px; background: rgba(41, 37, 36, 0.9); color: #fed7aa; font-size: 0.66rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 9999px; backdrop-filter: blur(4px); border: 1px solid rgba(251, 146, 60, 0.4); display: flex; align-items: center; gap: 0.3rem; z-index: 2;">
+          <i class="fa-solid fa-award" style="color: #fb923c;"></i> #3 Popular
+        </div>
+      `;
+    }
+
     const thumbHtml = r.thumbnailUrl
       ? `<img src="${r.thumbnailUrl}" alt="Cover" style="width: 100%; height: 100%; object-fit: cover;">`
       : `<div class="analytics-reel-placeholder">
@@ -2468,11 +2608,12 @@ function renderAnalyticsReelsGrid(reels) {
          </div>`;
 
     return `
-      <div class="analytics-reel-item">
+      <div class="analytics-reel-item ${isGlobalTop ? 'is-top-performer' : ''}">
         <!-- Card Visual Header -->
         <div class="analytics-reel-header">
           ${thumbHtml}
-          <div style="position: absolute; top: 10px; left: 10px; display: flex; gap: 0.45rem; flex-wrap: wrap;">
+          ${rankBadge}
+          <div style="position: absolute; top: 10px; left: 10px; display: flex; gap: 0.45rem; flex-wrap: wrap; z-index: 1;">
             ${hasIg ? '<span style="background: rgba(185, 92, 107, 0.95); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 9999px; backdrop-filter: blur(4px);"><i class="fa-brands fa-instagram"></i> Reel</span>' : ''}
             ${hasYt ? '<span style="background: rgba(220, 38, 38, 0.95); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 9999px; backdrop-filter: blur(4px);"><i class="fa-brands fa-youtube"></i> Shorts</span>' : ''}
           </div>
@@ -2484,6 +2625,11 @@ function renderAnalyticsReelsGrid(reels) {
         <!-- Card Body -->
         <div style="padding: 1.15rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
           <div>
+            ${isGlobalTop ? `
+              <div style="margin-bottom: 0.5rem; padding: 0.25rem 0.55rem; background: #fcf8ee; border: 1px solid rgba(184, 151, 88, 0.35); border-radius: 6px; font-size: 0.72rem; color: #946e2b; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-fire" style="color: #e11d48;"></i> સૌથી વધુ ચાલ્યો (Top Engagement)
+              </div>
+            ` : ''}
             <h4 style="margin: 0 0 0.45rem 0; font-size: 0.95rem; font-weight: 700; color: #201d1a; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
               ${escapeHtml(r.title || 'Untitled Reel')}
             </h4>

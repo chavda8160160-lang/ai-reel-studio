@@ -2196,4 +2196,55 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   transform: scale(1.15) !important;
 }
 
+/* 📊 Analytics Feed Controls & Top Performer Highlights */
+.analytics-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #57534e;
+  background: #ffffff;
+  border: 1px solid rgba(215, 206, 192, 0.75);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.analytics-sort-btn:hover {
+  background: #fdfbf7;
+  color: #1c1917;
+  border-color: rgba(184, 151, 88, 0.6);
+  transform: translateY(-1px);
+}
+
+.analytics-sort-btn.active {
+  background: #1c1917;
+  color: #fdfbf7;
+  border-color: #1c1917;
+  box-shadow: 0 4px 12px rgba(28, 25, 23, 0.16);
+}
+
+.analytics-sort-btn.active i {
+  color: #e5c870 !important;
+}
+
+.analytics-reel-item.is-top-performer {
+  border: 1.5px solid rgba(184, 151, 88, 0.75) !important;
+  box-shadow: 0 8px 24px -2px rgba(184, 151, 88, 0.18) !important;
+  position: relative;
+}
+
+.analytics-reel-item.is-top-performer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #b89758, #e5c870, #b89758);
+}
+
 
