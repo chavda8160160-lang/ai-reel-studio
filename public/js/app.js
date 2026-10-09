@@ -1990,32 +1990,66 @@ function initThumbnailStudio() {
 
   if (!modal) return;
 
-  let selectedColor = 'yellow';
-  let selectedPosition = 'both';
+  let selectedColor = 'gold';
+  let selectedPosition = 'title-only';
+  let selectedFont = 'classic';
 
   const posBtns = document.querySelectorAll('#thumbPositionOptions .btn-pos-pick');
+  const fontBtns = document.querySelectorAll('#thumbFontOptions .btn-font-pick');
 
   // Position button toggle
   posBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       posBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      selectedPosition = btn.dataset.pos || 'both';
+      selectedPosition = btn.dataset.pos || 'title-only';
+    });
+  });
+
+  // Font button toggle
+  fontBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      fontBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedFont = btn.dataset.font || 'classic';
     });
   });
 
   function openStudio() {
     const state = window.activeReelThumbnail || {};
-    if (headlineInput) headlineInput.value = state.headlineText || 'THE ART OF PATOLA ✨';
-    if (hookBadgeInput) hookBadgeInput.value = state.hookBadge || state.bottomText || '★ 100% PURE HANDLOOM SILK ★';
+    let headline = state.headlineText || 'THE ART OF PATOLA ✨';
+    let hook = state.hookBadge || state.bottomText || '';
+
+    // DEDUPLICATION: If bottom hook is duplicate of headline or contains same words, leave it empty!
+    const nHead = headline.replace(/[^A-Z]/gi, '').toLowerCase();
+    const nHook = hook.replace(/[^A-Z]/gi, '').toLowerCase();
+    if (nHook && nHead && (nHead.includes(nHook) || nHook.includes(nHead))) {
+      hook = '';
+    }
+
+    if (headlineInput) headlineInput.value = headline;
+    if (hookBadgeInput) hookBadgeInput.value = hook;
+
     if (timeSlider) {
       timeSlider.value = state.timestamp || 1.5;
       if (timeDisplay) timeDisplay.textContent = `${state.timestamp || 1.5}s`;
     }
 
-    selectedPosition = state.positionMode || 'both';
+    selectedPosition = state.positionMode || 'title-only';
     posBtns.forEach(b => {
       if (b.dataset.pos === selectedPosition) b.classList.add('active');
+      else b.classList.remove('active');
+    });
+
+    selectedFont = state.fontStyle || 'classic';
+    fontBtns.forEach(b => {
+      if (b.dataset.font === selectedFont) b.classList.add('active');
+      else b.classList.remove('active');
+    });
+
+    selectedColor = state.colorStyle || 'gold';
+    colorBtns.forEach(b => {
+      if (b.dataset.color === selectedColor) b.classList.add('active');
       else b.classList.remove('active');
     });
 
@@ -2055,7 +2089,7 @@ function initThumbnailStudio() {
     btn.addEventListener('click', () => {
       colorBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      selectedColor = btn.dataset.color || 'yellow';
+      selectedColor = btn.dataset.color || 'gold';
     });
   });
 
@@ -2085,6 +2119,7 @@ function initThumbnailStudio() {
             hookBadge,
             bottomText: hookBadge,
             positionMode: selectedPosition,
+            fontStyle: selectedFont,
             colorStyle: selectedColor,
             timestamp
           })
@@ -2103,6 +2138,7 @@ function initThumbnailStudio() {
           hookBadge,
           bottomText: hookBadge,
           positionMode: selectedPosition,
+          fontStyle: selectedFont,
           colorStyle: selectedColor,
           timestamp
         };

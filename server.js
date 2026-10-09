@@ -473,25 +473,93 @@ async function generateViralThumbnail({
   headlineText,
   hookBadge,
   bottomText,
-  positionMode = 'both', // 'both' (Top & Bottom empty spaces), 'top', 'bottom', 'center'
-  colorStyle = 'yellow',
+  positionMode = 'title-only', // 'title-only' (1 classic title), 'both', 'top', 'bottom', 'center', 'none' (clean frame)
+  fontStyle = 'classic',       // 'classic' (Georgia Luxury Serif), 'modern' (Segoe UI), 'bold' (Arial Hormozi)
+  colorStyle = 'gold',         // 'gold' (Royal Gold), 'white' (Pure White), 'rose-gold', 'yellow', 'cyan'
   timestamp = 1.5
 }) {
   const safeTime = Math.max(0.1, Number(timestamp) || 1.5);
-  
-  // Color mappings for ASS subtitle format (&HAABBGGRR&)
-  let primaryCol = '&H0000FFFF&'; // Default Hormozi Yellow
-  if (colorStyle === 'cyan') primaryCol = '&H00FFFF00&';
-  else if (colorStyle === 'neon-green') primaryCol = '&H0000FF00&';
-  else if (colorStyle === 'flame-red') primaryCol = '&H001030FF&';
-  else if (colorStyle === 'purple') primaryCol = '&H00FF00EA&';
-  else if (colorStyle === 'white') primaryCol = '&H00FFFFFF&';
 
-  // Smart Word-Wrap for bold viral headline (Auto-strip #hashtags to keep headline super clean)
+  // If user selected 'none' or all text inputs are empty, render a pristine clean 9:16 frame!
+  const hasHeadline = headlineText && String(headlineText).trim().length > 0;
+  const hasBottom = (bottomText !== undefined ? bottomText : hookBadge) && String(bottomText || hookBadge).trim().length > 0;
+  
+  if (positionMode === 'none' || (!hasHeadline && !hasBottom)) {
+    return new Promise((resolve, reject) => {
+      ffmpeg()
+        .input(videoPath)
+        .inputOptions([`-ss ${safeTime}`])
+        .outputOptions([
+          '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,eq=saturation=1.28:contrast=1.14',
+          '-vframes 1',
+          '-q:v 2'
+        ])
+        .output(outputPath)
+        .on('end', () => {
+          console.log(`🖼️ [AI Thumbnail Studio] Generated clean cover frame: ${path.basename(outputPath)} at ${safeTime}s`);
+          resolve({ success: true, outputPath, fileName: path.basename(outputPath) });
+        })
+        .on('error', (err) => {
+          console.warn('Clean frame generation error:', err.message);
+          resolve({ success: false, error: err.message });
+        })
+        .run();
+    });
+  }
+
+  // Color mappings for ASS subtitle format (&HAABBGGRR&)
+  let primaryCol = '&H0075D4FF&'; // Default Royal Champagne Gold
+  let accentCol = '&H00FFFFFF&';  // Classic White
+
+  if (colorStyle === 'gold') {
+    primaryCol = '&H0075D4FF&'; // Luxury Champagne Gold
+    accentCol = '&H00E2F3FF&';
+  } else if (colorStyle === 'white') {
+    primaryCol = '&H00FFFFFF&'; // Pure Diamond White
+    accentCol = '&H00E2E8F0&';
+  } else if (colorStyle === 'rose-gold') {
+    primaryCol = '&H00B5B0FF&'; // Rose Gold
+    accentCol = '&H00FFFFFF&';
+  } else if (colorStyle === 'yellow') {
+    primaryCol = '&H0000FFFF&'; // Hormozi Yellow
+    accentCol = '&H00FFFFFF&';
+  } else if (colorStyle === 'cyan') {
+    primaryCol = '&H00FFFF00&';
+    accentCol = '&H00FFFFFF&';
+  }
+
+  // Font family and letter spacing
+  let fontName = 'Georgia';
+  let fontSpacing = 3; // Classic luxury wide letter-spacing
+  let isBold = -1;
+  let outlineSize = 5;
+  let shadowSize = 3;
+
+  if (fontStyle === 'classic') {
+    fontName = 'Georgia'; // Luxury Royal Serif
+    fontSpacing = 3;
+    isBold = -1;
+    outlineSize = 5;
+    shadowSize = 3;
+  } else if (fontStyle === 'modern') {
+    fontName = 'Segoe UI';
+    fontSpacing = 2;
+    isBold = -1;
+    outlineSize = 6;
+    shadowSize = 3;
+  } else if (fontStyle === 'bold') {
+    fontName = 'Arial';
+    fontSpacing = 0;
+    isBold = -1;
+    outlineSize = 8;
+    shadowSize = 4;
+  }
+
+  // Clean Headline (Strip hashtags and colons)
   let formattedHeadline = '';
-  if (headlineText) {
+  if (hasHeadline) {
     const clean = String(headlineText)
-      .replace(/#\w+/g, '') // strip hashtags like #Shorts #Patola
+      .replace(/#\w+/g, '') // remove #Shorts, #Patola, etc.
       .replace(/[:]/g, '')
       .replace(/\s+/g, ' ')
       .trim()
@@ -501,7 +569,7 @@ async function generateViralThumbnail({
     const lines = [];
     let curLine = '';
     for (const w of words) {
-      if ((curLine + ' ' + w).trim().length > 18) {
+      if ((curLine + ' ' + w).trim().length > 20) {
         if (curLine) lines.push(curLine.trim());
         curLine = w;
       } else {
@@ -509,23 +577,30 @@ async function generateViralThumbnail({
       }
     }
     if (curLine) lines.push(curLine.trim());
-    formattedHeadline = lines.slice(0, 3).join('\\N');
-  } else {
-    formattedHeadline = 'MUST WATCH 🔥';
+    formattedHeadline = lines.slice(0, 2).join('\\N');
   }
 
-  // Hook / Bottom badge text
+  // Clean Hook / Bottom text (only if not 'title-only' and text is provided)
   let formattedHook = '';
-  const rawHook = bottomText || hookBadge;
-  if (rawHook) {
-    const cleanHook = String(rawHook)
-      .replace(/#\w+/g, '')
-      .replace(/[{}]/g, '')
-      .trim()
-      .toUpperCase();
-    formattedHook = cleanHook.startsWith('★') ? cleanHook : `★ ${cleanHook} ★`;
-  } else {
-    formattedHook = '★ 100% PURE HANDLOOM SILK ★';
+  if (positionMode !== 'title-only') {
+    const rawHook = bottomText !== undefined ? bottomText : hookBadge;
+    if (rawHook && String(rawHook).trim()) {
+      const cleanHook = String(rawHook)
+        .replace(/#\w+/g, '')
+        .replace(/[:]/g, '')
+        .replace(/[{}]/g, '')
+        .trim()
+        .toUpperCase();
+
+      // DEDUPLICATION: If hook contains similar words as headline, do NOT duplicate it!
+      const normHead = formattedHeadline.replace(/[^A-Z]/g, '');
+      const normHook = cleanHook.replace(/[^A-Z]/g, '');
+      const isDuplicate = normHead && normHook && (normHead.includes(normHook) || normHook.includes(normHead));
+
+      if (cleanHook && !isDuplicate) {
+        formattedHook = cleanHook.startsWith('★') || cleanHook.startsWith('◆') ? cleanHook : `◆ ${cleanHook} ◆`;
+      }
+    }
   }
 
   const assPath = path.join(os.tmpdir(), `thumb-sub-${Date.now()}-${Math.round(Math.random() * 1000)}.ass`);
@@ -533,66 +608,58 @@ async function generateViralThumbnail({
   const sEnd = '0:05:00.00';
 
   let headlineAlign = 8;
-  let headlineMarginV = 190;
-  let headlineFontSize = 82;
+  let headlineMarginV = 180;
+  let headlineFontSize = 74;
   let hookAlign = 2;
-  let hookMarginV = 230;
-  let hookFontSize = 66;
+  let hookMarginV = 200;
+  let hookFontSize = 50;
   let events = '';
 
   if (positionMode === 'top') {
-    // Only in top space
     headlineAlign = 8;
-    headlineMarginV = 240;
-    headlineFontSize = 80;
+    headlineMarginV = 220;
+    headlineFontSize = 72;
     hookAlign = 8;
-    hookMarginV = 130;
-    hookFontSize = 52;
-    events = `
-Dialogue: 0,${sStart},${sEnd},ThumbHook,,0,0,0,,{\\c&H00FFFFFF&}${formattedHook}
-Dialogue: 0,${sStart},${sEnd},ThumbHeadline,,0,0,0,,{\\c${primaryCol}}${formattedHeadline}
-`;
+    hookMarginV = 120;
+    hookFontSize = 46;
   } else if (positionMode === 'bottom') {
-    // Only in bottom space
     headlineAlign = 2;
-    headlineMarginV = 240;
-    headlineFontSize = 80;
+    headlineMarginV = 220;
+    headlineFontSize = 72;
     hookAlign = 2;
-    hookMarginV = 140;
-    hookFontSize = 52;
-    events = `
-Dialogue: 0,${sStart},${sEnd},ThumbHeadline,,0,0,0,,{\\c${primaryCol}}${formattedHeadline}
-Dialogue: 0,${sStart},${sEnd},ThumbHook,,0,0,0,,{\\c&H00FFFFFF&}${formattedHook}
-`;
+    hookMarginV = 130;
+    hookFontSize = 46;
   } else if (positionMode === 'center') {
-    // Center of screen
     headlineAlign = 5;
     headlineMarginV = 0;
-    headlineFontSize = 88;
+    headlineFontSize = 78;
     hookAlign = 8;
-    hookMarginV = 220;
-    hookFontSize = 56;
-    events = `
-Dialogue: 0,${sStart},${sEnd},ThumbHook,,0,0,0,,{\\c&H00FFFFFF&}${formattedHook}
-Dialogue: 0,${sStart},${sEnd},ThumbHeadline,,0,0,0,,{\\c${primaryCol}}${formattedHeadline}
-`;
-  } else {
-    // Default & Recommended: 'both' (Top empty space gets Headline, Bottom empty space gets Hook/Badge)
-    // Middle video is completely free from obstruction!
+    hookMarginV = 200;
+  } else if (positionMode === 'title-only') {
+    // Only 1 classic title at the top space, middle and bottom are 100% free!
     headlineAlign = 8;
-    headlineMarginV = 190;
-    headlineFontSize = 82;
+    headlineMarginV = 180;
+    headlineFontSize = 76;
+    formattedHook = ''; // Ensure no duplicate bottom text!
+  } else {
+    // 'both' (Top title + Bottom badge if provided)
+    headlineAlign = 8;
+    headlineMarginV = 180;
+    headlineFontSize = 74;
     hookAlign = 2;
-    hookMarginV = 230;
-    hookFontSize = 66;
-    events = `
-Dialogue: 0,${sStart},${sEnd},ThumbHeadline,,0,0,0,,{\\c${primaryCol}}${formattedHeadline}
-Dialogue: 0,${sStart},${sEnd},ThumbHook,,0,0,0,,{\\c&H00FFFFFF&}${formattedHook}
-`;
+    hookMarginV = 200;
+    hookFontSize = 50;
+  }
+
+  if (formattedHeadline) {
+    events += `Dialogue: 0,${sStart},${sEnd},ThumbHeadline,,0,0,0,,{\\c${primaryCol}}${formattedHeadline}\n`;
+  }
+  if (formattedHook) {
+    events += `Dialogue: 0,${sStart},${sEnd},ThumbHook,,0,0,0,,{\\c${accentCol}}${formattedHook}\n`;
   }
 
   const assContent = `[Script Info]
-Title: AI Viral Cover Thumbnail
+Title: AI Classic Luxury Cover
 ScriptType: v4.00+
 WrapStyle: 0
 ScaledBorderAndShadow: yes
@@ -602,8 +669,8 @@ PlayResY: 1920
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: ThumbHeadline,Arial,${headlineFontSize},${primaryCol},&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,10,4,${headlineAlign},60,60,${headlineMarginV},1
-Style: ThumbHook,Arial,${hookFontSize},&H00FFFFFF,&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,9,4,${hookAlign},60,60,${hookMarginV},1
+Style: ThumbHeadline,${fontName},${headlineFontSize},${primaryCol},&H00000000,&H00000000,&H80000000,${isBold},0,0,0,100,100,${fontSpacing},0,1,${outlineSize},${shadowSize},${headlineAlign},60,60,${headlineMarginV},1
+Style: ThumbHook,${fontName},${hookFontSize},${accentCol},&H00000000,&H00000000,&H80000000,0,0,0,0,100,100,${fontSpacing + 1},0,1,${outlineSize - 1},${shadowSize - 1},${hookAlign},60,60,${hookMarginV},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -612,7 +679,7 @@ ${events}
 
   fs.writeFileSync(assPath, assContent, 'utf8');
   const escapedAss = path.resolve(assPath).replace(/\\/g, '/').replace(/:/g, '\\:');
-  const vf = `scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,eq=saturation=1.35:contrast=1.18,subtitles='${escapedAss}'`;
+  const vf = `scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,eq=saturation=1.3:contrast=1.15,subtitles='${escapedAss}'`;
 
   return new Promise((resolve) => {
     ffmpeg()
@@ -1455,7 +1522,7 @@ Respond ONLY with valid JSON:`;
 // 🖼️ Feature #4: AI Smart Thumbnail Studio Endpoint (Regenerate / Customize on the fly)
 app.post('/api/video/generate-thumbnail', async (req, res) => {
   try {
-    const { videoFileName, headlineText, hookBadge, bottomText, positionMode, colorStyle, timestamp } = req.body;
+    const { videoFileName, headlineText, hookBadge, bottomText, positionMode, fontStyle, colorStyle, timestamp } = req.body;
     if (!videoFileName) {
       return res.status(400).json({ error: 'વિડીયો ફાઈલનું નામ જરૂરી છે.' });
     }
@@ -1475,11 +1542,12 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
     const result = await generateViralThumbnail({
       videoPath,
       outputPath,
-      headlineText: headlineText || 'MUST WATCH 🔥',
-      hookBadge: hookBadge || '★ VIRAL HIGHLIGHT ★',
-      bottomText: bottomText || hookBadge || '★ 100% PURE HANDLOOM SILK ★',
-      positionMode: positionMode || 'both',
-      colorStyle: colorStyle || 'yellow',
+      headlineText: headlineText !== undefined ? headlineText : 'THE ART OF PATOLA ✨',
+      hookBadge: hookBadge !== undefined ? hookBadge : '',
+      bottomText: bottomText !== undefined ? bottomText : '',
+      positionMode: positionMode || 'title-only',
+      fontStyle: fontStyle || 'classic',
+      colorStyle: colorStyle || 'gold',
       timestamp: parseFloat(timestamp) || 1.5
     });
 
@@ -1495,8 +1563,9 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
       headlineText,
       hookBadge,
       bottomText,
-      positionMode: positionMode || 'both',
-      colorStyle
+      positionMode: positionMode || 'title-only',
+      fontStyle: fontStyle || 'classic',
+      colorStyle: colorStyle || 'gold'
     });
   } catch (err) {
     console.error('Thumbnail generation endpoint error:', err);

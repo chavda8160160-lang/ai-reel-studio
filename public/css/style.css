@@ -1741,6 +1741,24 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   transform: translateY(-1px);
 }
 
+.btn-font-pick {
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.btn-font-pick:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.btn-font-pick.active {
+  background: #fffbeb !important;
+  border: 2px solid #d97706 !important;
+  color: #92400e !important;
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.25);
+  transform: translateY(-1px);
+}
+
 @media (max-width: 768px) {
   #thumbnailStudioModal .modal-body {
     grid-template-columns: 1fr !important;

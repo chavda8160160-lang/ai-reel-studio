@@ -931,51 +931,62 @@
         </div>
 
         <!-- Right: Studio Controls -->
-        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-          <!-- 0. Position Selector (ખાલી જગ્યા પસંદ કરો) -->
+        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+          <!-- 0. Classic Font Style Selector -->
           <div>
             <label style="display: block; font-weight: 700; font-size: 0.84rem; color: #1e293b; margin-bottom: 0.35rem;">
-              <i class="fa-solid fa-arrows-up-down" style="color: #0284c7;"></i> લખાણ ક્યાં મૂકવું (Space Position):
+              <i class="fa-solid fa-font" style="color: #d97706;"></i> ફોન્ટ સ્ટાઇલ (Classic Luxury):
             </label>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.45rem;" id="thumbPositionOptions">
-              <button type="button" class="btn-pos-pick active" data-pos="both" style="background: #e0f2fe; border: 2px solid #0284c7; color: #0369a1; padding: 0.45rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.76rem; cursor: pointer; text-align: center;">
-                ↕️ બંને ખાલી જગ્યા (ઉપર + નીચે)
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem;" id="thumbFontOptions">
+              <button type="button" class="btn-font-pick active" data-font="classic" style="background: #fffbeb; border: 2px solid #d97706; color: #92400e; padding: 0.4rem 0.4rem; border-radius: 6px; font-weight: 700; font-size: 0.76rem; cursor: pointer; text-align: center; font-family: Georgia, serif;">
+                👑 Classic Royal
               </button>
-              <button type="button" class="btn-pos-pick" data-pos="top" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 0.45rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.76rem; cursor: pointer; text-align: center;">
-                ⬆️ ફક્ત ઉપરની સ્પેસ
+              <button type="button" class="btn-font-pick" data-font="modern" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 0.4rem 0.4rem; border-radius: 6px; font-weight: 600; font-size: 0.76rem; cursor: pointer; text-align: center; font-family: 'Segoe UI', sans-serif;">
+                ✨ Modern Clean
               </button>
-              <button type="button" class="btn-pos-pick" data-pos="bottom" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 0.45rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.76rem; cursor: pointer; text-align: center;">
-                ⬇️ ફક્ત નીચેની સ્પેસ
-              </button>
-              <button type="button" class="btn-pos-pick" data-pos="center" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 0.45rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.76rem; cursor: pointer; text-align: center;">
-                ⏺️ સેન્ટર (વચ્ચે)
+              <button type="button" class="btn-font-pick" data-font="bold" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 0.4rem 0.4rem; border-radius: 6px; font-weight: 700; font-size: 0.76rem; cursor: pointer; text-align: center; font-family: Arial, sans-serif;">
+                ⚡ Hormozi Bold
               </button>
             </div>
-            <span style="font-size: 0.72rem; color: #059669; font-weight: 600; margin-top: 0.25rem; display: block;">
-              ✓ "બંને ખાલી જગ્યા" પસંદ કરવાથી વચ્ચેનો વિડીયો/મોઢું બિલકુલ ઢંકાશે નહીં!
-            </span>
           </div>
 
-          <!-- 1. Top Space Headline Input -->
+          <!-- 1. Position & Clean Options (Deduplication) -->
           <div>
             <label style="display: block; font-weight: 700; font-size: 0.84rem; color: #1e293b; margin-bottom: 0.35rem;">
-              <i class="fa-solid fa-heading" style="color: #6366f1;"></i> ઉપરની સ્પેસનું ટાઈટલ (Top Headline):
+              <i class="fa-solid fa-arrows-up-down" style="color: #0284c7;"></i> લખાણ મોડ (Position & Clean):
+            </label>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem;" id="thumbPositionOptions">
+              <button type="button" class="btn-pos-pick active" data-pos="title-only" style="background: #e0f2fe; border: 2px solid #0284c7; color: #0369a1; padding: 0.45rem 0.4rem; border-radius: 6px; font-weight: 700; font-size: 0.74rem; cursor: pointer; text-align: center;">
+                👑 ફક્ત ૧ ટાઈટલ (No Repeat)
+              </button>
+              <button type="button" class="btn-pos-pick" data-pos="both" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 0.45rem 0.4rem; border-radius: 6px; font-weight: 600; font-size: 0.74rem; cursor: pointer; text-align: center;">
+                ↕️ બંને (ઉપર + નીચે)
+              </button>
+              <button type="button" class="btn-pos-pick" data-pos="none" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 0.45rem 0.4rem; border-radius: 6px; font-weight: 600; font-size: 0.74rem; cursor: pointer; text-align: center;">
+                🖼️ Clean Frame (લખાણ વગર)
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Top Space Headline Input -->
+          <div>
+            <label style="display: block; font-weight: 700; font-size: 0.84rem; color: #1e293b; margin-bottom: 0.35rem;">
+              <i class="fa-solid fa-heading" style="color: #6366f1;"></i> કવર ટાઈટલ (Classic Headline):
             </label>
             <input type="text" id="thumbHeadlineInput" class="custom-input" placeholder="દા.ત. THE ART OF PATOLA" style="font-weight: 700; font-size: 0.92rem; width: 100%;">
-            <span style="font-size: 0.72rem; color: #64748b;">(હાઇલાઇટ બોલ્ડ ફોન્ટ - હેશટેગ વગર ચોખ્ખું લખાશે)</span>
           </div>
 
-          <!-- 2. Bottom Space Hook Badge Input -->
+          <!-- 3. Bottom Space Hook Badge Input (Optional) -->
           <div>
             <label style="display: block; font-weight: 700; font-size: 0.84rem; color: #1e293b; margin-bottom: 0.35rem;">
-              <i class="fa-solid fa-star" style="color: #f59e0b;"></i> નીચેની સ્પેસનું લખાણ (Bottom Hook / Offer):
+              <i class="fa-solid fa-star" style="color: #f59e0b;"></i> નીચેનું લખાણ (જો ન જોઈતું હોય તો ખાલી રાખો):
             </label>
-            <input type="text" id="thumbHookBadgeInput" class="custom-input" placeholder="દા.ત. ★ 100% PURE HANDLOOM SILK ★" style="font-weight: 600; width: 100%;">
+            <input type="text" id="thumbHookBadgeInput" class="custom-input" placeholder="ખાલી રાખી શકો છો (કોઈ ડુપ્લિકેટ નહીં થાય)" style="font-weight: 600; width: 100%;">
           </div>
 
-          <!-- 3. Frame Timestamp Slider -->
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <!-- 4. Frame Timestamp Slider -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.7rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
               <label style="font-weight: 700; font-size: 0.84rem; color: #1e293b; margin: 0;">
                 <i class="fa-solid fa-film" style="color: #0ea5e9;"></i> વિડીયો ફ્રેમ ટાઈમિંગ (સેકન્ડ):
               </label>
@@ -983,35 +994,35 @@
             </div>
             <input type="range" id="thumbTimeSlider" min="0.2" max="29" step="0.5" value="1.5" style="width: 100%; cursor: pointer;">
             <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #94a3b8; margin-top: 0.2rem;">
-              <span>0.2s (Start)</span>
-              <span>15s (Middle)</span>
-              <span>29s (End)</span>
+              <span>0.2s</span>
+              <span>15s</span>
+              <span>29s</span>
             </div>
           </div>
 
-          <!-- 4. Color Palette Picker -->
+          <!-- 5. Color Palette Picker -->
           <div>
             <label style="display: block; font-weight: 700; font-size: 0.84rem; color: #1e293b; margin-bottom: 0.35rem;">
-              <i class="fa-solid fa-palette" style="color: #ec4899;"></i> હેડલાઇન કલર સ્ટાઇલ:
+              <i class="fa-solid fa-palette" style="color: #ec4899;"></i> કલર પેલેટ:
             </label>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem;" id="thumbColorOptions">
-              <button type="button" class="btn-color-pick active" data-color="yellow" style="background: #fef08a; border: 2px solid #ca8a04; color: #713f12; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
-                ⚡ Yellow
+              <button type="button" class="btn-color-pick active" data-color="gold" style="background: #fef3c7; border: 2px solid #d97706; color: #92400e; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+                👑 Royal Gold
               </button>
-              <button type="button" class="btn-color-pick" data-color="cyan" style="background: #a5f3fc; border: 2px solid #0891b2; color: #164e63; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+              <button type="button" class="btn-color-pick" data-color="white" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+                🤍 Classic White
+              </button>
+              <button type="button" class="btn-color-pick" data-color="rose-gold" style="background: #fdf2f8; border: 1px solid #f472b6; color: #9d174d; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+                💎 Rose Gold
+              </button>
+              <button type="button" class="btn-color-pick" data-color="yellow" style="background: #fef08a; border: 1px solid #ca8a04; color: #713f12; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+                ⚡ Hormozi Yellow
+              </button>
+              <button type="button" class="btn-color-pick" data-color="cyan" style="background: #a5f3fc; border: 1px solid #0891b2; color: #164e63; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
                 💎 Neon Cyan
               </button>
-              <button type="button" class="btn-color-pick" data-color="neon-green" style="background: #bbf7d0; border: 2px solid #16a34a; color: #14532d; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+              <button type="button" class="btn-color-pick" data-color="neon-green" style="background: #bbf7d0; border: 1px solid #16a34a; color: #14532d; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
                 🟢 Neon Green
-              </button>
-              <button type="button" class="btn-color-pick" data-color="flame-red" style="background: #fecaca; border: 2px solid #dc2626; color: #7f1d1d; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
-                🔥 Flame Red
-              </button>
-              <button type="button" class="btn-color-pick" data-color="purple" style="background: #f3e8ff; border: 2px solid #9333ea; color: #581c87; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
-                💜 Cyber Purple
-              </button>
-              <button type="button" class="btn-color-pick" data-color="white" style="background: #f8fafc; border: 2px solid #64748b; color: #0f172a; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
-                ✨ Pure White
               </button>
             </div>
           </div>
