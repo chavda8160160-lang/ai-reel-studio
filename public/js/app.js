@@ -164,6 +164,16 @@ async function loadApiKeyStatus() {
   if (whatsappPhoneInput) whatsappPhoneInput.value = localStorage.getItem('WHATSAPP_PHONE') || '';
   if (whatsappApiKeyInput) whatsappApiKeyInput.value = localStorage.getItem('WHATSAPP_APIKEY') || '';
 
+  // Load WhatsApp Alerts enabled status
+  fetch('/api/settings/get').then(r => r.json()).then(data => {
+    if (data.success && data.whatsapp) {
+      updateWhatsAppToggleUI(data.whatsapp.enabled);
+      if (data.whatsapp.phone && whatsappPhoneInput && !whatsappPhoneInput.value) {
+        whatsappPhoneInput.value = data.whatsapp.phone;
+      }
+    }
+  }).catch(() => {});
+
   if (localKey) {
     apiKeyStatusLabel.textContent = 'API Key Active ✓';
     apiKeyStatusLabel.style.color = 'var(--accent-emerald)';
@@ -188,6 +198,69 @@ async function loadApiKeyStatus() {
 
   // Check token health on load
   checkLiveTokenHealth();
+}
+
+function updateWhatsAppToggleUI(isEnabled) {
+  const toggle = document.getElementById('whatsappAlertsToggle');
+  const track = document.getElementById('whatsappToggleTrack');
+  const knob = document.getElementById('whatsappToggleKnob');
+  const label = document.getElementById('whatsappToggleLabel');
+  const headerBtn = document.getElementById('btnHeaderWhatsAppToggle');
+  const headerLabel = document.getElementById('headerWhatsAppStatusLabel');
+
+  if (toggle) toggle.checked = isEnabled;
+  if (track) track.style.backgroundColor = isEnabled ? '#22c55e' : '#cbd5e1';
+  if (knob) knob.style.left = isEnabled ? '24px' : '4px';
+  if (label) {
+    label.textContent = isEnabled ? 'ON' : 'OFF';
+    label.style.color = isEnabled ? '#16a34a' : '#64748b';
+  }
+
+  if (headerLabel) {
+    headerLabel.textContent = isEnabled ? 'WhatsApp: ON ✓' : 'WhatsApp: OFF ⏸️';
+  }
+  if (headerBtn) {
+    headerBtn.style.color = isEnabled ? '#16a34a' : '#64748b';
+    headerBtn.style.borderColor = isEnabled ? 'rgba(34,197,94,0.3)' : '#cbd5e1';
+    headerBtn.style.background = isEnabled ? 'rgba(34,197,94,0.08)' : 'rgba(241,245,249,0.7)';
+  }
+}
+
+// 1-Click WhatsApp Header Toggle Button
+const btnHeaderWhatsAppToggle = document.getElementById('btnHeaderWhatsAppToggle');
+if (btnHeaderWhatsAppToggle) {
+  btnHeaderWhatsAppToggle.addEventListener('click', async () => {
+    btnHeaderWhatsAppToggle.disabled = true;
+    try {
+      const res = await fetch('/api/settings/toggle-whatsapp', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        updateWhatsAppToggleUI(data.enabled);
+        showToast(data.enabled ? '🔔 WhatsApp Alerts Turned ON!' : '⏸️ WhatsApp Alerts Paused (OFF)');
+      }
+    } catch (e) {
+      showToast('Toggle failed: ' + e.message, true);
+    } finally {
+      btnHeaderWhatsAppToggle.disabled = false;
+    }
+  });
+}
+
+// Settings Modal WhatsApp Toggle Switch
+const whatsappAlertsToggle = document.getElementById('whatsappAlertsToggle');
+if (whatsappAlertsToggle) {
+  whatsappAlertsToggle.addEventListener('change', async (e) => {
+    const isChecked = e.target.checked;
+    updateWhatsAppToggleUI(isChecked);
+    try {
+      await fetch('/api/settings/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ whatsappAlertsEnabled: isChecked })
+      });
+      showToast(isChecked ? '🔔 WhatsApp Alerts Turned ON!' : '⏸️ WhatsApp Alerts Paused (OFF)');
+    } catch (_) {}
+  });
 }
 
 btnSettings.addEventListener('click', () => {
@@ -371,7 +444,8 @@ btnSaveApiKey.addEventListener('click', async () => {
         telegramBotToken,
         telegramChatId,
         whatsappPhone,
-        whatsappApiKey
+        whatsappApiKey,
+        whatsappAlertsEnabled: document.getElementById('whatsappAlertsToggle')?.checked !== false
       })
     });
   } catch (err) {

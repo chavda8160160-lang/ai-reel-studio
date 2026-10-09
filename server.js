@@ -358,6 +358,10 @@ async function sendTelegramAlert(messageHtml) {
 
 // WhatsApp Instant Alert Dispatcher (CallMeBot Free API)
 async function sendWhatsAppAlert(messageText) {
+  if (process.env.WHATSAPP_ALERTS_ENABLED === 'false') {
+    console.log('⏸️ [WhatsApp Alert Skipped] Alerts are toggled OFF by user switch.');
+    return false;
+  }
   const phone = process.env.WHATSAPP_PHONE;
   const apiKey = process.env.WHATSAPP_APIKEY;
   if (!phone || !apiKey) {
@@ -1798,7 +1802,7 @@ app.post('/api/meta/auto-refresh', async (req, res) => {
 // Endpoint to save settings directly to server .env & process.env
 app.post('/api/settings/save', async (req, res) => {
   try {
-    const { metaIgUserId, metaIgToken, geminiApiKey, metaAppId, metaAppSecret, youtubeToken, youtubeRefreshToken, youtubeClientId, youtubeClientSecret, telegramBotToken, telegramChatId, whatsappPhone, whatsappApiKey } = req.body;
+    const { metaIgUserId, metaIgToken, geminiApiKey, metaAppId, metaAppSecret, youtubeToken, youtubeRefreshToken, youtubeClientId, youtubeClientSecret, telegramBotToken, telegramChatId, whatsappPhone, whatsappApiKey, whatsappAlertsEnabled } = req.body;
     const updates = {};
     if (metaIgToken && metaIgToken.trim()) updates.META_INSTAGRAM_TOKEN = metaIgToken.trim();
     if (metaIgUserId && metaIgUserId.trim()) {
@@ -1828,6 +1832,7 @@ app.post('/api/settings/save', async (req, res) => {
     if (telegramChatId !== undefined) updates.TELEGRAM_CHAT_ID = telegramChatId.trim();
     if (whatsappPhone !== undefined) updates.WHATSAPP_PHONE = whatsappPhone.trim();
     if (whatsappApiKey !== undefined) updates.WHATSAPP_APIKEY = whatsappApiKey.trim();
+    if (whatsappAlertsEnabled !== undefined) updates.WHATSAPP_ALERTS_ENABLED = String(whatsappAlertsEnabled);
 
     updateEnvFile(updates);
     console.log('✅ Settings saved to .env & process.env:', Object.keys(updates));
@@ -1837,12 +1842,22 @@ app.post('/api/settings/save', async (req, res) => {
   }
 });
 
+// Quick 1-Click WhatsApp Toggle Switch Endpoint
+app.post('/api/settings/toggle-whatsapp', (req, res) => {
+  const current = process.env.WHATSAPP_ALERTS_ENABLED !== 'false';
+  const next = !current;
+  updateEnvFile({ WHATSAPP_ALERTS_ENABLED: String(next) });
+  console.log(`🔔 [WhatsApp Toggle] Alerts are now: ${next ? 'ON' : 'OFF'}`);
+  res.json({ success: true, enabled: next });
+});
+
 // Endpoint to retrieve status of social and notification connections
 app.get('/api/settings/get', (req, res) => {
   res.json({
     success: true,
     whatsapp: {
       configured: !!(process.env.WHATSAPP_PHONE && process.env.WHATSAPP_APIKEY),
+      enabled: process.env.WHATSAPP_ALERTS_ENABLED !== 'false',
       phone: process.env.WHATSAPP_PHONE || ''
     },
     telegram: {
