@@ -1702,3 +1702,30 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   color: #059669;
   border-color: #a7f3d0;
 }
+
+/* 🖼️ Feature #4: AI Smart Thumbnail Studio Styles */
+.btn-color-pick {
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.btn-color-pick:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.btn-color-pick.active {
+  box-shadow: 0 0 0 3px #3b82f6, 0 4px 12px rgba(59, 130, 246, 0.35);
+  transform: translateY(-1px);
+}
+
+#thumbTimeSlider {
+  accent-color: #0284c7;
+}
+
+@media (max-width: 768px) {
+  #thumbnailStudioModal .modal-body {
+    grid-template-columns: 1fr !important;
+  }
+}
+

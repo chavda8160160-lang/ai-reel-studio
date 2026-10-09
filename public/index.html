@@ -393,6 +393,9 @@
           </div>
           
           <div class="project-actions hidden" id="videoActionButtons">
+            <button id="btnOpenThumbnailStudio" class="btn btn-secondary" title="AI Smart Thumbnail Studio" style="display: none; background: #fffbeb; border-color: #fde68a; color: #b45309; font-weight: 700;">
+              <i class="fa-solid fa-wand-magic-sparkles" style="color: #d97706;"></i> 🖼️ Thumbnail Studio
+            </button>
             <a id="btnDownloadCover" href="#" download class="btn btn-secondary" title="Download High-Res 9:16 Cover Photo" style="display: none;">
               <i class="fa-solid fa-image"></i> Download Cover
             </a>
@@ -422,6 +425,20 @@
               <span class="pill" id="pillSubtitles"><i class="fa-solid fa-closed-captioning"></i> <b id="lblPillSubtitles">Hormozi Subs</b></span>
               <span class="pill"><i class="fa-solid fa-mobile-screen"></i> <b>1080x1920</b></span>
               <span class="pill pill-sched hidden" id="pillScheduleTime"><i class="fa-solid fa-calendar-check"></i> <b id="lblPillScheduleTime">Scheduled</b></span>
+            </div>
+
+            <!-- Thumbnail Quick Preview Strip -->
+            <div id="thumbQuickBar" class="hidden" style="width: 100%; max-width: 300px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.65rem 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
+                <img id="thumbMiniPreview" src="" alt="Cover" style="width: 36px; height: 56px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                <div style="min-width: 0;">
+                  <div style="font-size: 0.8rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🖼️ AI Cover Photo</div>
+                  <div id="thumbMiniHeadline" style="font-size: 0.7rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Alex Hormozi 9:16</div>
+                </div>
+              </div>
+              <button type="button" id="btnEditThumbnailMini" class="btn btn-ghost" style="font-size: 0.74rem; padding: 0.35rem 0.65rem; border: 1px solid #f59e0b; color: #b45309; background: #fffbeb; white-space: nowrap; font-weight: 600;">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Edit Cover
+              </button>
             </div>
           </div>
 
@@ -877,7 +894,125 @@
     </div>
   </div>
 
-  <!-- Toast Notification -->
+  <!-- 🖼️ AI Smart Thumbnail / Cover Creator Modal -->
+  <div id="thumbnailStudioModal" class="modal-backdrop hidden">
+    <div class="modal-card glass-card" style="max-width: 820px; width: 95vw; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
+      <!-- Modal Header -->
+      <div class="modal-header" style="padding: 1.1rem 1.4rem; border-bottom: 1px solid #e2e8f0; background: #ffffff; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #f59e0b, #ef4444); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.15rem;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a;">AI Smart Thumbnail / Cover Creator</h3>
+            <p style="margin: 0; font-size: 0.76rem; color: #64748b;">Instagram Reels & YouTube Shorts માટે 1080x1920 વાયરલ કવર ફોટો (Alex Hormozi Style)</p>
+          </div>
+        </div>
+        <button id="btnCloseThumbnailModal" class="btn-icon" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Modal Body (Two Columns: Left 9:16 Preview, Right Controls) -->
+      <div class="modal-body" style="padding: 1.3rem; overflow-y: auto; display: grid; grid-template-columns: 280px 1fr; gap: 1.3rem; align-items: start;">
+        <!-- Left: 9:16 Live Preview Frame -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.6rem;">
+          <div style="position: relative; width: 100%; aspect-ratio: 9/16; max-height: 460px; background: #0f172a; border-radius: 14px; overflow: hidden; box-shadow: 0 12px 28px rgba(0,0,0,0.25); border: 2px solid #334155; display: flex; align-items: center; justify-content: center;">
+            <img id="thumbStudioPreviewImg" src="" alt="Thumbnail Preview" style="width: 100%; height: 100%; object-fit: cover;">
+            <div id="thumbStudioLoading" class="hidden" style="position: absolute; inset: 0; background: rgba(15,23,42,0.75); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; gap: 0.6rem; backdrop-filter: blur(3px);">
+              <i class="fa-solid fa-spinner fa-spin" style="font-size: 2.2rem; color: #f59e0b;"></i>
+              <span style="font-size: 0.88rem; font-weight: 700;">નવો કવર ફોટો બની રહ્યો છે... ⚡</span>
+            </div>
+            <span style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.65); color: #fde047; font-size: 0.68rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; backdrop-filter: blur(4px);">
+              9:16 HD COVER
+            </span>
+          </div>
+          <span style="font-size: 0.74rem; color: #64748b; text-align: center;">
+            <i class="fa-solid fa-circle-info"></i> Instagram & Shorts Feed માં આ ફોટો સૌથી પહેલા દેખાશે
+          </span>
+        </div>
+
+        <!-- Right: Studio Controls -->
+        <div style="display: flex; flex-direction: column; gap: 0.9rem;">
+          <!-- 1. Headline Text Input -->
+          <div>
+            <label style="display: block; font-weight: 700; font-size: 0.84rem; color: #1e293b; margin-bottom: 0.35rem;">
+              <i class="fa-solid fa-heading" style="color: #6366f1;"></i> વાયરલ હેડલાઇન (વિડીયો પર મોટા અક્ષરે દેખાશે):
+            </label>
+            <input type="text" id="thumbHeadlineInput" class="custom-input" placeholder="દા.ત. ROYAL PATOLA SILK 🔥" style="font-weight: 700; font-size: 0.92rem; width: 100%;">
+            <span style="font-size: 0.72rem; color: #64748b;">Alex Hormozi બોલ્ડ ફોન્ટ સાથે ઓટો-વ્રેપ થશે.</span>
+          </div>
+
+          <!-- 2. Hook Badge Input -->
+          <div>
+            <label style="display: block; font-weight: 700; font-size: 0.84rem; color: #1e293b; margin-bottom: 0.35rem;">
+              <i class="fa-solid fa-star" style="color: #f59e0b;"></i> ટોપ હુક બેજ (ઉપર નાનું બેજ):
+            </label>
+            <input type="text" id="thumbHookBadgeInput" class="custom-input" placeholder="દા.ત. ★ 100% PURE SILK ★" style="font-weight: 600; width: 100%;">
+          </div>
+
+          <!-- 3. Frame Timestamp Slider -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <label style="font-weight: 700; font-size: 0.84rem; color: #1e293b; margin: 0;">
+                <i class="fa-solid fa-film" style="color: #0ea5e9;"></i> વિડીયો ફ્રેમ ટાઈમિંગ (સેકન્ડ):
+              </label>
+              <span id="thumbTimeDisplay" style="font-size: 0.84rem; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 0.15rem 0.5rem; border-radius: 4px;">1.5s</span>
+            </div>
+            <input type="range" id="thumbTimeSlider" min="0.2" max="29" step="0.5" value="1.5" style="width: 100%; cursor: pointer;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #94a3b8; margin-top: 0.2rem;">
+              <span>0.2s (Start)</span>
+              <span>15s (Middle)</span>
+              <span>29s (End)</span>
+            </div>
+          </div>
+
+          <!-- 4. Color Palette Picker -->
+          <div>
+            <label style="display: block; font-weight: 700; font-size: 0.84rem; color: #1e293b; margin-bottom: 0.35rem;">
+              <i class="fa-solid fa-palette" style="color: #ec4899;"></i> હેડલાઇન કલર સ્ટાઇલ:
+            </label>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem;" id="thumbColorOptions">
+              <button type="button" class="btn-color-pick active" data-color="yellow" style="background: #fef08a; border: 2px solid #ca8a04; color: #713f12; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+                ⚡ Yellow
+              </button>
+              <button type="button" class="btn-color-pick" data-color="cyan" style="background: #a5f3fc; border: 2px solid #0891b2; color: #164e63; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+                💎 Neon Cyan
+              </button>
+              <button type="button" class="btn-color-pick" data-color="neon-green" style="background: #bbf7d0; border: 2px solid #16a34a; color: #14532d; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+                🟢 Neon Green
+              </button>
+              <button type="button" class="btn-color-pick" data-color="flame-red" style="background: #fecaca; border: 2px solid #dc2626; color: #7f1d1d; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+                🔥 Flame Red
+              </button>
+              <button type="button" class="btn-color-pick" data-color="purple" style="background: #f3e8ff; border: 2px solid #9333ea; color: #581c87; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+                💜 Cyber Purple
+              </button>
+              <button type="button" class="btn-color-pick" data-color="white" style="background: #f8fafc; border: 2px solid #64748b; color: #0f172a; padding: 0.4rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; text-align: center;">
+                ✨ Pure White
+              </button>
+            </div>
+          </div>
+
+          <!-- 5. Regenerate Button -->
+          <button type="button" id="btnRegenerateThumbnailInModal" class="btn btn-primary" style="padding: 0.65rem 1rem; font-weight: 700; background: linear-gradient(135deg, #f59e0b, #ef4444); border: none; font-size: 0.92rem; width: 100%;">
+            <i class="fa-solid fa-arrows-rotate"></i> ⚡ Re-Generate Cover (1-Sec)
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer" style="padding: 0.9rem 1.4rem; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.78rem; color: #64748b;">
+          <i class="fa-solid fa-shield-halved" style="color: #10b981;"></i> 100% Free • High-Res 1080x1920 JPEG
+        </span>
+        <div style="display: flex; gap: 0.6rem;">
+          <button type="button" id="btnCloseThumbnailModalFooter" class="btn btn-ghost">બંધ કરો</button>
+          <a id="btnDownloadThumbnailFinal" href="#" download class="btn btn-success" style="font-weight: 700; padding: 0.55rem 1.2rem;">
+            <i class="fa-solid fa-download"></i> Download HD Cover (.jpg)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/app.js"></script>

@@ -466,6 +466,122 @@ ${events}
   return assPath;
 }
 
+// 🖼️ Feature #4: AI Smart Thumbnail / Cover Photo Creator (Alex Hormozi & MrBeast Viral Style)
+async function generateViralThumbnail({
+  videoPath,
+  outputPath,
+  headlineText,
+  hookBadge,
+  colorStyle = 'yellow',
+  timestamp = 1.5
+}) {
+  const safeTime = Math.max(0.1, Number(timestamp) || 1.5);
+  
+  // Color mappings for ASS subtitle format (&HAABBGGRR&)
+  let primaryCol = '&H0000FFFF&'; // Default Hormozi Yellow
+  if (colorStyle === 'cyan') primaryCol = '&H00FFFF00&';
+  else if (colorStyle === 'neon-green') primaryCol = '&H0000FF00&';
+  else if (colorStyle === 'flame-red') primaryCol = '&H001030FF&';
+  else if (colorStyle === 'purple') primaryCol = '&H00FF00EA&';
+  else if (colorStyle === 'white') primaryCol = '&H00FFFFFF&';
+
+  // Smart Word-Wrap for bold viral headline
+  let formattedHeadline = '';
+  if (headlineText) {
+    const clean = String(headlineText).trim().replace(/[{}]/g, '').toUpperCase();
+    const words = clean.split(/\s+/);
+    const lines = [];
+    let curLine = '';
+    for (const w of words) {
+      if ((curLine + ' ' + w).trim().length > 18) {
+        if (curLine) lines.push(curLine.trim());
+        curLine = w;
+      } else {
+        curLine = (curLine + ' ' + w).trim();
+      }
+    }
+    if (curLine) lines.push(curLine.trim());
+    formattedHeadline = lines.slice(0, 3).join('\\N');
+  } else {
+    formattedHeadline = 'MUST WATCH 🔥';
+  }
+
+  let formattedHook = '';
+  if (hookBadge) {
+    const cleanHook = String(hookBadge).trim().replace(/[{}]/g, '').toUpperCase();
+    formattedHook = cleanHook.startsWith('★') ? cleanHook : `★ ${cleanHook} ★`;
+  } else {
+    formattedHook = '★ VIRAL HIGHLIGHT ★';
+  }
+
+  const assPath = path.join(os.tmpdir(), `thumb-sub-${Date.now()}-${Math.round(Math.random() * 1000)}.ass`);
+  const sStart = '0:00:00.00';
+  const sEnd = '0:05:00.00';
+
+  const events = `
+Dialogue: 0,${sStart},${sEnd},ThumbHook,,0,0,0,,{\\c&H00FFFFFF&}${formattedHook}
+Dialogue: 0,${sStart},${sEnd},ThumbHeadline,,0,0,0,,{\\c${primaryCol}}${formattedHeadline}
+`;
+
+  const assContent = `[Script Info]
+Title: AI Viral Cover Thumbnail
+ScriptType: v4.00+
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.601
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: ThumbHeadline,Arial,90,${primaryCol},&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,10,5,8,80,80,560,1
+Style: ThumbHook,Arial,54,&H00FFFFFF,&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,3,8,60,60,240,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+${events}
+`;
+
+  fs.writeFileSync(assPath, assContent, 'utf8');
+  const escapedAss = path.resolve(assPath).replace(/\\/g, '/').replace(/:/g, '\\:');
+  const vf = `scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,eq=saturation=1.35:contrast=1.18,subtitles='${escapedAss}'`;
+
+  return new Promise((resolve) => {
+    ffmpeg()
+      .input(videoPath)
+      .inputOptions([`-ss ${safeTime}`])
+      .outputOptions([
+        '-vf', vf,
+        '-vframes 1',
+        '-q:v 2'
+      ])
+      .output(outputPath)
+      .on('end', async () => {
+        try { await fsp.unlink(assPath); } catch (_) {}
+        console.log(`🖼️ [AI Thumbnail Studio] Generated viral cover photo: ${path.basename(outputPath)} at ${safeTime}s`);
+        resolve({ success: true, outputPath, fileName: path.basename(outputPath) });
+      })
+      .on('error', async (err) => {
+        try { await fsp.unlink(assPath); } catch (_) {}
+        console.warn(`⚠️ [AI Thumbnail Studio] Overlay failed, falling back to basic frame:`, err.message);
+        try {
+          ffmpeg(videoPath)
+            .screenshots({
+              timestamps: [String(safeTime)],
+              filename: path.basename(outputPath),
+              folder: path.dirname(outputPath),
+              size: '1080x1920'
+            })
+            .on('end', () => resolve({ success: true, outputPath, fileName: path.basename(outputPath) }))
+            .on('error', () => resolve({ success: false, error: err.message }));
+        } catch (e2) {
+          resolve({ success: false, error: e2.message });
+        }
+      })
+      .run();
+  });
+}
+
 // Core Engine: Publish Reel to Instagram Graph API Direct
 async function publishReelDirectToInstagram(videoPath, caption, customToken, customUserId) {
   // 🛡️ STEP 0: Check token validity first. Auto-refresh if expired!
@@ -1190,22 +1306,22 @@ Respond ONLY with valid JSON:`;
       try { await fsp.unlink(assFilePath); } catch (_) {}
     }
 
-    // Generate high-resolution 9:16 cover photo thumbnail at 1.5s
+    // Feature #4: Generate AI Smart Viral 9:16 Cover Thumbnail with Bold Headline & Hook Badge
     const thumbFileName = outputFileName.replace('.mp4', '-cover.jpg');
+    const thumbOutputPath = path.join(REELS_DIR, thumbFileName);
     try {
-      await new Promise((resolve) => {
-        ffmpeg(outputPath)
-          .screenshots({
-            timestamps: ['1.5'],
-            filename: thumbFileName,
-            folder: REELS_DIR,
-            size: '1080x1920'
-          })
-          .on('end', resolve)
-          .on('error', resolve);
+      await generateViralThumbnail({
+        videoPath: outputPath,
+        outputPath: thumbOutputPath,
+        headlineText: aiDirectorRecipe.viralTitle || 'MUST WATCH 🔥',
+        hookBadge: aiDirectorRecipe.hookOverlay || '★ VIRAL HIGHLIGHT ★',
+        colorStyle: 'yellow',
+        timestamp: 1.5
       });
-      console.log(`🖼️ [Cover Photo] AI Cover photo generated: ${thumbFileName}`);
-    } catch (_) {}
+      console.log(`🖼️ [Cover Photo] AI Viral Cover photo generated: ${thumbFileName}`);
+    } catch (thumbErr) {
+      console.warn('⚠️ Thumbnail generation fallback:', thumbErr.message);
+    }
 
     const isScheduled = req.body.isScheduled === 'true' || !!req.body.scheduledTime;
     const scheduledTime = req.body.scheduledTime || null;
@@ -1264,6 +1380,54 @@ Respond ONLY with valid JSON:`;
   } catch (err) {
     console.error('Video processing error:', err);
     res.status(500).json({ error: `વિડીયો પ્રોસેસ કરવામાં ભૂલ આવી: ${err.message}` });
+  }
+});
+
+// 🖼️ Feature #4: AI Smart Thumbnail Studio Endpoint (Regenerate / Customize on the fly)
+app.post('/api/video/generate-thumbnail', async (req, res) => {
+  try {
+    const { videoFileName, headlineText, hookBadge, colorStyle, timestamp } = req.body;
+    if (!videoFileName) {
+      return res.status(400).json({ error: 'વિડીયો ફાઈલનું નામ જરૂરી છે.' });
+    }
+
+    const cleanBase = path.basename(videoFileName);
+    let videoPath = path.join(REELS_DIR, cleanBase);
+    if (!fs.existsSync(videoPath)) {
+      videoPath = path.join(UPLOADS_DIR, cleanBase);
+    }
+    if (!fs.existsSync(videoPath)) {
+      return res.status(404).json({ error: 'વિડીયો ફાઈલ મળી નથી.' });
+    }
+
+    const thumbFileName = cleanBase.replace(/\.(mp4|mov|avi|webm)$/i, '') + '-cover.jpg';
+    const outputPath = path.join(REELS_DIR, thumbFileName);
+
+    const result = await generateViralThumbnail({
+      videoPath,
+      outputPath,
+      headlineText: headlineText || 'MUST WATCH 🔥',
+      hookBadge: hookBadge || '★ VIRAL HIGHLIGHT ★',
+      colorStyle: colorStyle || 'yellow',
+      timestamp: parseFloat(timestamp) || 1.5
+    });
+
+    if (!result.success) {
+      return res.status(500).json({ error: result.error || 'થમ્બનેઈલ બનાવવામાં નિષ્ફળતા મળી.' });
+    }
+
+    return res.json({
+      success: true,
+      thumbnailUrl: `/rendered-reels/${thumbFileName}?t=${Date.now()}`,
+      fileName: thumbFileName,
+      timestamp: parseFloat(timestamp) || 1.5,
+      headlineText,
+      hookBadge,
+      colorStyle
+    });
+  } catch (err) {
+    console.error('Thumbnail generation endpoint error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -2149,22 +2313,22 @@ Respond ONLY with valid JSON.`
     try { await fsp.unlink(assFilePath); } catch (_) {}
   }
 
-  // Generate high-resolution 9:16 cover thumbnail at 1.5s
+  // Feature #4: Generate AI Smart Viral 9:16 Cover Thumbnail for Split Part
   const thumbFileName = outputFileName.replace('.mp4', '-cover.jpg');
+  const thumbOutputPath = path.join(REELS_DIR, thumbFileName);
   try {
-    await new Promise((resolve) => {
-      ffmpeg(outputPath)
-        .screenshots({
-          timestamps: ['1.5'],
-          filename: thumbFileName,
-          folder: REELS_DIR,
-          size: '1080x1920'
-        })
-        .on('end', resolve)
-        .on('error', resolve);
+    await generateViralThumbnail({
+      videoPath: outputPath,
+      outputPath: thumbOutputPath,
+      headlineText: partRecipe.viralTitle || `PART ${partNum} MUST WATCH`,
+      hookBadge: partRecipe.hookOverlay || `★ PART ${partNum} ★`,
+      colorStyle: 'yellow',
+      timestamp: 1.5
     });
-    console.log(`🖼️ [Cover Photo] AI Cover photo generated for Part ${partNum}: ${thumbFileName}`);
-  } catch (_) {}
+    console.log(`🖼️ [Cover Photo] AI Viral Cover photo generated for Part ${partNum}: ${thumbFileName}`);
+  } catch (thumbErr) {
+    console.warn('⚠️ Part thumbnail fallback:', thumbErr.message);
+  }
 
   // 4. Update Scheduler State (Increment progress so this 30s segment NEVER posts again!)
   const historyItem = {

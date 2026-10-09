@@ -1290,10 +1290,35 @@ function initVideoStudio() {
       btnDownloadReel.setAttribute('download', data.fileName || 'reel-30s.mp4');
 
       const btnDownloadCover = document.getElementById('btnDownloadCover');
-      if (btnDownloadCover && data.thumbnailUrl) {
-        btnDownloadCover.href = data.thumbnailUrl;
-        btnDownloadCover.setAttribute('download', (data.fileName || 'reel').replace('.mp4', '-cover.jpg'));
-        btnDownloadCover.style.display = 'inline-flex';
+      const btnOpenThumbnailStudio = document.getElementById('btnOpenThumbnailStudio');
+      const thumbQuickBar = document.getElementById('thumbQuickBar');
+      const thumbMiniPreview = document.getElementById('thumbMiniPreview');
+      const thumbMiniHeadline = document.getElementById('thumbMiniHeadline');
+
+      if (data.thumbnailUrl) {
+        if (btnDownloadCover) {
+          btnDownloadCover.href = data.thumbnailUrl;
+          btnDownloadCover.setAttribute('download', (data.fileName || 'reel').replace('.mp4', '-cover.jpg'));
+          btnDownloadCover.style.display = 'inline-flex';
+        }
+        if (btnOpenThumbnailStudio) {
+          btnOpenThumbnailStudio.style.display = 'inline-flex';
+        }
+        if (thumbQuickBar && thumbMiniPreview && thumbMiniHeadline) {
+          thumbMiniPreview.src = data.thumbnailUrl;
+          thumbMiniHeadline.textContent = data.recipe?.viralTitle || 'Alex Hormozi 9:16';
+          thumbQuickBar.classList.remove('hidden');
+        }
+
+        // Cache thumbnail studio state
+        window.activeReelThumbnail = {
+          fileName: data.fileName,
+          thumbnailUrl: data.thumbnailUrl,
+          headlineText: data.recipe?.viralTitle || 'MUST WATCH 🔥',
+          hookBadge: data.recipe?.hookOverlay || '★ VIRAL HIGHLIGHT ★',
+          colorStyle: 'yellow',
+          timestamp: 1.5
+        };
       }
 
       videoActionButtons.classList.remove('hidden');
@@ -1938,3 +1963,161 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+// ==========================================
+// 🖼️ FEATURE #4: AI SMART THUMBNAIL STUDIO
+// ==========================================
+function initThumbnailStudio() {
+  const modal = document.getElementById('thumbnailStudioModal');
+  const btnOpen = document.getElementById('btnOpenThumbnailStudio');
+  const btnEditMini = document.getElementById('btnEditThumbnailMini');
+  const btnClose = document.getElementById('btnCloseThumbnailModal');
+  const btnCloseFooter = document.getElementById('btnCloseThumbnailModalFooter');
+  const previewImg = document.getElementById('thumbStudioPreviewImg');
+  const headlineInput = document.getElementById('thumbHeadlineInput');
+  const hookBadgeInput = document.getElementById('thumbHookBadgeInput');
+  const timeSlider = document.getElementById('thumbTimeSlider');
+  const timeDisplay = document.getElementById('thumbTimeDisplay');
+  const colorBtns = document.querySelectorAll('#thumbColorOptions .btn-color-pick');
+  const btnRegen = document.getElementById('btnRegenerateThumbnailInModal');
+  const loadingOverlay = document.getElementById('thumbStudioLoading');
+  const btnDownloadFinal = document.getElementById('btnDownloadThumbnailFinal');
+
+  if (!modal) return;
+
+  let selectedColor = 'yellow';
+
+  function openStudio() {
+    const state = window.activeReelThumbnail || {};
+    if (headlineInput) headlineInput.value = state.headlineText || 'MUST WATCH 🔥';
+    if (hookBadgeInput) hookBadgeInput.value = state.hookBadge || '★ VIRAL HIGHLIGHT ★';
+    if (timeSlider) {
+      timeSlider.value = state.timestamp || 1.5;
+      if (timeDisplay) timeDisplay.textContent = `${state.timestamp || 1.5}s`;
+    }
+    if (previewImg && state.thumbnailUrl) {
+      previewImg.src = state.thumbnailUrl;
+    }
+    if (btnDownloadFinal && state.thumbnailUrl) {
+      btnDownloadFinal.href = state.thumbnailUrl;
+      btnDownloadFinal.setAttribute('download', (state.fileName || 'reel').replace('.mp4', '-cover.jpg'));
+    }
+    modal.classList.remove('hidden');
+  }
+
+  function closeStudio() {
+    modal.classList.add('hidden');
+  }
+
+  if (btnOpen) btnOpen.addEventListener('click', openStudio);
+  if (btnEditMini) btnEditMini.addEventListener('click', openStudio);
+  if (btnClose) btnClose.addEventListener('click', closeStudio);
+  if (btnCloseFooter) btnCloseFooter.addEventListener('click', closeStudio);
+
+  // Close modal when backdrop is clicked
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeStudio();
+  });
+
+  // Slider update
+  if (timeSlider && timeDisplay) {
+    timeSlider.addEventListener('input', (e) => {
+      timeDisplay.textContent = `${e.target.value}s`;
+    });
+  }
+
+  // Color button toggle
+  colorBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      colorBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedColor = btn.dataset.color || 'yellow';
+    });
+  });
+
+  // Re-generate action
+  if (btnRegen) {
+    btnRegen.addEventListener('click', async () => {
+      const state = window.activeReelThumbnail;
+      if (!state || !state.fileName) {
+        showToast('કૃપા કરીને પહેલા વિડીયો બનાવો અથવા પસંદ કરો.', true);
+        return;
+      }
+
+      const headlineText = headlineInput ? headlineInput.value.trim() : '';
+      const hookBadge = hookBadgeInput ? hookBadgeInput.value.trim() : '';
+      const timestamp = timeSlider ? parseFloat(timeSlider.value) : 1.5;
+
+      try {
+        if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+        btnRegen.disabled = true;
+
+        const res = await fetch('/api/video/generate-thumbnail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoFileName: state.fileName,
+            headlineText,
+            hookBadge,
+            colorStyle: selectedColor,
+            timestamp
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Failed to generate thumbnail.');
+        }
+
+        // Update active state
+        window.activeReelThumbnail = {
+          ...window.activeReelThumbnail,
+          thumbnailUrl: data.thumbnailUrl,
+          headlineText,
+          hookBadge,
+          colorStyle: selectedColor,
+          timestamp
+        };
+
+        // Update UI
+        if (previewImg) previewImg.src = data.thumbnailUrl;
+        if (btnDownloadFinal) {
+          btnDownloadFinal.href = data.thumbnailUrl;
+          btnDownloadFinal.setAttribute('download', (state.fileName || 'reel').replace('.mp4', '-cover.jpg'));
+        }
+
+        const thumbMiniPreview = document.getElementById('thumbMiniPreview');
+        const thumbMiniHeadline = document.getElementById('thumbMiniHeadline');
+        if (thumbMiniPreview) thumbMiniPreview.src = data.thumbnailUrl;
+        if (thumbMiniHeadline) thumbMiniHeadline.textContent = headlineText || 'Viral Cover';
+
+        const btnDownloadCover = document.getElementById('btnDownloadCover');
+        if (btnDownloadCover) {
+          btnDownloadCover.href = data.thumbnailUrl;
+          btnDownloadCover.setAttribute('download', (state.fileName || 'reel').replace('.mp4', '-cover.jpg'));
+        }
+
+        const renderedVideoPlayer = document.getElementById('renderedVideoPlayer');
+        if (renderedVideoPlayer) {
+          renderedVideoPlayer.poster = data.thumbnailUrl;
+        }
+
+        showToast('🎉 નવો HD 9:16 કવર ફોટો સફળતાપૂર્વક બની ગયો છે! 🖼️');
+      } catch (err) {
+        console.error(err);
+        showToast(`ભૂલ: ${err.message}`, true);
+      } finally {
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+        btnRegen.disabled = false;
+      }
+    });
+  }
+}
+
+// Initialize on page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initThumbnailStudio);
+} else {
+  initThumbnailStudio();
+}
+
