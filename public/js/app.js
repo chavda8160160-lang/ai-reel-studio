@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initModeSwitcher();
   initVideoStudio();
   initSchedulerView();
+  initAnalyticsView();
 });
 
 // Toast Helper
@@ -796,7 +797,8 @@ function initModeSwitcher() {
   const allViews = [
     document.getElementById('appBuilderView'),
     document.getElementById('videoStudioView'),
-    document.getElementById('schedulerView')
+    document.getElementById('schedulerView'),
+    document.getElementById('analyticsView')
   ];
 
   navTabs.forEach(tab => {
@@ -814,6 +816,8 @@ function initModeSwitcher() {
 
       if (targetId === 'schedulerView') {
         fetchSchedulerStatus();
+      } else if (targetId === 'analyticsView') {
+        fetchAnalyticsOverview();
       }
     });
   });
@@ -2280,5 +2284,198 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initThumbnailStudio);
 } else {
   initThumbnailStudio();
+}
+
+// ==========================================
+// 📊 8. LIVE SOCIAL ANALYTICS & VIEWS TRACKER
+// ==========================================
+let isAnalyticsFetching = false;
+
+function initAnalyticsView() {
+  const btnRefresh = document.getElementById('btnRefreshAnalytics');
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', () => {
+      fetchAnalyticsOverview(true);
+    });
+  }
+
+  const btnClean = document.getElementById('btnCleanStorage');
+  if (btnClean) {
+    btnClean.addEventListener('click', async () => {
+      if (!confirm('શું તમે ૭ દિવસથી જૂની રેન્ડર વિડીયો ફાઈલો સાફ કરવા માંગો છો? (તાજેતરની ૫ રીલ્સ હંમેશા સુરક્ષિત રહેશે)')) {
+        return;
+      }
+      try {
+        btnClean.disabled = true;
+        btnClean.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> સાફ થઈ રહ્યું છે...';
+        const res = await fetch('/api/storage/clean', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ daysOld: 7 })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`🧹 ${data.message}`);
+          fetchAnalyticsOverview();
+        } else {
+          showToast(`ભૂલ: ${data.error}`, true);
+        }
+      } catch (err) {
+        showToast(`ભૂલ: ${err.message}`, true);
+      } finally {
+        btnClean.disabled = false;
+        btnClean.innerHTML = '<i class="fa-solid fa-broom" style="color: #f59e0b;"></i> <span>🧹 Clean Old Videos (> 7 Days)</span>';
+      }
+    });
+  }
+}
+
+async function fetchAnalyticsOverview(showFeedback = false) {
+  if (isAnalyticsFetching) return;
+  isAnalyticsFetching = true;
+
+  const syncIcon = document.getElementById('analyticsSyncIcon');
+  if (syncIcon) syncIcon.classList.add('fa-spin');
+
+  try {
+    const res = await fetch('/api/social/analytics');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Analytics fetch failed');
+
+    // 1. Profile Information
+    const profilePic = document.getElementById('analyticsProfilePic');
+    const profileName = document.getElementById('analyticsProfileName');
+    const usernameBadge = document.getElementById('analyticsUsernameBadge');
+    const followersCount = document.getElementById('analyticsFollowersCount');
+    const lastUpdated = document.getElementById('analyticsLastUpdated');
+
+    if (profilePic && data.instagram?.profilePic) {
+      profilePic.src = data.instagram.profilePic;
+    }
+    if (profileName) profileName.textContent = data.instagram?.name || 'Reel Creator';
+    if (usernameBadge) usernameBadge.textContent = '@' + (data.instagram?.username || 'moving.151120');
+    if (followersCount) followersCount.textContent = `${data.instagram?.followers || 0} Followers`;
+    if (lastUpdated) lastUpdated.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+    // 2. Top KPI Cards
+    const kpiReach = document.getElementById('kpiTotalReach');
+    const kpiLikes = document.getElementById('kpiTotalLikes');
+    const kpiComments = document.getElementById('kpiTotalComments');
+    const kpiReels = document.getElementById('kpiTotalReels');
+
+    if (kpiReach) kpiReach.textContent = (data.summary?.estimatedReach || 0).toLocaleString('en-IN') + '+';
+    if (kpiLikes) kpiLikes.textContent = data.summary?.totalLikes || 0;
+    if (kpiComments) kpiComments.textContent = data.summary?.totalComments || 0;
+    if (kpiReels) kpiReels.textContent = data.summary?.totalReels || 0;
+
+    // 3. Storage Info
+    const storageSize = document.getElementById('storageSizeLabel');
+    const storageFiles = document.getElementById('storageFilesLabel');
+    if (storageSize) storageSize.textContent = `${data.storage?.totalMB || 0} MB`;
+    if (storageFiles) storageFiles.textContent = `(${data.storage?.totalFiles || 0} Files)`;
+
+    // 4. Render Reels Performance Grid
+    renderAnalyticsReelsGrid(data.reels || []);
+
+    if (showFeedback) {
+      showToast('🎉 લાઈવ એનાલિટિક્સ અને વ્યુઝ સફળતાપૂર્વક અપડેટ થઈ ગયા! 📊');
+    }
+  } catch (err) {
+    console.error('Analytics error:', err);
+    if (showFeedback) showToast(`એનાલિટિક્સ અપડેટ કરવામાં ભૂલ: ${err.message}`, true);
+  } finally {
+    if (syncIcon) syncIcon.classList.remove('fa-spin');
+    isAnalyticsFetching = false;
+  }
+}
+
+function renderAnalyticsReelsGrid(reels) {
+  const container = document.getElementById('analyticsReelsGrid');
+  if (!container) return;
+
+  if (!reels || reels.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: #94a3b8; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px;">
+        <i class="fa-solid fa-clapperboard" style="font-size: 2.2rem; color: #cbd5e1; margin-bottom: 0.75rem;"></i>
+        <h4 style="color: #475569; margin: 0 0 0.35rem 0;">હજી સુધી કોઈ રીલ્સ પબ્લિશ થઈ નથી</h4>
+        <p style="font-size: 0.85rem; margin: 0;">Reel Studio અથવા Daily Auto-Pilot માંથી તમારી પ્રથમ રીલ પબ્લિશ કરો!</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = reels.map(r => {
+    const formattedDate = r.publishedAt 
+      ? new Date(r.publishedAt).toLocaleDateString('gu-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+      : 'હમણાં જ';
+
+    const hasIg = !!(r.instagram?.url);
+    const hasYt = !!(r.youtube?.url);
+
+    const likesCount = r.instagram?.likes || 0;
+    const commentsCount = r.instagram?.comments || 0;
+
+    const thumbHtml = r.thumbnailUrl
+      ? `<img src="${r.thumbnailUrl}" alt="Cover" style="width: 100%; height: 100%; object-fit: cover;">`
+      : `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #1e1b4b, #312e81); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #a5b4fc; gap: 0.4rem;">
+          <i class="fa-solid fa-film" style="font-size: 1.8rem;"></i>
+          <span style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;">9:16 REEL</span>
+         </div>`;
+
+    return `
+      <div class="glass-card" style="border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #e2e8f0; background: #ffffff; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+        <!-- Card Header: Visual Preview & Badges -->
+        <div style="position: relative; width: 100%; height: 160px; background: #0f172a; overflow: hidden;">
+          ${thumbHtml}
+          <div style="position: absolute; top: 8px; left: 8px; display: flex; gap: 0.4rem; flex-wrap: wrap;">
+            ${hasIg ? '<span style="background: rgba(236,72,153,0.9); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 9999px; backdrop-filter: blur(4px);"><i class="fa-brands fa-instagram"></i> Reel</span>' : ''}
+            ${hasYt ? '<span style="background: rgba(239,68,68,0.9); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 9999px; backdrop-filter: blur(4px);"><i class="fa-brands fa-youtube"></i> Shorts</span>' : ''}
+          </div>
+          <span style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: #fff; font-size: 0.68rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 4px;">
+            ${r.niche ? r.niche.substring(0, 22) : 'Viral Reel'}
+          </span>
+        </div>
+
+        <!-- Card Body -->
+        <div style="padding: 1rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h4 style="margin: 0 0 0.35rem 0; font-size: 0.92rem; font-weight: 700; color: #0f172a; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+              ${escapeHtml(r.title || 'Untitled Reel')}
+            </h4>
+            <div style="font-size: 0.74rem; color: #94a3b8; display: flex; align-items: center; gap: 0.35rem;">
+              <i class="fa-regular fa-clock"></i>
+              <span>${formattedDate}</span>
+            </div>
+          </div>
+
+          <!-- Metrics Row -->
+          <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 0.85rem; align-items: center;">
+              <span style="font-size: 0.82rem; font-weight: 700; color: #ec4899; display: flex; align-items: center; gap: 0.25rem;" title="Likes">
+                <i class="fa-solid fa-heart"></i> ${likesCount}
+              </span>
+              <span style="font-size: 0.82rem; font-weight: 700; color: #6366f1; display: flex; align-items: center; gap: 0.25rem;" title="Comments">
+                <i class="fa-solid fa-comment"></i> ${commentsCount}
+              </span>
+            </div>
+            
+            <!-- External Links -->
+            <div style="display: flex; gap: 0.4rem;">
+              ${hasIg ? `
+                <a href="${r.instagram.url}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" style="padding: 0.3rem 0.6rem; font-size: 0.74rem; color: #ec4899; border: 1px solid rgba(236,72,153,0.3); border-radius: 6px; text-decoration: none;" title="Open in Instagram">
+                  <i class="fa-brands fa-instagram"></i> IG ↗
+                </a>
+              ` : ''}
+              ${hasYt ? `
+                <a href="${r.youtube.url}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" style="padding: 0.3rem 0.6rem; font-size: 0.74rem; color: #ef4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; text-decoration: none;" title="Open in YouTube">
+                  <i class="fa-brands fa-youtube"></i> YT ↗
+                </a>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 

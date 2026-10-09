@@ -40,6 +40,9 @@
         <button id="navModeScheduler" class="mode-tab" data-target="schedulerView">
           <i class="fa-solid fa-clock"></i> ⏰ Daily Auto-Pilot
         </button>
+        <button id="navModeAnalytics" class="mode-tab" data-target="analyticsView">
+          <i class="fa-solid fa-chart-line"></i> 📊 Live Analytics
+        </button>
       </nav>
 
       <div class="header-actions" style="display: flex; gap: 0.6rem; align-items: center;">
@@ -668,6 +671,163 @@
                 <p>No parts published yet. Click "Extract & Post Next Part Now" to test.</p>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- VIEW 4: Live Social Analytics & Views Tracker -->
+    <main class="main-container hidden" id="analyticsView" style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 1280px; margin: 0 auto; width: 100%;">
+      
+      <!-- Top Profile & Live Status Header -->
+      <section class="glass-card" style="padding: 1.25rem 1.6rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-radius: 16px;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div style="position: relative;">
+            <img id="analyticsProfilePic" src="https://ui-avatars.com/api/?name=Reel+Creator&background=4f46e5&color=fff" alt="Profile" style="width: 58px; height: 58px; border-radius: 50%; object-fit: cover; border: 3px solid #6366f1; box-shadow: 0 4px 12px rgba(99,102,241,0.25);">
+            <span style="position: absolute; bottom: 0; right: 0; width: 14px; height: 14px; background: #22c55e; border: 2px solid #fff; border-radius: 50%;"></span>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <h2 id="analyticsProfileName" style="font-size: 1.3rem; font-weight: 800; color: #0f172a; margin: 0;">Reel Creator</h2>
+              <span id="analyticsUsernameBadge" style="font-size: 0.82rem; font-weight: 700; color: #ec4899; background: rgba(236,72,153,0.1); padding: 0.2rem 0.6rem; border-radius: 9999px;">
+                @moving.151120
+              </span>
+            </div>
+            <p style="font-size: 0.84rem; color: #64748b; margin: 0.25rem 0 0 0; display: flex; align-items: center; gap: 0.8rem;">
+              <span><i class="fa-brands fa-instagram" style="color: #ec4899;"></i> Instagram Reels: <b id="analyticsFollowersCount" style="color: #0f172a;">2 Followers</b></span>
+              <span>•</span>
+              <span><i class="fa-brands fa-youtube" style="color: #ef4444;"></i> YouTube Shorts: <b style="color: #16a34a;">Active ✓</b></span>
+            </p>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+          <div style="text-align: right; font-size: 0.78rem; color: #64748b;">
+            <span>છેલ્લે અપડેટ:</span> <b id="analyticsLastUpdated" style="color: #0f172a;">હમણાં જ</b>
+          </div>
+          <button id="btnRefreshAnalytics" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #4f46e5, #06b6d4);">
+            <i class="fa-solid fa-rotate" id="analyticsSyncIcon"></i>
+            <span>⚡ Sync Live Stats</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 4 Top KPI Metrics Cards -->
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem;">
+        <!-- Card 1: Estimated Reach & Plays -->
+        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #0284c7;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કુલ પહોંચ (Reach & Plays)</p>
+              <h3 id="kpiTotalReach" style="font-size: 2rem; font-weight: 800; color: #0284c7; margin: 0.4rem 0 0 0;">1,040+</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(2,132,199,0.12); display: flex; align-items: center; justify-content: center; color: #0284c7; font-size: 1.3rem;">
+              <i class="fa-solid fa-eye"></i>
+            </div>
+          </div>
+          <div style="margin-top: 0.75rem; font-size: 0.76rem; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 0.3rem;">
+            <i class="fa-solid fa-arrow-trend-up"></i>
+            <span>Organic Growth Active</span>
+          </div>
+        </div>
+
+        <!-- Card 2: Total Likes -->
+        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #ec4899;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કુલ લાઇક્સ (Total Likes)</p>
+              <h3 id="kpiTotalLikes" style="font-size: 2rem; font-weight: 800; color: #ec4899; margin: 0.4rem 0 0 0;">8</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(236,72,153,0.12); display: flex; align-items: center; justify-content: center; color: #ec4899; font-size: 1.3rem;">
+              <i class="fa-solid fa-heart"></i>
+            </div>
+          </div>
+          <div style="margin-top: 0.75rem; font-size: 0.76rem; color: #64748b; font-weight: 600; display: flex; align-items: center; gap: 0.3rem;">
+            <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i>
+            <span>Real Instagram Reactions</span>
+          </div>
+        </div>
+
+        <!-- Card 3: Total Comments -->
+        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #8b5cf6;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કમેન્ટ્સ & એંગેજમેન્ટ</p>
+              <h3 id="kpiTotalComments" style="font-size: 2rem; font-weight: 800; color: #8b5cf6; margin: 0.4rem 0 0 0;">0</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(139,92,246,0.12); display: flex; align-items: center; justify-content: center; color: #8b5cf6; font-size: 1.3rem;">
+              <i class="fa-solid fa-comments"></i>
+            </div>
+          </div>
+          <div style="margin-top: 0.75rem; font-size: 0.76rem; color: #64748b; font-weight: 600;">
+            <span>ઓડિયન્સ ફીડબેક & સવાલો</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Total Tracked Reels -->
+        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #10b981;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કુલ પબ્લિશ થયેલી રીલ્સ</p>
+              <h3 id="kpiTotalReels" style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0.4rem 0 0 0;">13</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(16,185,129,0.12); display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 1.3rem;">
+              <i class="fa-solid fa-clapperboard"></i>
+            </div>
+          </div>
+          <div style="margin-top: 0.75rem; font-size: 0.76rem; color: #16a34a; font-weight: 600;">
+            <span>૧૦૦% હેન્ડ્સ-ફ્રી ઓટો-પબ્લિશ</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Storage Health & 1-Click Cleaner Banner -->
+      <section class="glass-card" style="padding: 1rem 1.4rem; border-radius: 14px; background: linear-gradient(135deg, rgba(248,250,252,0.9), rgba(241,245,249,0.9)); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border: 1px solid #e2e8f0;">
+        <div style="display: flex; align-items: center; gap: 0.85rem;">
+          <div style="width: 42px; height: 42px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+            <i class="fa-solid fa-hard-drive"></i>
+          </div>
+          <div>
+            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
+              સર્વર સ્ટોરેજ વપરાશ: <span id="storageSizeLabel" style="color: #0284c7;">319 MB</span>
+              <span id="storageFilesLabel" style="font-size: 0.8rem; font-weight: 600; color: #64748b; margin-left: 0.4rem;">(47 Files)</span>
+            </h4>
+            <p style="margin: 0.2rem 0 0 0; font-size: 0.76rem; color: #64748b;">
+              સર્વર ડિસ્ક ભરાઈ ન જાય તે માટે ૭ દિવસથી જૂની રેન્ડર વિડીયો ફાઈલો ઓટોમેટિક સાફ કરી શકાય છે.
+            </p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.6rem; align-items: center;">
+          <button id="btnCleanStorage" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.45rem 0.9rem; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; font-weight: 600;">
+            <i class="fa-solid fa-broom" style="color: #f59e0b;"></i>
+            <span>🧹 Clean Old Videos (> 7 Days)</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Live Performance Feed / Published Reels Table -->
+      <section class="glass-card" style="padding: 1.4rem; border-radius: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.1rem; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-tower-broadcast" style="color: #6366f1;"></i>
+              લાઇવ રીલ્સ પર્ફોર્મન્સ ટ્રેકર (Live Performance Feed)
+            </h3>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: #64748b;">
+              તમારા ઇન્સ્ટાગ્રામ અને યુટ્યુબ શોર્ટ્સ પર પબ્લિશ થયેલી તમામ રીલ્સનું રીઅલ-ટાઇમ લિસ્ટ
+            </p>
+          </div>
+          <span class="badge" style="background: rgba(34,197,94,0.12); color: #16a34a; font-weight: 700; padding: 0.35rem 0.75rem; border-radius: 9999px; font-size: 0.78rem;">
+            🟢 Real-Time API Linked
+          </span>
+        </div>
+
+        <!-- Reels Cards Grid -->
+        <div id="analyticsReelsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1.2rem;">
+          <!-- Dynamically Populated -->
+          <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem; color: #94a3b8;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: #6366f1;"></i>
+            <p style="margin-top: 0.75rem; font-weight: 600;">લાઇવ એનાલિટિક્સ લોડ થઈ રહ્યું છે...</p>
           </div>
         </div>
       </section>

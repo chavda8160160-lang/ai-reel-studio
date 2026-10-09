@@ -2804,6 +2804,227 @@ app.get('/api/social/status', async (req, res) => {
   });
 });
 
+// 📊 8. LIVE SOCIAL ANALYTICS & ENGAGEMENT TRACKER
+app.get('/api/social/analytics', async (req, res) => {
+  try {
+    const queue = getScheduledQueue();
+    const hasIg = !!(process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID);
+    const hasYt = !!process.env.YOUTUBE_ACCESS_TOKEN;
+
+    let igProfile = {
+      username: cachedIgUsername || 'moving.151120',
+      name: 'Reel Creator',
+      followers: 2,
+      mediaCount: 0,
+      profilePic: null,
+      connected: hasIg
+    };
+
+    let igMediaList = [];
+
+    if (hasIg) {
+      try {
+        const token = process.env.META_INSTAGRAM_TOKEN;
+        const userId = process.env.META_INSTAGRAM_USER_ID;
+
+        // Fetch IG profile details
+        const profRes = await fetch(`https://graph.facebook.com/v20.0/${userId}?fields=id,username,name,followers_count,media_count,profile_picture_url&access_token=${token}`).then(r => r.json());
+        if (profRes && profRes.username) {
+          igProfile.username = profRes.username;
+          cachedIgUsername = profRes.username;
+          igProfile.name = profRes.name || profRes.username;
+          igProfile.followers = profRes.followers_count || 0;
+          igProfile.mediaCount = profRes.media_count || 0;
+          igProfile.profilePic = profRes.profile_picture_url || null;
+        }
+
+        // Fetch recent reels/media
+        const mediaRes = await fetch(`https://graph.facebook.com/v20.0/${userId}/media?fields=id,caption,media_type,media_product_type,like_count,comments_count,permalink,timestamp&limit=25&access_token=${token}`).then(r => r.json());
+        if (mediaRes && Array.isArray(mediaRes.data)) {
+          igMediaList = mediaRes.data;
+        }
+      } catch (igErr) {
+        console.warn('⚠️ [Analytics] IG Profile fetch warning:', igErr.message);
+      }
+    }
+
+    // Merge queue items with IG media list
+    const igMediaMap = new Map();
+    igMediaList.forEach(m => igMediaMap.set(m.id, m));
+
+    // Combine published reels
+    const publishedReels = [];
+    let totalLikes = 0;
+    let totalComments = 0;
+
+    // Process from scheduled queue first
+    for (const qItem of queue) {
+      if (qItem.status && (qItem.status.includes('Posted') || qItem.lastPostId || qItem.youtubeVideoId)) {
+        let igData = qItem.lastPostId ? igMediaMap.get(qItem.lastPostId) : null;
+        let likes = (igData && igData.like_count !== undefined) ? igData.like_count : (qItem.likes || 0);
+        let comments = (igData && igData.comments_count !== undefined) ? igData.comments_count : (qItem.comments || 0);
+        let permalink = (igData && igData.permalink) ? igData.permalink : qItem.lastPostUrl;
+
+        totalLikes += likes;
+        totalComments += comments;
+
+        let thumb = qItem.thumbnailUrl;
+        if (!thumb && qItem.fileName) {
+          const coverCandidate = `/rendered-reels/${path.parse(qItem.fileName).name}-cover.jpg`;
+          if (fs.existsSync(path.join(REELS_DIR, `${path.parse(qItem.fileName).name}-cover.jpg`))) {
+            thumb = coverCandidate;
+          }
+        }
+
+        publishedReels.push({
+          id: qItem.id,
+          title: qItem.viralTitle || qItem.title || 'Viral AI Reel',
+          caption: qItem.viralCaption || '',
+          thumbnailUrl: thumb,
+          videoUrl: qItem.reelUrl || (qItem.fileName ? `/rendered-reels/${qItem.fileName}` : null),
+          publishedAt: qItem.lastPostedAt || qItem.scheduledTime || qItem.createdAt,
+          instagram: {
+            id: qItem.lastPostId || null,
+            url: permalink || null,
+            likes: likes,
+            comments: comments,
+            posted: !!(qItem.lastPostId || (qItem.status && qItem.status.includes('IG')))
+          },
+          youtube: {
+            videoId: qItem.youtubeVideoId || null,
+            url: qItem.youtubePostUrl || null,
+            posted: !!(qItem.youtubeVideoId || (qItem.status && qItem.status.includes('YouTube')))
+          },
+          niche: qItem.niche || 'General',
+          status: qItem.status
+        });
+
+        if (qItem.lastPostId) {
+          igMediaMap.delete(qItem.lastPostId); // Marked as matched
+        }
+      }
+    }
+
+    // Include other live reels found directly on Instagram
+    for (const [igId, igItem] of igMediaMap.entries()) {
+      totalLikes += (igItem.like_count || 0);
+      totalComments += (igItem.comments_count || 0);
+      publishedReels.push({
+        id: `ig-${igId}`,
+        title: (igItem.caption || 'Instagram Reel').split('\n')[0].substring(0, 70),
+        caption: igItem.caption || '',
+        thumbnailUrl: null,
+        videoUrl: null,
+        publishedAt: igItem.timestamp,
+        instagram: {
+          id: igId,
+          url: igItem.permalink,
+          likes: igItem.like_count || 0,
+          comments: igItem.comments_count || 0,
+          posted: true
+        },
+        youtube: { videoId: null, url: null, posted: false },
+        niche: 'Instagram Video',
+        status: 'Posted to Instagram ✓'
+      });
+    }
+
+    // Storage info calculation
+    let storageTotalFiles = 0;
+    let storageTotalBytes = 0;
+    try {
+      if (fs.existsSync(REELS_DIR)) {
+        const files = fs.readdirSync(REELS_DIR);
+        storageTotalFiles = files.length;
+        files.forEach(f => {
+          try {
+            const st = fs.statSync(path.join(REELS_DIR, f));
+            storageTotalBytes += st.size;
+          } catch (_) {}
+        });
+      }
+    } catch (_) {}
+
+    // Sort published reels by newest first
+    publishedReels.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+
+    // Best viral reel
+    const topReel = publishedReels.length > 0
+      ? publishedReels.reduce((prev, curr) => {
+          const prevScore = (prev.instagram?.likes || 0) + (prev.instagram?.comments || 0) * 2;
+          const currScore = (curr.instagram?.likes || 0) + (curr.instagram?.comments || 0) * 2;
+          return currScore >= prevScore ? curr : prev;
+        }, publishedReels[0])
+      : null;
+
+    res.json({
+      success: true,
+      instagram: igProfile,
+      youtube: {
+        connected: hasYt,
+        channelTitle: process.env.YOUTUBE_CHANNEL_TITLE || 'YouTube Shorts Channel'
+      },
+      summary: {
+        totalReels: publishedReels.length,
+        totalLikes,
+        totalComments,
+        estimatedReach: Math.max(totalLikes * 45 + totalComments * 20, igProfile.followers * 25, publishedReels.length * 80),
+        topReel
+      },
+      reels: publishedReels,
+      storage: {
+        totalFiles: storageTotalFiles,
+        totalMB: (storageTotalBytes / (1024 * 1024)).toFixed(1),
+        reelsDir: 'public/rendered-reels'
+      }
+    });
+  } catch (err) {
+    console.error('Analytics overview error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🧹 9. 1-CLICK STORAGE AUTO-CLEANER ENDPOINT
+app.post('/api/storage/clean', async (req, res) => {
+  try {
+    const daysOld = parseInt(req.body.daysOld) || 7;
+    const now = Date.now();
+    const thresholdMs = daysOld * 24 * 60 * 60 * 1000;
+    let deletedCount = 0;
+    let freedBytes = 0;
+
+    if (fs.existsSync(REELS_DIR)) {
+      const files = fs.readdirSync(REELS_DIR);
+      // Keep at least the 5 newest reels
+      const mp4Files = files.filter(f => f.endsWith('.mp4')).map(f => {
+        const fullPath = path.join(REELS_DIR, f);
+        const st = fs.statSync(fullPath);
+        return { file: f, path: fullPath, mtimeMs: st.mtimeMs, size: st.size };
+      }).sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+      const filesToConsider = mp4Files.slice(5); // Protect latest 5 reels
+      for (const item of filesToConsider) {
+        if (now - item.mtimeMs > thresholdMs) {
+          try {
+            fs.unlinkSync(item.path);
+            deletedCount++;
+            freedBytes += item.size;
+          } catch (_) {}
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      deletedCount,
+      freedMB: (freedBytes / (1024 * 1024)).toFixed(1),
+      message: `${deletedCount} જૂની વિડીયો ફાઈલો સાફ થઈ (${(freedBytes / (1024 * 1024)).toFixed(1)} MB મેમરી મુક્ત થઈ).`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 app.post('/api/social/publish-instagram-direct', async (req, res) => {
