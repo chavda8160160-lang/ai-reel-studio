@@ -145,6 +145,8 @@ async function loadApiKeyStatus() {
   const youtubeClientIdInput = document.getElementById('youtubeClientIdInput');
   const youtubeClientSecretInput = document.getElementById('youtubeClientSecretInput');
   const youtubeRefreshTokenInput = document.getElementById('youtubeRefreshTokenInput');
+  const telegramBotTokenInput = document.getElementById('telegramBotTokenInput');
+  const telegramChatIdInput = document.getElementById('telegramChatIdInput');
 
   if (metaIgUserIdInput) metaIgUserIdInput.value = localStorage.getItem('META_IG_USER_ID') || '';
   if (metaIgTokenInput) metaIgTokenInput.value = localStorage.getItem('META_IG_TOKEN') || '';
@@ -154,6 +156,8 @@ async function loadApiKeyStatus() {
   if (youtubeClientIdInput) youtubeClientIdInput.value = localStorage.getItem('YOUTUBE_CLIENT_ID') || '';
   if (youtubeClientSecretInput) youtubeClientSecretInput.value = localStorage.getItem('YOUTUBE_CLIENT_SECRET') || '';
   if (youtubeRefreshTokenInput) youtubeRefreshTokenInput.value = localStorage.getItem('YOUTUBE_REFRESH_TOKEN') || '';
+  if (telegramBotTokenInput) telegramBotTokenInput.value = localStorage.getItem('TELEGRAM_BOT_TOKEN') || '';
+  if (telegramChatIdInput) telegramChatIdInput.value = localStorage.getItem('TELEGRAM_CHAT_ID') || '';
 
   if (localKey) {
     apiKeyStatusLabel.textContent = 'API Key Active ✓';
@@ -313,7 +317,14 @@ btnSaveApiKey.addEventListener('click', async () => {
 
   if (ytClientId) localStorage.setItem('YOUTUBE_CLIENT_ID', ytClientId);
   if (ytClientSecret) localStorage.setItem('YOUTUBE_CLIENT_SECRET', ytClientSecret);
-  if (ytRefreshToken) localStorage.setItem('YOUTUBE_REFRESH_TOKEN', ytRefreshToken);
+  const telegramBotToken = document.getElementById('telegramBotTokenInput')?.value.trim() || '';
+  const telegramChatId = document.getElementById('telegramChatIdInput')?.value.trim() || '';
+
+  if (telegramBotToken) localStorage.setItem('TELEGRAM_BOT_TOKEN', telegramBotToken);
+  else localStorage.removeItem('TELEGRAM_BOT_TOKEN');
+
+  if (telegramChatId) localStorage.setItem('TELEGRAM_CHAT_ID', telegramChatId);
+  else localStorage.removeItem('TELEGRAM_CHAT_ID');
 
   // Sync to server backend so background scheduler has the new token immediately
   try {
@@ -329,7 +340,9 @@ btnSaveApiKey.addEventListener('click', async () => {
         youtubeToken: ytTok,
         youtubeClientId: ytClientId,
         youtubeClientSecret: ytClientSecret,
-        youtubeRefreshToken: ytRefreshToken
+        youtubeRefreshToken: ytRefreshToken,
+        telegramBotToken,
+        telegramChatId
       })
     });
   } catch (err) {
@@ -340,6 +353,39 @@ btnSaveApiKey.addEventListener('click', async () => {
   await loadApiKeyStatus();
   settingsModal.classList.add('hidden');
 });
+
+// Telegram Alert Test Button Listener
+const btnTestTelegram = document.getElementById('btnTestTelegram');
+if (btnTestTelegram) {
+  btnTestTelegram.addEventListener('click', async () => {
+    const botToken = document.getElementById('telegramBotTokenInput')?.value.trim() || '';
+    const chatId = document.getElementById('telegramChatIdInput')?.value.trim() || '';
+    if (!botToken || !chatId) {
+      showToast('Telegram Bot Token અને Chat ID બંને દાખલ કરો.', true);
+      return;
+    }
+    btnTestTelegram.disabled = true;
+    btnTestTelegram.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing...';
+    try {
+      const res = await fetch('/api/telegram/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ botToken, chatId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || '✅ Telegram Alert Sent Successfully!');
+      } else {
+        showToast(`Error: ${data.error || 'Failed'}`, true);
+      }
+    } catch (err) {
+      showToast(`Error: ${err.message}`, true);
+    } finally {
+      btnTestTelegram.disabled = false;
+      btnTestTelegram.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Test Alert';
+    }
+  });
+}
 
 // Quick Chips
 function initChips() {
@@ -612,6 +658,7 @@ if (btnDownloadZip) {
 function initModeSwitcher() {
   const navTabs = document.querySelectorAll('.mode-tab');
   const allViews = [
+    document.getElementById('appBuilderView'),
     document.getElementById('videoStudioView'),
     document.getElementById('schedulerView')
   ];

@@ -24,13 +24,16 @@
           <i class="fa-solid fa-wand-magic-sparkles"></i>
         </div>
         <div>
-          <h1 class="brand-title">ForgeAI <span>Reel Studio</span></h1>
-          <p class="brand-sub">Autonomous AI 30s Video Reels & Instagram Auto-Pilot</p>
+          <h1 class="brand-title">ForgeAI <span>Studio</span></h1>
+          <p class="brand-sub">Autonomous AI Full-Stack App Builder & Video Reels Automation</p>
         </div>
       </div>
 
       <!-- Mode Switcher Navigation -->
       <nav class="mode-nav">
+        <button id="navModeApp" class="mode-tab" data-target="appBuilderView">
+          <i class="fa-solid fa-laptop-code"></i> 💻 App Builder
+        </button>
         <button id="navModeVideo" class="mode-tab active" data-target="videoStudioView">
           <i class="fa-solid fa-clapperboard"></i> 🎬 Reel Studio
         </button>
@@ -47,7 +50,176 @@
       </div>
     </header>
 
-    <!-- VIEW: AI Video 30s Reels & Auto-Post Studio -->
+    <!-- VIEW 1: Full-Stack Code Builder -->
+    <main class="main-container hidden" id="appBuilderView">
+      <!-- Left Column: Controls & Input -->
+      <section class="prompt-panel glass-card">
+        <div class="panel-header">
+          <h2><i class="fa-solid fa-microchip"></i> What Do You Want to Build?</h2>
+          <span class="badge badge-accent">AI Architect</span>
+        </div>
+
+        <!-- Prompt Textarea -->
+        <div class="form-group">
+          <label for="promptInput">Describe your requirements:</label>
+          <textarea 
+            id="promptInput" 
+            rows="5" 
+            placeholder="e.g. Build an E-commerce Store with Products, Cart, Customer Orders, and Admin Dashboard with SQL Database, C# Backend, and React UI..."
+          ></textarea>
+        </div>
+
+        <!-- Suggested Quick Prompts -->
+        <div class="quick-prompts">
+          <span class="quick-label"><i class="fa-solid fa-bolt"></i> Quick Ideas:</span>
+          <div class="chips">
+            <button class="chip" data-prompt="E-Commerce Store with Products catalog, Shopping Cart, Checkout, Order Tracking, and Admin Product Management">🛍️ E-Commerce Store</button>
+            <button class="chip" data-prompt="Hospital & Clinic Doctor Appointment System with Patients, Doctors, Time slots booking and billing">🏥 Hospital Portal</button>
+            <button class="chip" data-prompt="Inventory & Billing Management System with Customers, Items, Invoices, GST calculations and PDF invoices">📦 Inventory & Billing</button>
+            <button class="chip" data-prompt="Real Estate Property Listing Portal with Buy/Rent properties, Image galleries, Inquiry leads and Agent contact">🏠 Real Estate</button>
+          </div>
+        </div>
+
+        <!-- Tech Stack Configuration -->
+        <div class="tech-stack-section">
+          <div class="tech-stack-header">
+            <h3><i class="fa-solid fa-sliders"></i> Select Tech Stack</h3>
+            <span class="tech-stack-badge">Full-Stack Stack</span>
+          </div>
+          
+          <div class="tech-stack-list">
+            <div class="tech-stack-row">
+              <label for="dbEngine"><i class="fa-solid fa-database"></i> Database</label>
+              <select id="dbEngine" class="custom-select tech-select">
+                <option value="SQL Server" selected>SQL Server (T-SQL)</option>
+                <option value="PostgreSQL">PostgreSQL</option>
+                <option value="SQLite">SQLite</option>
+                <option value="MySQL">MySQL</option>
+              </select>
+            </div>
+
+            <div class="tech-stack-row">
+              <label for="backendFramework"><i class="fa-solid fa-server"></i> Backend</label>
+              <select id="backendFramework" class="custom-select tech-select">
+                <option value="ASP.NET Core C#" selected>ASP.NET Core (C#)</option>
+                <option value="Node.js Express">Node.js (Express)</option>
+                <option value="Python FastAPI">Python (FastAPI)</option>
+              </select>
+            </div>
+
+            <div class="tech-stack-row">
+              <label for="frontendFramework"><i class="fa-solid fa-desktop"></i> Frontend</label>
+              <select id="frontendFramework" class="custom-select tech-select">
+                <option value="React" selected>React (Components)</option>
+                <option value="Modern HTML5/CSS/JS">Vanilla Web (HTML/JS)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <button id="btnGenerate" class="btn btn-primary btn-large">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>Generate Full-Stack Application</span>
+        </button>
+
+        <!-- Loader State -->
+        <div id="generationLoader" class="loader-box hidden">
+          <div class="spinner"></div>
+          <p class="loader-text" id="loaderStatus">AI is generating Schema, Controllers, and UI code...</p>
+          <div class="loader-steps">
+            <span class="step-badge active"><i class="fa-solid fa-check"></i> DB Schema</span>
+            <span class="step-badge active"><i class="fa-solid fa-check"></i> Backend API</span>
+            <span class="step-badge active"><i class="fa-solid fa-check"></i> Frontend UI</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Results & Code Viewer -->
+      <section class="output-panel glass-card">
+        <!-- Results Header & Actions -->
+        <div class="output-header">
+          <div class="output-meta">
+            <h2 id="projectTitleDisplay">Your Generated Project</h2>
+            <p id="projectDescDisplay" class="text-muted">Enter your prompt and click "Generate" to view code and live demo.</p>
+          </div>
+          
+          <div class="project-actions hidden" id="projectActionButtons">
+            <button id="btnSaveToDisk" class="btn btn-success" title="Save whole project to PC">
+              <i class="fa-solid fa-floppy-disk"></i> Save to PC
+            </button>
+            <button id="btnDownloadZip" class="btn btn-outline" title="Download ZIP file">
+              <i class="fa-solid fa-file-zipper"></i> Download ZIP
+            </button>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="preview"><i class="fa-solid fa-play"></i> 1. Live UI Preview</button>
+          <button class="tab-btn" data-tab="database"><i class="fa-solid fa-database"></i> 2. Database (SQL)</button>
+          <button class="tab-btn" data-tab="backend"><i class="fa-solid fa-server"></i> 3. Backend (APIs)</button>
+          <button class="tab-btn" data-tab="frontend"><i class="fa-solid fa-code"></i> 4. Frontend (UI)</button>
+          <button class="tab-btn" data-tab="guide"><i class="fa-solid fa-book-open"></i> 5. Setup & Run Guide</button>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="tab-content-area">
+          <div class="tab-pane active" id="tab-preview">
+            <div class="preview-wrapper">
+              <iframe id="previewIframe" srcdoc="<body style='font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:85vh;color:#64748b;background:#f8fafc;margin:0;'><div style='text-align:center;padding:2rem;'><div style='font-size:3rem;margin-bottom:1rem;color:#cbd5e1;'>💻</div><h3 style='color:#1e293b;font-weight:700;margin-bottom:0.5rem;'>Live application demo will appear here after code generation</h3><p style='color:#94a3b8;font-size:0.9rem;'>Enter a prompt on the left and click &quot;Generate Full-Stack Application&quot;</p></div></body>"></iframe>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-database">
+            <div class="code-header">
+              <span id="dbFileName"><i class="fa-solid fa-file-code"></i> schema.sql</span>
+              <button class="btn-copy" data-target="dbCodeArea"><i class="fa-regular fa-copy"></i> Copy</button>
+            </div>
+            <pre class="code-block"><code id="dbCodeArea">-- SQL Server Table Schema & Seed Data will appear here</code></pre>
+          </div>
+
+          <div class="tab-pane" id="tab-backend">
+            <div class="file-browser-layout">
+              <div class="file-list" id="backendFileList">
+                <span class="file-list-heading">Files</span>
+              </div>
+              <div class="file-viewer">
+                <div class="code-header">
+                  <span id="backendCurrentFileName"><i class="fa-solid fa-file-code"></i> Backend File</span>
+                  <button class="btn-copy" data-target="backendCodeArea"><i class="fa-regular fa-copy"></i> Copy</button>
+                </div>
+                <pre class="code-block"><code id="backendCodeArea">// Backend Code will appear here</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-frontend">
+            <div class="file-browser-layout">
+              <div class="file-list" id="frontendFileList">
+                <span class="file-list-heading">Files</span>
+              </div>
+              <div class="file-viewer">
+                <div class="code-header">
+                  <span id="frontendCurrentFileName"><i class="fa-solid fa-file-code"></i> Frontend File</span>
+                  <button class="btn-copy" data-target="frontendCodeArea"><i class="fa-regular fa-copy"></i> Copy</button>
+                </div>
+                <pre class="code-block"><code id="frontendCodeArea">// Frontend Code will appear here</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-guide">
+            <div class="guide-box" id="guideContent">
+              <h3>How to Run This Project?</h3>
+              <p>Step-by-step instructions and run commands will appear here once the project is generated.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- VIEW 2: AI Video 30s Reels & Auto-Post Studio -->
     <main class="main-container" id="videoStudioView">
       <!-- Left Column: Video Upload & AI Director Settings -->
       <section class="prompt-panel glass-card">
@@ -564,6 +736,40 @@
             </div>
           </details>
           <div id="youtubeTestResult" style="margin-top: 0.5rem; font-size: 0.8rem; display: none;"></div>
+        </div>
+
+        <!-- Telegram Instant Alerts Configuration -->
+        <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #e2e8f0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: #0284c7; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+              <i class="fa-brands fa-telegram"></i> 📲 Telegram Instant Alerts
+            </h4>
+            <span id="telegramStatusPill" class="badge" style="background: rgba(2,132,199,0.1); color: #0284c7; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 9999px;">
+              Auto-Alerts
+            </span>
+          </div>
+          <p class="text-muted" style="font-size: 0.8rem; line-height: 1.4; margin-bottom: 0.75rem;">
+            જ્યારે પણ Reel Instagram કે YouTube પર પોસ્ટ થાય, ત્યારે ૨ સેકન્ડમાં તમારા મોબાઈલમાં લિંક સાથે મેસેજ આવી જશે:
+          </p>
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label for="telegramBotTokenInput" style="font-weight: 700; font-size: 0.82rem; color: #334155;">Telegram Bot Token:</label>
+            <input type="password" id="telegramBotTokenInput" placeholder="7123456789:AAH..." class="custom-input">
+          </div>
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label for="telegramChatIdInput" style="font-weight: 700; font-size: 0.82rem; color: #334155;">Telegram Chat ID:</label>
+            <input type="text" id="telegramChatIdInput" placeholder="1234567890" class="custom-input">
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
+            <button type="button" id="btnTestTelegram" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; border: 1px solid #cbd5e1;">
+              <i class="fa-solid fa-paper-plane"></i> Test Alert
+            </button>
+          </div>
+          <div style="margin-top: 0.6rem; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 0.6rem 0.8rem; font-size: 0.76rem; color: #0369a1; line-height: 1.4;">
+            <b>💡 ૩૦ સેકન્ડમાં Telegram Bot બનાવવાની સરળ રીત:</b><br>
+            ૧. Telegram માં <b>@BotFather</b> ખોલી <code>/newbot</code> લખો ➔ Bot Token મળશે.<br>
+            ૨. Telegram માં <b>@userinfobot</b> ખોલી Start કરો ➔ તમારો Chat ID મળશે.<br>
+            ૩. બંને વિગતો અહીં નાખી <b>Test Alert</b> અને <b>Save Settings</b> કરો!
+          </div>
         </div>
       </div>
       <div class="modal-footer" style="padding: 1rem 1.4rem; border-top: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; display: flex; justify-content: flex-end; position: sticky; bottom: 0; z-index: 20;">

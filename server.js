@@ -322,6 +322,39 @@ async function ensureValidInstagramToken(customToken) {
   throw new Error(`ઇન્સ્ટાગ્રામ ટોકન માન્ય નથી: ${status.error}`);
 }
 
+// Telegram Instant Alert Dispatcher
+async function sendTelegramAlert(messageHtml) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) {
+    return false;
+  }
+  try {
+    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: messageHtml,
+        parse_mode: 'HTML',
+        disable_web_page_preview: false
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      console.log('📲 [Telegram Alert] Notification delivered to your Telegram!');
+      return true;
+    } else {
+      console.warn('⚠️ [Telegram Alert Warning]:', data.description);
+      return false;
+    }
+  } catch (err) {
+    console.warn('⚠️ [Telegram Alert Request Error]:', err.message);
+    return false;
+  }
+}
+
 // Core Engine: Publish Reel to Instagram Graph API Direct
 async function publishReelDirectToInstagram(videoPath, caption, customToken, customUserId) {
   // 🛡️ STEP 0: Check token validity first. Auto-refresh if expired!
@@ -510,6 +543,19 @@ setInterval(async () => {
             } else {
               item.status = 'Ready to Post';
               item.readyAt = new Date().toISOString();
+            }
+
+            // 📲 Send Instant Alert to Telegram
+            if (igSuccess || ytSuccess) {
+              let alertText = `🎉 <b>ForgeAI: New Reel Published!</b>\n\n`;
+              if (igSuccess && item.lastPostUrl) {
+                alertText += `📸 <b>Instagram:</b> <a href="${item.lastPostUrl}">${item.lastPostUrl}</a>\n`;
+              }
+              if (ytSuccess && item.youtubePostUrl) {
+                alertText += `🔴 <b>YouTube Shorts:</b> <a href="${item.youtubePostUrl}">${item.youtubePostUrl}</a>\n`;
+              }
+              alertText += `\n⏰ <i>Published at: ${new Date().toLocaleTimeString('en-IN')}</i>`;
+              sendTelegramAlert(alertText).catch(() => {});
             }
 
             // If Every Day Recurring Mode is ON: Reschedule for tomorrow at the EXACT same time!
@@ -1130,6 +1176,9 @@ app.post('/api/social/publish-instagram-direct', async (req, res) => {
     }
 
     const result = await publishReelDirectToInstagram(videoPath, caption, accessToken, igUserId);
+    if (result && result.postUrl) {
+      sendTelegramAlert(`📸 <b>ForgeAI: Instagram Reel Published!</b>\n\n🔗 <a href="${result.postUrl}">${result.postUrl}</a>\n\n⏰ <i>Time: ${new Date().toLocaleTimeString('en-IN')}</i>`).catch(() => {});
+    }
     res.json(result);
   } catch (err) {
     console.error('Meta Direct Publish Error:', err);
@@ -1265,6 +1314,9 @@ app.post('/api/social/publish-youtube-direct', async (req, res) => {
     }
 
     const result = await publishShortDirectToYouTube(videoPath, title, description, tags, accessToken);
+    if (result && result.postUrl) {
+      sendTelegramAlert(`🔴 <b>ForgeAI: YouTube Short Published!</b>\n\n🔗 <a href="${result.postUrl}">${result.postUrl}</a>\n\n⏰ <i>Time: ${new Date().toLocaleTimeString('en-IN')}</i>`).catch(() => {});
+    }
     res.json(result);
   } catch (err) {
     console.error('YouTube Direct Publish Error:', err);
@@ -1330,6 +1382,15 @@ app.post('/api/social/publish-both-direct', async (req, res) => {
 
     if (!results.instagram && !results.youtube) {
       return res.status(500).json({ error: errors.join(' | ') });
+    }
+
+    // 📲 Send Instant Alert to Telegram
+    if (results.instagram?.postUrl || results.youtube?.postUrl) {
+      let alertText = `🎉 <b>ForgeAI: 1-Click Published!</b>\n\n`;
+      if (results.instagram?.postUrl) alertText += `📸 <b>Instagram:</b> <a href="${results.instagram.postUrl}">${results.instagram.postUrl}</a>\n`;
+      if (results.youtube?.postUrl) alertText += `🔴 <b>YouTube Shorts:</b> <a href="${results.youtube.postUrl}">${results.youtube.postUrl}</a>\n`;
+      alertText += `\n⏰ <i>Time: ${new Date().toLocaleTimeString('en-IN')}</i>`;
+      sendTelegramAlert(alertText).catch(() => {});
     }
 
     res.json({
@@ -1553,7 +1614,7 @@ app.post('/api/meta/auto-refresh', async (req, res) => {
 // Endpoint to save settings directly to server .env & process.env
 app.post('/api/settings/save', async (req, res) => {
   try {
-    const { metaIgUserId, metaIgToken, geminiApiKey, metaAppId, metaAppSecret, youtubeToken, youtubeRefreshToken, youtubeClientId, youtubeClientSecret } = req.body;
+    const { metaIgUserId, metaIgToken, geminiApiKey, metaAppId, metaAppSecret, youtubeToken, youtubeRefreshToken, youtubeClientId, youtubeClientSecret, telegramBotToken, telegramChatId } = req.body;
     const updates = {};
     if (metaIgToken && metaIgToken.trim()) updates.META_INSTAGRAM_TOKEN = metaIgToken.trim();
     if (metaIgUserId && metaIgUserId.trim()) {
@@ -1579,12 +1640,49 @@ app.post('/api/settings/save', async (req, res) => {
     if (youtubeRefreshToken && youtubeRefreshToken.trim()) updates.YOUTUBE_REFRESH_TOKEN = youtubeRefreshToken.trim();
     if (youtubeClientId && youtubeClientId.trim()) updates.YOUTUBE_CLIENT_ID = youtubeClientId.trim();
     if (youtubeClientSecret && youtubeClientSecret.trim()) updates.YOUTUBE_CLIENT_SECRET = youtubeClientSecret.trim();
+    if (telegramBotToken !== undefined) updates.TELEGRAM_BOT_TOKEN = telegramBotToken.trim();
+    if (telegramChatId !== undefined) updates.TELEGRAM_CHAT_ID = telegramChatId.trim();
 
     updateEnvFile(updates);
     console.log('✅ Settings saved to .env & process.env:', Object.keys(updates));
     res.json({ success: true, message: 'Settings saved successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Test Telegram Instant Alert Bot
+app.post('/api/telegram/test', async (req, res) => {
+  try {
+    const { botToken, chatId } = req.body;
+    const token = botToken || process.env.TELEGRAM_BOT_TOKEN;
+    const chat = chatId || process.env.TELEGRAM_CHAT_ID;
+
+    if (!token || !chat) {
+      return res.status(400).json({ success: false, error: 'Telegram Bot Token અને Chat ID બંને જરૂરી છે.' });
+    }
+
+    const testMsg = `🚀 <b>ForgeAI Studio Alert Test</b>\n\n✅ તમારું Telegram Bot સફળતાપૂર્વક કનેક્ટ થઈ ગયું છે!\nહવે જ્યારે પણ કોઈ નવી Reel કે Short પોસ્ટ થશે ત્યારે તમને તરત જ લાઈવ લિંક સાથે અહીં મેસેજ આવી જશે. 🎉`;
+
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    const tgRes = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chat,
+        text: testMsg,
+        parse_mode: 'HTML'
+      })
+    });
+
+    const data = await tgRes.json();
+    if (data.ok) {
+      res.json({ success: true, message: 'Telegram પર ટેસ્ટ મેસેજ મોકલાઈ ગયો છે! તમારા મોબાઇલમાં ચેક કરો. 📲' });
+    } else {
+      res.status(400).json({ success: false, error: data.description || 'Telegram પર મેસેજ મોકલવામાં ભૂલ આવી.' });
+    }
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
