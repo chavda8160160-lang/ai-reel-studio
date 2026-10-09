@@ -7,6 +7,7 @@ node_modules/
 # Rendered & Uploaded Video files (large binaries)
 uploads/
 public/rendered-reels/*.mp4
+public/rendered-reels/*.jpg
 !public/rendered-reels/.gitkeep
 
 # System & temporary logs
