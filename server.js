@@ -472,6 +472,8 @@ async function generateViralThumbnail({
   outputPath,
   headlineText,
   hookBadge,
+  bottomText,
+  positionMode = 'both', // 'both' (Top & Bottom empty spaces), 'top', 'bottom', 'center'
   colorStyle = 'yellow',
   timestamp = 1.5
 }) {
@@ -485,11 +487,17 @@ async function generateViralThumbnail({
   else if (colorStyle === 'purple') primaryCol = '&H00FF00EA&';
   else if (colorStyle === 'white') primaryCol = '&H00FFFFFF&';
 
-  // Smart Word-Wrap for bold viral headline
+  // Smart Word-Wrap for bold viral headline (Auto-strip #hashtags to keep headline super clean)
   let formattedHeadline = '';
   if (headlineText) {
-    const clean = String(headlineText).trim().replace(/[{}]/g, '').toUpperCase();
-    const words = clean.split(/\s+/);
+    const clean = String(headlineText)
+      .replace(/#\w+/g, '') // strip hashtags like #Shorts #Patola
+      .replace(/[:]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/[{}]/g, '')
+      .toUpperCase();
+    const words = clean.split(/\s+/).filter(Boolean);
     const lines = [];
     let curLine = '';
     for (const w of words) {
@@ -506,22 +514,82 @@ async function generateViralThumbnail({
     formattedHeadline = 'MUST WATCH 🔥';
   }
 
+  // Hook / Bottom badge text
   let formattedHook = '';
-  if (hookBadge) {
-    const cleanHook = String(hookBadge).trim().replace(/[{}]/g, '').toUpperCase();
+  const rawHook = bottomText || hookBadge;
+  if (rawHook) {
+    const cleanHook = String(rawHook)
+      .replace(/#\w+/g, '')
+      .replace(/[{}]/g, '')
+      .trim()
+      .toUpperCase();
     formattedHook = cleanHook.startsWith('★') ? cleanHook : `★ ${cleanHook} ★`;
   } else {
-    formattedHook = '★ VIRAL HIGHLIGHT ★';
+    formattedHook = '★ 100% PURE HANDLOOM SILK ★';
   }
 
   const assPath = path.join(os.tmpdir(), `thumb-sub-${Date.now()}-${Math.round(Math.random() * 1000)}.ass`);
   const sStart = '0:00:00.00';
   const sEnd = '0:05:00.00';
 
-  const events = `
+  let headlineAlign = 8;
+  let headlineMarginV = 190;
+  let headlineFontSize = 82;
+  let hookAlign = 2;
+  let hookMarginV = 230;
+  let hookFontSize = 66;
+  let events = '';
+
+  if (positionMode === 'top') {
+    // Only in top space
+    headlineAlign = 8;
+    headlineMarginV = 240;
+    headlineFontSize = 80;
+    hookAlign = 8;
+    hookMarginV = 130;
+    hookFontSize = 52;
+    events = `
 Dialogue: 0,${sStart},${sEnd},ThumbHook,,0,0,0,,{\\c&H00FFFFFF&}${formattedHook}
 Dialogue: 0,${sStart},${sEnd},ThumbHeadline,,0,0,0,,{\\c${primaryCol}}${formattedHeadline}
 `;
+  } else if (positionMode === 'bottom') {
+    // Only in bottom space
+    headlineAlign = 2;
+    headlineMarginV = 240;
+    headlineFontSize = 80;
+    hookAlign = 2;
+    hookMarginV = 140;
+    hookFontSize = 52;
+    events = `
+Dialogue: 0,${sStart},${sEnd},ThumbHeadline,,0,0,0,,{\\c${primaryCol}}${formattedHeadline}
+Dialogue: 0,${sStart},${sEnd},ThumbHook,,0,0,0,,{\\c&H00FFFFFF&}${formattedHook}
+`;
+  } else if (positionMode === 'center') {
+    // Center of screen
+    headlineAlign = 5;
+    headlineMarginV = 0;
+    headlineFontSize = 88;
+    hookAlign = 8;
+    hookMarginV = 220;
+    hookFontSize = 56;
+    events = `
+Dialogue: 0,${sStart},${sEnd},ThumbHook,,0,0,0,,{\\c&H00FFFFFF&}${formattedHook}
+Dialogue: 0,${sStart},${sEnd},ThumbHeadline,,0,0,0,,{\\c${primaryCol}}${formattedHeadline}
+`;
+  } else {
+    // Default & Recommended: 'both' (Top empty space gets Headline, Bottom empty space gets Hook/Badge)
+    // Middle video is completely free from obstruction!
+    headlineAlign = 8;
+    headlineMarginV = 190;
+    headlineFontSize = 82;
+    hookAlign = 2;
+    hookMarginV = 230;
+    hookFontSize = 66;
+    events = `
+Dialogue: 0,${sStart},${sEnd},ThumbHeadline,,0,0,0,,{\\c${primaryCol}}${formattedHeadline}
+Dialogue: 0,${sStart},${sEnd},ThumbHook,,0,0,0,,{\\c&H00FFFFFF&}${formattedHook}
+`;
+  }
 
   const assContent = `[Script Info]
 Title: AI Viral Cover Thumbnail
@@ -534,8 +602,8 @@ PlayResY: 1920
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: ThumbHeadline,Arial,90,${primaryCol},&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,10,5,8,80,80,560,1
-Style: ThumbHook,Arial,54,&H00FFFFFF,&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,3,8,60,60,240,1
+Style: ThumbHeadline,Arial,${headlineFontSize},${primaryCol},&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,10,4,${headlineAlign},60,60,${headlineMarginV},1
+Style: ThumbHook,Arial,${hookFontSize},&H00FFFFFF,&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,9,4,${hookAlign},60,60,${hookMarginV},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -1314,7 +1382,8 @@ Respond ONLY with valid JSON:`;
         videoPath: outputPath,
         outputPath: thumbOutputPath,
         headlineText: aiDirectorRecipe.viralTitle || 'MUST WATCH 🔥',
-        hookBadge: aiDirectorRecipe.hookOverlay || '★ VIRAL HIGHLIGHT ★',
+        hookBadge: aiDirectorRecipe.hookOverlay || '★ 100% PURE HANDLOOM SILK ★',
+        positionMode: 'both',
         colorStyle: 'yellow',
         timestamp: 1.5
       });
@@ -1386,7 +1455,7 @@ Respond ONLY with valid JSON:`;
 // 🖼️ Feature #4: AI Smart Thumbnail Studio Endpoint (Regenerate / Customize on the fly)
 app.post('/api/video/generate-thumbnail', async (req, res) => {
   try {
-    const { videoFileName, headlineText, hookBadge, colorStyle, timestamp } = req.body;
+    const { videoFileName, headlineText, hookBadge, bottomText, positionMode, colorStyle, timestamp } = req.body;
     if (!videoFileName) {
       return res.status(400).json({ error: 'વિડીયો ફાઈલનું નામ જરૂરી છે.' });
     }
@@ -1408,6 +1477,8 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
       outputPath,
       headlineText: headlineText || 'MUST WATCH 🔥',
       hookBadge: hookBadge || '★ VIRAL HIGHLIGHT ★',
+      bottomText: bottomText || hookBadge || '★ 100% PURE HANDLOOM SILK ★',
+      positionMode: positionMode || 'both',
       colorStyle: colorStyle || 'yellow',
       timestamp: parseFloat(timestamp) || 1.5
     });
@@ -1423,6 +1494,8 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
       timestamp: parseFloat(timestamp) || 1.5,
       headlineText,
       hookBadge,
+      bottomText,
+      positionMode: positionMode || 'both',
       colorStyle
     });
   } catch (err) {
@@ -2322,6 +2395,7 @@ Respond ONLY with valid JSON.`
       outputPath: thumbOutputPath,
       headlineText: partRecipe.viralTitle || `PART ${partNum} MUST WATCH`,
       hookBadge: partRecipe.hookOverlay || `★ PART ${partNum} ★`,
+      positionMode: 'both',
       colorStyle: 'yellow',
       timestamp: 1.5
     });

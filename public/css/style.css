@@ -1723,9 +1723,28 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   accent-color: #0284c7;
 }
 
+.btn-pos-pick {
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.btn-pos-pick:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.btn-pos-pick.active {
+  background: #e0f2fe !important;
+  border: 2px solid #0284c7 !important;
+  color: #0369a1 !important;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
+  transform: translateY(-1px);
+}
+
 @media (max-width: 768px) {
   #thumbnailStudioModal .modal-body {
     grid-template-columns: 1fr !important;
   }
 }
+
 

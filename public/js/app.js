@@ -1304,9 +1304,12 @@ function initVideoStudio() {
         if (btnOpenThumbnailStudio) {
           btnOpenThumbnailStudio.style.display = 'inline-flex';
         }
+        const rawHeadline = data.recipe?.viralTitle || 'THE ART OF PATOLA';
+        const cleanHeadline = rawHeadline.replace(/#\w+/g, '').replace(/[:]/g, '').trim();
+
         if (thumbQuickBar && thumbMiniPreview && thumbMiniHeadline) {
           thumbMiniPreview.src = data.thumbnailUrl;
-          thumbMiniHeadline.textContent = data.recipe?.viralTitle || 'Alex Hormozi 9:16';
+          thumbMiniHeadline.textContent = cleanHeadline || 'Alex Hormozi 9:16';
           thumbQuickBar.classList.remove('hidden');
         }
 
@@ -1314,8 +1317,10 @@ function initVideoStudio() {
         window.activeReelThumbnail = {
           fileName: data.fileName,
           thumbnailUrl: data.thumbnailUrl,
-          headlineText: data.recipe?.viralTitle || 'MUST WATCH 🔥',
-          hookBadge: data.recipe?.hookOverlay || '★ VIRAL HIGHLIGHT ★',
+          headlineText: cleanHeadline || 'THE ART OF PATOLA ✨',
+          hookBadge: data.recipe?.hookOverlay || '★ 100% PURE HANDLOOM SILK ★',
+          bottomText: '★ 100% PURE HANDLOOM SILK ★',
+          positionMode: 'both',
           colorStyle: 'yellow',
           timestamp: 1.5
         };
@@ -1986,15 +1991,34 @@ function initThumbnailStudio() {
   if (!modal) return;
 
   let selectedColor = 'yellow';
+  let selectedPosition = 'both';
+
+  const posBtns = document.querySelectorAll('#thumbPositionOptions .btn-pos-pick');
+
+  // Position button toggle
+  posBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      posBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedPosition = btn.dataset.pos || 'both';
+    });
+  });
 
   function openStudio() {
     const state = window.activeReelThumbnail || {};
-    if (headlineInput) headlineInput.value = state.headlineText || 'MUST WATCH 🔥';
-    if (hookBadgeInput) hookBadgeInput.value = state.hookBadge || '★ VIRAL HIGHLIGHT ★';
+    if (headlineInput) headlineInput.value = state.headlineText || 'THE ART OF PATOLA ✨';
+    if (hookBadgeInput) hookBadgeInput.value = state.hookBadge || state.bottomText || '★ 100% PURE HANDLOOM SILK ★';
     if (timeSlider) {
       timeSlider.value = state.timestamp || 1.5;
       if (timeDisplay) timeDisplay.textContent = `${state.timestamp || 1.5}s`;
     }
+
+    selectedPosition = state.positionMode || 'both';
+    posBtns.forEach(b => {
+      if (b.dataset.pos === selectedPosition) b.classList.add('active');
+      else b.classList.remove('active');
+    });
+
     if (previewImg && state.thumbnailUrl) {
       previewImg.src = state.thumbnailUrl;
     }
@@ -2059,6 +2083,8 @@ function initThumbnailStudio() {
             videoFileName: state.fileName,
             headlineText,
             hookBadge,
+            bottomText: hookBadge,
+            positionMode: selectedPosition,
             colorStyle: selectedColor,
             timestamp
           })
@@ -2075,6 +2101,8 @@ function initThumbnailStudio() {
           thumbnailUrl: data.thumbnailUrl,
           headlineText,
           hookBadge,
+          bottomText: hookBadge,
+          positionMode: selectedPosition,
           colorStyle: selectedColor,
           timestamp
         };
