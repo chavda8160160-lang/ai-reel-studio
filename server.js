@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const fsp = require('fs').promises;
+const os = require('os');
 const archiver = require('archiver');
 const multer = require('multer');
 const cron = require('node-cron');
@@ -355,6 +356,112 @@ async function sendTelegramAlert(messageHtml) {
   }
 }
 
+// WhatsApp Instant Alert Dispatcher (CallMeBot Free API)
+async function sendWhatsAppAlert(messageText) {
+  const phone = process.env.WHATSAPP_PHONE;
+  const apiKey = process.env.WHATSAPP_APIKEY;
+  if (!phone || !apiKey) {
+    return false;
+  }
+  try {
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const encodedText = encodeURIComponent(messageText);
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${encodedText}&apikey=${apiKey}`;
+    const res = await fetch(url);
+    const text = await res.text();
+    if (res.ok || text.includes('queued') || text.includes('Success')) {
+      console.log('📲 [WhatsApp Alert] Instant notification delivered to your WhatsApp!');
+      return true;
+    } else {
+      console.warn('⚠️ [WhatsApp Alert Warning]:', text);
+      return false;
+    }
+  } catch (err) {
+    console.warn('⚠️ [WhatsApp Alert Error]:', err.message);
+    return false;
+  }
+}
+
+// Unified Instant Alert Dispatcher (Sends WhatsApp + Telegram)
+async function sendInstantAlert(plainText, htmlText) {
+  sendWhatsAppAlert(plainText).catch(() => {});
+  sendTelegramAlert(htmlText || plainText).catch(() => {});
+}
+
+// Format seconds into ASS subtitle timestamp (H:MM:SS.cs)
+function formatAssTime(seconds) {
+  const s = Math.max(0, Number(seconds) || 0);
+  const hrs = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  const secs = Math.floor(s % 60);
+  const cs = Math.floor((s - Math.floor(s)) * 100);
+  return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+}
+
+// Generate Alex Hormozi Style Dynamic Subtitle (.ass) file
+function generateAssSubtitleFile(captions, hookText, durationSec = 30, styleMode = 'hormozi') {
+  const assPath = path.join(os.tmpdir(), `sub-${Date.now()}-${Math.round(Math.random() * 1000)}.ass`);
+  let events = '';
+
+  const primaryCol = styleMode === 'electric-cyan' ? '&H00FFFF00&' : '&H0000FFFF&'; // Cyan or Yellow
+  const accentCol = styleMode === 'electric-cyan' ? '&H0000FFFF&' : '&H0000FF00&';  // Yellow or Neon Green
+
+  // 1. Hook Badge at Top for the first 3.5 seconds
+  if (hookText) {
+    const cleanHook = String(hookText).toUpperCase().replace(/[{}]/g, '').trim();
+    events += `Dialogue: 0,0:00:00.20,0:00:03.50,HormoziHook,,0,0,0,,{\\c${primaryCol}}★ ${cleanHook} ★\n`;
+  }
+
+  // 2. Dynamic Timed Subtitles (centered above Instagram & YouTube Shorts bottom UI)
+  if (Array.isArray(captions) && captions.length > 0) {
+    for (const cap of captions) {
+      if (!cap || !cap.text) continue;
+      const sStart = formatAssTime(cap.startSec || 0);
+      const sEnd = formatAssTime(cap.endSec || Math.min(durationSec, (cap.startSec || 0) + 3));
+      const text = String(cap.text).toUpperCase().replace(/[{}]/g, '').trim();
+      const col = cap.highlightColor || primaryCol;
+      events += `Dialogue: 0,${sStart},${sEnd},HormoziWord,,0,0,0,,{\\c${col}}${text}\n`;
+    }
+  } else {
+    // Intelligent default fallback sequence timed to the reel
+    const dur = Math.max(10, durationSec);
+    const step = dur / 4;
+    const defaults = [
+      { start: 0.5, end: Math.min(dur, step), text: "WAIT FOR THIS! 🔥", col: primaryCol },
+      { start: step, end: Math.min(dur, step * 2), text: "WATCH TILL THE END 👀", col: accentCol },
+      { start: step * 2, end: Math.min(dur, step * 3), text: "DON'T MISS THIS! 💡", col: primaryCol },
+      { start: step * 3, end: Math.min(dur, dur - 0.5), text: "FOLLOW FOR NEXT PART 🚀", col: '&H00FFFFFF&' }
+    ];
+    for (const d of defaults) {
+      if (d.start < dur) {
+        events += `Dialogue: 0,${formatAssTime(d.start)},${formatAssTime(d.end)},HormoziWord,,0,0,0,,{\\c${d.col}}${d.text}\n`;
+      }
+    }
+  }
+
+  const assContent = `[Script Info]
+Title: Alex Hormozi Dynamic Subtitles
+ScriptType: v4.00+
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.601
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: HormoziWord,Arial,72,&H0000FFFF,&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,3,2,60,60,380,1
+Style: HormoziHook,Arial,58,&H00FFFFFF,&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,7,2,8,60,60,220,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+${events}
+`;
+
+  fs.writeFileSync(assPath, assContent, 'utf8');
+  return assPath;
+}
+
 // Core Engine: Publish Reel to Instagram Graph API Direct
 async function publishReelDirectToInstagram(videoPath, caption, customToken, customUserId) {
   // 🛡️ STEP 0: Check token validity first. Auto-refresh if expired!
@@ -545,17 +652,22 @@ setInterval(async () => {
               item.readyAt = new Date().toISOString();
             }
 
-            // 📲 Send Instant Alert to Telegram
+            // 📲 Send Instant Alert to WhatsApp & Telegram
             if (igSuccess || ytSuccess) {
-              let alertText = `🎉 <b>ForgeAI: New Reel Published!</b>\n\n`;
+              let plainText = `🎉 ForgeAI: New Reel Published!\n\n`;
+              let htmlText = `🎉 <b>ForgeAI: New Reel Published!</b>\n\n`;
               if (igSuccess && item.lastPostUrl) {
-                alertText += `📸 <b>Instagram:</b> <a href="${item.lastPostUrl}">${item.lastPostUrl}</a>\n`;
+                plainText += `📸 Instagram: ${item.lastPostUrl}\n`;
+                htmlText += `📸 <b>Instagram:</b> <a href="${item.lastPostUrl}">${item.lastPostUrl}</a>\n`;
               }
               if (ytSuccess && item.youtubePostUrl) {
-                alertText += `🔴 <b>YouTube Shorts:</b> <a href="${item.youtubePostUrl}">${item.youtubePostUrl}</a>\n`;
+                plainText += `🔴 YouTube Shorts: ${item.youtubePostUrl}\n`;
+                htmlText += `🔴 <b>YouTube Shorts:</b> <a href="${item.youtubePostUrl}">${item.youtubePostUrl}</a>\n`;
               }
-              alertText += `\n⏰ <i>Published at: ${new Date().toLocaleTimeString('en-IN')}</i>`;
-              sendTelegramAlert(alertText).catch(() => {});
+              const timeStr = new Date().toLocaleTimeString('en-IN');
+              plainText += `\n⏰ Published at: ${timeStr}`;
+              htmlText += `\n⏰ <i>Published at: ${timeStr}</i>`;
+              sendInstantAlert(plainText, htmlText).catch(() => {});
             }
 
             // If Every Day Recurring Mode is ON: Reschedule for tomorrow at the EXACT same time!
@@ -927,6 +1039,7 @@ app.post('/api/video/auto-edit', upload.single('videoFile'), async (req, res) =>
     }
 
     // Step 2: AI Vision & Director Recipe generation via Gemini Vision
+    const subtitlesStyle = req.body.subtitlesStyle || 'hormozi';
     let aiDirectorRecipe = {
       detectedTopic: 'Universal Video Showcase',
       themeName: 'Cinematic Vibrant Glow',
@@ -936,7 +1049,8 @@ app.post('/api/video/auto-edit', upload.single('videoFile'), async (req, res) =>
       viralTitle: '✨ Watch This Till The End! #Viral #Shorts #Reels',
       viralCaption: 'Unbelievable moments captured in 4K quality! Hit Like and Share with your friends. 🔥\n\nFollow for more daily viral content! ✨',
       viralHashtags: '#ViralReels #TrendingNow #Shorts #ExplorePage #InstaDaily #ViralVideo #TrendingReels',
-      hookOverlay: 'Wait For The End 🔥'
+      hookOverlay: 'Wait For The End 🔥',
+      captions: []
     };
 
     if (apiKey) {
@@ -970,7 +1084,8 @@ Tasks:
    - "viralTitle": Irresistible YouTube Shorts title (with emojis & #Shorts)
    - "viralCaption": Engaging Instagram Reels caption with hook, description of the scene, question to audience & CTA
    - "viralHashtags": 12-15 targeted viral hashtags matching this exact niche
-   - "hookOverlay": Catchy 3-4 word hook text to display on screen.
+   - "hookOverlay": Catchy 3-4 word explosive hook for top badge (e.g. "WAIT TILL THE END 😱", "SECRET EXPOSED 💡", "NEVER DO THIS ❌")
+   - "captions": Array of 3-5 timed punchy uppercase subtitle items for 30s video, e.g. [{"startSec": 0.5, "endSec": 3.5, "text": "SHORT EXPLOSIVE HOOK", "highlightColor": "&H0000FFFF&"}]
 
 Respond ONLY with valid JSON:`;
 
@@ -1014,21 +1129,37 @@ Respond ONLY with valid JSON:`;
 
     console.log(`🎬 Rendering 30s 9:16 Reel with Saturation: ${sat}, Contrast: ${con}...`);
 
+    const vFilters = [
+      // Scale & pad to 1080x1920 (9:16 vertical for Reels & Shorts)
+      'scale=1080:1920:force_original_aspect_ratio=decrease',
+      'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
+      // Color grading
+      `eq=saturation=${sat}:contrast=${con}:brightness=${bri}`,
+      // Fade in at 0s, fade out at end
+      'fade=t=in:st=0:d=0.8',
+      `fade=t=out:st=${Math.max(1, maxSec - 1.5)}:d=1.5`
+    ];
+
+    let assFilePath = null;
+    if (subtitlesStyle !== 'none') {
+      try {
+        assFilePath = generateAssSubtitleFile(aiDirectorRecipe.captions, aiDirectorRecipe.hookOverlay, maxSec, subtitlesStyle);
+        if (assFilePath && fs.existsSync(assFilePath)) {
+          const escapedAss = path.resolve(assFilePath).replace(/\\/g, '/').replace(/:/g, '\\:');
+          vFilters.push(`subtitles='${escapedAss}'`);
+          console.log(`🎬 [Subtitles Engine] Burning Alex Hormozi dynamic subtitles (${subtitlesStyle})`);
+        }
+      } catch (assErr) {
+        console.warn('⚠️ Subtitle generation notice:', assErr.message);
+      }
+    }
+
     // FFmpeg execution
     await new Promise((resolve, reject) => {
       ffmpeg(inputPath)
         .setStartTime(0)
         .duration(maxSec)
-        .videoFilters([
-          // Scale & pad to 1080x1920 (9:16 vertical for Reels & Shorts)
-          'scale=1080:1920:force_original_aspect_ratio=decrease',
-          'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
-          // Color grading
-          `eq=saturation=${sat}:contrast=${con}:brightness=${bri}`,
-          // Fade in at 0s, fade out at end
-          'fade=t=in:st=0:d=0.8',
-          `fade=t=out:st=${Math.max(1, maxSec - 1.5)}:d=1.5`
-        ])
+        .videoFilters(vFilters)
         .outputOptions([
           '-c:v libx264',
           '-preset fast',
@@ -1049,8 +1180,28 @@ Respond ONLY with valid JSON:`;
         });
     });
 
-    // Cleanup raw uploaded video after render to save disk space
+    // Cleanup raw uploaded video and temporary subtitle file after render
     try { await fsp.unlink(inputPath); } catch (_) {}
+    if (assFilePath && fs.existsSync(assFilePath)) {
+      try { await fsp.unlink(assFilePath); } catch (_) {}
+    }
+
+    // Generate high-resolution 9:16 cover photo thumbnail at 1.5s
+    const thumbFileName = outputFileName.replace('.mp4', '-cover.jpg');
+    try {
+      await new Promise((resolve) => {
+        ffmpeg(outputPath)
+          .screenshots({
+            timestamps: ['1.5'],
+            filename: thumbFileName,
+            folder: REELS_DIR,
+            size: '1080x1920'
+          })
+          .on('end', resolve)
+          .on('error', resolve);
+      });
+      console.log(`🖼️ [Cover Photo] AI Cover photo generated: ${thumbFileName}`);
+    } catch (_) {}
 
     const isScheduled = req.body.isScheduled === 'true' || !!req.body.scheduledTime;
     const scheduledTime = req.body.scheduledTime || null;
@@ -1074,6 +1225,7 @@ Respond ONLY with valid JSON:`;
         recurringDaily,
         recurringCycle: 1,
         duration: `${maxSec}s`,
+        thumbnailUrl: `/rendered-reels/${thumbFileName}`,
         niche: niche || 'AI Auto-Detect',
         viralTitle: aiDirectorRecipe.viralTitle,
         viralCaption: aiDirectorRecipe.viralCaption,
@@ -1093,6 +1245,9 @@ Respond ONLY with valid JSON:`;
       success: true,
       reelUrl: `/rendered-reels/${outputFileName}`,
       downloadUrl: `/rendered-reels/${outputFileName}`,
+      thumbnailUrl: `/rendered-reels/${thumbFileName}`,
+      subtitlesEnabled: subtitlesStyle !== 'none',
+      subtitlesStyle,
       fileName: outputFileName,
       duration: `${maxSec} સેકન્ડ`,
       aspectRatio: '9:16 (1080x1920) - Instagram Reels / YouTube Shorts',
@@ -1315,7 +1470,9 @@ app.post('/api/social/publish-youtube-direct', async (req, res) => {
 
     const result = await publishShortDirectToYouTube(videoPath, title, description, tags, accessToken);
     if (result && result.postUrl) {
-      sendTelegramAlert(`🔴 <b>ForgeAI: YouTube Short Published!</b>\n\n🔗 <a href="${result.postUrl}">${result.postUrl}</a>\n\n⏰ <i>Time: ${new Date().toLocaleTimeString('en-IN')}</i>`).catch(() => {});
+      const plain = `🔴 ForgeAI: YouTube Short Published!\n\n🔗 ${result.postUrl}\n\n⏰ Time: ${new Date().toLocaleTimeString('en-IN')}`;
+      const html = `🔴 <b>ForgeAI: YouTube Short Published!</b>\n\n🔗 <a href="${result.postUrl}">${result.postUrl}</a>\n\n⏰ <i>Time: ${new Date().toLocaleTimeString('en-IN')}</i>`;
+      sendInstantAlert(plain, html).catch(() => {});
     }
     res.json(result);
   } catch (err) {
@@ -1384,13 +1541,22 @@ app.post('/api/social/publish-both-direct', async (req, res) => {
       return res.status(500).json({ error: errors.join(' | ') });
     }
 
-    // 📲 Send Instant Alert to Telegram
+    // 📲 Send Instant Alert to WhatsApp & Telegram
     if (results.instagram?.postUrl || results.youtube?.postUrl) {
-      let alertText = `🎉 <b>ForgeAI: 1-Click Published!</b>\n\n`;
-      if (results.instagram?.postUrl) alertText += `📸 <b>Instagram:</b> <a href="${results.instagram.postUrl}">${results.instagram.postUrl}</a>\n`;
-      if (results.youtube?.postUrl) alertText += `🔴 <b>YouTube Shorts:</b> <a href="${results.youtube.postUrl}">${results.youtube.postUrl}</a>\n`;
-      alertText += `\n⏰ <i>Time: ${new Date().toLocaleTimeString('en-IN')}</i>`;
-      sendTelegramAlert(alertText).catch(() => {});
+      let plain = `🎉 ForgeAI: 1-Click Published!\n\n`;
+      let html = `🎉 <b>ForgeAI: 1-Click Published!</b>\n\n`;
+      if (results.instagram?.postUrl) {
+        plain += `📸 Instagram: ${results.instagram.postUrl}\n`;
+        html += `📸 <b>Instagram:</b> <a href="${results.instagram.postUrl}">${results.instagram.postUrl}</a>\n`;
+      }
+      if (results.youtube?.postUrl) {
+        plain += `🔴 YouTube Shorts: ${results.youtube.postUrl}\n`;
+        html += `🔴 <b>YouTube Shorts:</b> <a href="${results.youtube.postUrl}">${results.youtube.postUrl}</a>\n`;
+      }
+      const timeStr = new Date().toLocaleTimeString('en-IN');
+      plain += `\n⏰ Time: ${timeStr}`;
+      html += `\n⏰ <i>Time: ${timeStr}</i>`;
+      sendInstantAlert(plain, html).catch(() => {});
     }
 
     res.json({
@@ -1551,6 +1717,24 @@ app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
       return res.status(500).json({ error: item.lastError || item.lastYoutubeError || 'કૃપા કરીને Instagram અથવા YouTube ટોકન કનેક્ટ કરો.' });
     }
 
+    // 📲 Send Instant Alert to WhatsApp & Telegram
+    if (igSuccess || ytSuccess) {
+      let plain = `🎉 ForgeAI: Reel Published Now!\n\n`;
+      let html = `🎉 <b>ForgeAI: Reel Published Now!</b>\n\n`;
+      if (igSuccess && item.lastPostUrl) {
+        plain += `📸 Instagram: ${item.lastPostUrl}\n`;
+        html += `📸 <b>Instagram:</b> <a href="${item.lastPostUrl}">${item.lastPostUrl}</a>\n`;
+      }
+      if (ytSuccess && item.youtubePostUrl) {
+        plain += `🔴 YouTube Shorts: ${item.youtubePostUrl}\n`;
+        html += `🔴 <b>YouTube Shorts:</b> <a href="${item.youtubePostUrl}">${item.youtubePostUrl}</a>\n`;
+      }
+      const timeStr = new Date().toLocaleTimeString('en-IN');
+      plain += `\n⏰ Time: ${timeStr}`;
+      html += `\n⏰ <i>Time: ${timeStr}</i>`;
+      sendInstantAlert(plain, html).catch(() => {});
+    }
+
     saveScheduledQueue(queue);
     res.json({
       success: true,
@@ -1614,7 +1798,7 @@ app.post('/api/meta/auto-refresh', async (req, res) => {
 // Endpoint to save settings directly to server .env & process.env
 app.post('/api/settings/save', async (req, res) => {
   try {
-    const { metaIgUserId, metaIgToken, geminiApiKey, metaAppId, metaAppSecret, youtubeToken, youtubeRefreshToken, youtubeClientId, youtubeClientSecret, telegramBotToken, telegramChatId } = req.body;
+    const { metaIgUserId, metaIgToken, geminiApiKey, metaAppId, metaAppSecret, youtubeToken, youtubeRefreshToken, youtubeClientId, youtubeClientSecret, telegramBotToken, telegramChatId, whatsappPhone, whatsappApiKey } = req.body;
     const updates = {};
     if (metaIgToken && metaIgToken.trim()) updates.META_INSTAGRAM_TOKEN = metaIgToken.trim();
     if (metaIgUserId && metaIgUserId.trim()) {
@@ -1642,12 +1826,64 @@ app.post('/api/settings/save', async (req, res) => {
     if (youtubeClientSecret && youtubeClientSecret.trim()) updates.YOUTUBE_CLIENT_SECRET = youtubeClientSecret.trim();
     if (telegramBotToken !== undefined) updates.TELEGRAM_BOT_TOKEN = telegramBotToken.trim();
     if (telegramChatId !== undefined) updates.TELEGRAM_CHAT_ID = telegramChatId.trim();
+    if (whatsappPhone !== undefined) updates.WHATSAPP_PHONE = whatsappPhone.trim();
+    if (whatsappApiKey !== undefined) updates.WHATSAPP_APIKEY = whatsappApiKey.trim();
 
     updateEnvFile(updates);
     console.log('✅ Settings saved to .env & process.env:', Object.keys(updates));
     res.json({ success: true, message: 'Settings saved successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint to retrieve status of social and notification connections
+app.get('/api/settings/get', (req, res) => {
+  res.json({
+    success: true,
+    whatsapp: {
+      configured: !!(process.env.WHATSAPP_PHONE && process.env.WHATSAPP_APIKEY),
+      phone: process.env.WHATSAPP_PHONE || ''
+    },
+    telegram: {
+      configured: !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID)
+    },
+    youtube: {
+      configured: !!(process.env.YOUTUBE_ACCESS_TOKEN || process.env.YOUTUBE_REFRESH_TOKEN),
+      channelTitle: cachedYtTitle || process.env.YOUTUBE_CHANNEL_TITLE || 'YouTube Shorts Connected'
+    },
+    instagram: {
+      configured: !!(process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID),
+      username: cachedIgUsername || 'Instagram Connected'
+    }
+  });
+});
+
+// Test WhatsApp Instant Alert (CallMeBot Free API)
+app.post('/api/whatsapp/test', async (req, res) => {
+  try {
+    const { phone, apiKey } = req.body;
+    const targetPhone = phone || process.env.WHATSAPP_PHONE;
+    const key = apiKey || process.env.WHATSAPP_APIKEY;
+
+    if (!targetPhone || !key) {
+      return res.status(400).json({ success: false, error: 'WhatsApp Phone Number અને CallMeBot API Key બંને જરૂરી છે.' });
+    }
+
+    const cleanPhone = targetPhone.replace(/[^0-9]/g, '');
+    const testMsg = `🚀 ForgeAI Studio Alert Test\n\n✅ તમારું WhatsApp સફળતાપૂર્વક કનેક્ટ થઈ ગયું છે!\nહવે દર વખતે નવી Reel કે Short પોસ્ટ થશે ત્યારે લાઈવ લિંક સાથે સીધો અહીં જ મેસેજ આવી જશે. 🎉`;
+
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${encodeURIComponent(testMsg)}&apikey=${key}`;
+    const cbRes = await fetch(url);
+    const cbText = await cbRes.text();
+
+    if (cbRes.ok || cbText.includes('queued') || cbText.includes('Success')) {
+      res.json({ success: true, message: 'WhatsApp પર ટેસ્ટ મેસેજ મોકલાઈ ગયો છે! તમારા WhatsApp માં ચેક કરો. 📲' });
+    } else {
+      res.status(400).json({ success: false, error: cbText || 'WhatsApp મેસેજ મોકલવામાં ભૂલ આવી.' });
+    }
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -1822,6 +2058,7 @@ Generate JSON with:
 7. "viralCaption": Captivating caption referencing Part ${partNum} with hook and reminder to follow for next part
 8. "viralHashtags": 12 viral hashtags including #Part${partNum} #Shorts #TrendingReels
 9. "hookOverlay": "Part ${partNum} 🔥"
+10. "captions": Array of 3-5 timed punchy uppercase subtitle items, e.g. [{"startSec": 0.5, "endSec": 3.5, "text": "PART ${partNum} MUST WATCH", "highlightColor": "&H0000FFFF&"}]
 Respond ONLY with valid JSON.`
       });
 
@@ -1854,17 +2091,31 @@ Respond ONLY with valid JSON.`
   const con = Math.max(1.0, Math.min(1.25, Number(partRecipe.contrast) || 1.12));
   const bri = Math.max(-0.05, Math.min(0.05, Number(partRecipe.brightness) || 0.02));
 
+  const vFilters = [
+    'scale=1080:1920:force_original_aspect_ratio=decrease',
+    'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
+    `eq=saturation=${sat}:contrast=${con}:brightness=${bri}`,
+    'fade=t=in:st=0:d=0.7',
+    `fade=t=out:st=${Math.max(1, segDuration - 1.2)}:d=1.2`
+  ];
+
+  let assFilePath = null;
+  try {
+    assFilePath = generateAssSubtitleFile(partRecipe.captions, partRecipe.hookOverlay || `Part ${partNum} 🔥`, segDuration, 'hormozi');
+    if (assFilePath && fs.existsSync(assFilePath)) {
+      const escapedAss = path.resolve(assFilePath).replace(/\\/g, '/').replace(/:/g, '\\:');
+      vFilters.push(`subtitles='${escapedAss}'`);
+      console.log(`🎬 [Scheduler Engine] Burned Alex Hormozi dynamic subtitles for Part ${partNum}`);
+    }
+  } catch (assErr) {
+    console.warn('⚠️ Part subtitle warning:', assErr.message);
+  }
+
   await new Promise((resolve, reject) => {
     ffmpeg(state.masterVideo.path)
       .setStartTime(startSec)
       .duration(segDuration)
-      .videoFilters([
-        'scale=1080:1920:force_original_aspect_ratio=decrease',
-        'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
-        `eq=saturation=${sat}:contrast=${con}:brightness=${bri}`,
-        'fade=t=in:st=0:d=0.7',
-        `fade=t=out:st=${Math.max(1, segDuration - 1.2)}:d=1.2`
-      ])
+      .videoFilters(vFilters)
       .outputOptions([
         '-c:v libx264',
         '-preset fast',
@@ -1879,6 +2130,27 @@ Respond ONLY with valid JSON.`
       .on('error', (err) => reject(err));
   });
 
+  if (assFilePath && fs.existsSync(assFilePath)) {
+    try { await fsp.unlink(assFilePath); } catch (_) {}
+  }
+
+  // Generate high-resolution 9:16 cover thumbnail at 1.5s
+  const thumbFileName = outputFileName.replace('.mp4', '-cover.jpg');
+  try {
+    await new Promise((resolve) => {
+      ffmpeg(outputPath)
+        .screenshots({
+          timestamps: ['1.5'],
+          filename: thumbFileName,
+          folder: REELS_DIR,
+          size: '1080x1920'
+        })
+        .on('end', resolve)
+        .on('error', resolve);
+    });
+    console.log(`🖼️ [Cover Photo] AI Cover photo generated for Part ${partNum}: ${thumbFileName}`);
+  } catch (_) {}
+
   // 4. Update Scheduler State (Increment progress so this 30s segment NEVER posts again!)
   const historyItem = {
     part: partNum,
@@ -1886,6 +2158,7 @@ Respond ONLY with valid JSON.`
     endSeconds: endSec,
     duration: `${segDuration}s`,
     renderedReelUrl: `/rendered-reels/${outputFileName}`,
+    thumbnailUrl: `/rendered-reels/${thumbFileName}`,
     fileName: outputFileName,
     postedAt: new Date().toISOString(),
     displayTime: new Date().toLocaleString(),
@@ -1932,6 +2205,24 @@ Respond ONLY with valid JSON.`
       console.error(`❌ [Auto-Pilot Master Video] YouTube auto-upload error for Part ${partNum}:`, e.message);
       historyItem.lastYoutubeError = e.message;
     }
+  }
+
+  // 📲 Send Instant Alert to WhatsApp & Telegram
+  if (historyItem.instagramPostUrl || historyItem.youtubePostUrl) {
+    let plain = `🎉 ForgeAI Auto-Pilot: Part ${partNum} Published!\n\n`;
+    let html = `🎉 <b>ForgeAI Auto-Pilot: Part ${partNum} Published!</b>\n\n`;
+    if (historyItem.instagramPostUrl) {
+      plain += `📸 Instagram: ${historyItem.instagramPostUrl}\n`;
+      html += `📸 <b>Instagram:</b> <a href="${historyItem.instagramPostUrl}">${historyItem.instagramPostUrl}</a>\n`;
+    }
+    if (historyItem.youtubePostUrl) {
+      plain += `🔴 YouTube Shorts: ${historyItem.youtubePostUrl}\n`;
+      html += `🔴 <b>YouTube Shorts:</b> <a href="${historyItem.youtubePostUrl}">${historyItem.youtubePostUrl}</a>\n`;
+    }
+    const timeStr = new Date().toLocaleTimeString('en-IN');
+    plain += `\n⏰ Time: ${timeStr}`;
+    html += `\n⏰ <i>Time: ${timeStr}</i>`;
+    sendInstantAlert(plain, html).catch(() => {});
   }
 
   state.history.unshift(historyItem);

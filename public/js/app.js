@@ -159,6 +159,11 @@ async function loadApiKeyStatus() {
   if (telegramBotTokenInput) telegramBotTokenInput.value = localStorage.getItem('TELEGRAM_BOT_TOKEN') || '';
   if (telegramChatIdInput) telegramChatIdInput.value = localStorage.getItem('TELEGRAM_CHAT_ID') || '';
 
+  const whatsappPhoneInput = document.getElementById('whatsappPhoneInput');
+  const whatsappApiKeyInput = document.getElementById('whatsappApiKeyInput');
+  if (whatsappPhoneInput) whatsappPhoneInput.value = localStorage.getItem('WHATSAPP_PHONE') || '';
+  if (whatsappApiKeyInput) whatsappApiKeyInput.value = localStorage.getItem('WHATSAPP_APIKEY') || '';
+
   if (localKey) {
     apiKeyStatusLabel.textContent = 'API Key Active ✓';
     apiKeyStatusLabel.style.color = 'var(--accent-emerald)';
@@ -195,6 +200,8 @@ btnSettings.addEventListener('click', () => {
   const youtubeClientIdInput = document.getElementById('youtubeClientIdInput');
   const youtubeClientSecretInput = document.getElementById('youtubeClientSecretInput');
   const youtubeRefreshTokenInput = document.getElementById('youtubeRefreshTokenInput');
+  const whatsappPhoneInput = document.getElementById('whatsappPhoneInput');
+  const whatsappApiKeyInput = document.getElementById('whatsappApiKeyInput');
 
   if (metaIgUserIdInput) metaIgUserIdInput.value = localStorage.getItem('META_IG_USER_ID') || '';
   if (metaIgTokenInput) metaIgTokenInput.value = localStorage.getItem('META_IG_TOKEN') || '';
@@ -204,6 +211,8 @@ btnSettings.addEventListener('click', () => {
   if (youtubeClientIdInput) youtubeClientIdInput.value = localStorage.getItem('YOUTUBE_CLIENT_ID') || '';
   if (youtubeClientSecretInput) youtubeClientSecretInput.value = localStorage.getItem('YOUTUBE_CLIENT_SECRET') || '';
   if (youtubeRefreshTokenInput) youtubeRefreshTokenInput.value = localStorage.getItem('YOUTUBE_REFRESH_TOKEN') || '';
+  if (whatsappPhoneInput) whatsappPhoneInput.value = localStorage.getItem('WHATSAPP_PHONE') || '';
+  if (whatsappApiKeyInput) whatsappApiKeyInput.value = localStorage.getItem('WHATSAPP_APIKEY') || '';
 
   settingsModal.classList.remove('hidden');
   checkLiveTokenHealth();
@@ -218,6 +227,15 @@ btnSettings.addEventListener('click', () => {
         ytPill.textContent = `${data.youtube.channelTitle || 'Connected'} ✓`;
         ytPill.style.background = 'rgba(16, 185, 129, 0.15)';
         ytPill.style.color = '#059669';
+      }
+      const waPill = document.getElementById('whatsappStatusPill');
+      if (waPill && data.whatsapp?.configured) {
+        waPill.textContent = 'WhatsApp Active ✓';
+        waPill.style.background = 'rgba(34, 197, 94, 0.15)';
+        waPill.style.color = '#16a34a';
+        if (whatsappPhoneInput && !whatsappPhoneInput.value) {
+          whatsappPhoneInput.value = data.whatsapp.phone;
+        }
       }
     }
   }).catch(() => {});
@@ -326,6 +344,15 @@ btnSaveApiKey.addEventListener('click', async () => {
   if (telegramChatId) localStorage.setItem('TELEGRAM_CHAT_ID', telegramChatId);
   else localStorage.removeItem('TELEGRAM_CHAT_ID');
 
+  const whatsappPhone = document.getElementById('whatsappPhoneInput')?.value.trim() || '';
+  const whatsappApiKey = document.getElementById('whatsappApiKeyInput')?.value.trim() || '';
+
+  if (whatsappPhone) localStorage.setItem('WHATSAPP_PHONE', whatsappPhone);
+  else localStorage.removeItem('WHATSAPP_PHONE');
+
+  if (whatsappApiKey) localStorage.setItem('WHATSAPP_APIKEY', whatsappApiKey);
+  else localStorage.removeItem('WHATSAPP_APIKEY');
+
   // Sync to server backend so background scheduler has the new token immediately
   try {
     await fetch('/api/settings/save', {
@@ -342,7 +369,9 @@ btnSaveApiKey.addEventListener('click', async () => {
         youtubeClientSecret: ytClientSecret,
         youtubeRefreshToken: ytRefreshToken,
         telegramBotToken,
-        telegramChatId
+        telegramChatId,
+        whatsappPhone,
+        whatsappApiKey
       })
     });
   } catch (err) {
@@ -353,6 +382,39 @@ btnSaveApiKey.addEventListener('click', async () => {
   await loadApiKeyStatus();
   settingsModal.classList.add('hidden');
 });
+
+// WhatsApp Alert Test Button Listener
+const btnTestWhatsApp = document.getElementById('btnTestWhatsApp');
+if (btnTestWhatsApp) {
+  btnTestWhatsApp.addEventListener('click', async () => {
+    const phone = document.getElementById('whatsappPhoneInput')?.value.trim() || '';
+    const apiKey = document.getElementById('whatsappApiKeyInput')?.value.trim() || '';
+    if (!phone || !apiKey) {
+      showToast('WhatsApp Phone અને CallMeBot API Key બંને દાખલ કરો.', true);
+      return;
+    }
+    btnTestWhatsApp.disabled = true;
+    btnTestWhatsApp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing WhatsApp...';
+    try {
+      const res = await fetch('/api/whatsapp/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, apiKey })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || '✅ WhatsApp Alert Sent Successfully!');
+      } else {
+        showToast(`Error: ${data.error || 'Failed'}`, true);
+      }
+    } catch (err) {
+      showToast(`Error: ${err.message}`, true);
+    } finally {
+      btnTestWhatsApp.disabled = false;
+      btnTestWhatsApp.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Test WhatsApp Alert';
+    }
+  });
+}
 
 // Telegram Alert Test Button Listener
 const btnTestTelegram = document.getElementById('btnTestTelegram');
@@ -1067,6 +1129,11 @@ function initVideoStudio() {
     formData.append('targetDuration', videoDurationSelect.value);
     formData.append('customInstructions', videoCustomPrompt.value);
 
+    const videoSubtitlesSelect = document.getElementById('videoSubtitlesSelect');
+    if (videoSubtitlesSelect) {
+      formData.append('subtitlesStyle', videoSubtitlesSelect.value);
+    }
+
     if (isScheduleModeActive && videoScheduleDateTime && videoScheduleDateTime.value) {
       formData.append('isScheduled', 'true');
       formData.append('scheduledTime', videoScheduleDateTime.value);
@@ -1091,8 +1158,11 @@ function initVideoStudio() {
 
       currentRenderedReel = data;
 
-      // 1. Play Rendered 9:16 Reel
+      // 1. Play Rendered 9:16 Reel & Set Cover Poster
       reelPlaceholder.style.display = 'none';
+      if (data.thumbnailUrl) {
+        renderedVideoPlayer.poster = data.thumbnailUrl;
+      }
       renderedVideoPlayer.src = data.reelUrl;
       renderedVideoPlayer.classList.add('active');
       renderedVideoPlayer.load();
@@ -1102,6 +1172,17 @@ function initVideoStudio() {
       pillTheme.textContent = data.recipe?.themeName || 'Royal Vibrant';
       pillDuration.textContent = data.duration || '30s';
       recipePills.classList.remove('hidden');
+
+      const pillSubtitles = document.getElementById('pillSubtitles');
+      const lblPillSubtitles = document.getElementById('lblPillSubtitles');
+      if (pillSubtitles && lblPillSubtitles) {
+        if (data.subtitlesEnabled) {
+          lblPillSubtitles.textContent = data.subtitlesStyle === 'electric-cyan' ? 'Cyan Subs' : 'Hormozi Subs';
+          pillSubtitles.style.display = 'inline-flex';
+        } else {
+          pillSubtitles.style.display = 'none';
+        }
+      }
 
       // Schedule Pill & Banner
       if (data.isScheduled && data.scheduledItem) {
@@ -1130,9 +1211,17 @@ function initVideoStudio() {
       viralCaptionText.textContent = data.recipe?.viralCaption || 'Unbelievable moments captured in high aesthetic 4K!';
       viralHashtagsText.textContent = data.recipe?.viralHashtags || '#ViralReels #Trending #Shorts #Explore';
 
-      // 4. Download Button
+      // 4. Download Reel & Cover Thumbnail Buttons
       btnDownloadReel.href = data.downloadUrl;
       btnDownloadReel.setAttribute('download', data.fileName || 'reel-30s.mp4');
+
+      const btnDownloadCover = document.getElementById('btnDownloadCover');
+      if (btnDownloadCover && data.thumbnailUrl) {
+        btnDownloadCover.href = data.thumbnailUrl;
+        btnDownloadCover.setAttribute('download', (data.fileName || 'reel').replace('.mp4', '-cover.jpg'));
+        btnDownloadCover.style.display = 'inline-flex';
+      }
+
       videoActionButtons.classList.remove('hidden');
 
       // 5. Enable Social Media Buttons
