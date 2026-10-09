@@ -1670,6 +1670,158 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
   }
 });
 
+// 🎬 Feature #5: AI Timeline Studio & Video FX Editor (Cut, Filters, Text, Effects)
+app.post('/api/video/edit-timeline', async (req, res) => {
+  try {
+    const { videoFileName, trimStart, trimEnd, filter, textSize, textPosition, textColor, effects, customCaption } = req.body;
+    if (!videoFileName) {
+      return res.status(400).json({ error: 'વિડીયો ફાઈલનું નામ જરૂરી છે.' });
+    }
+
+    const cleanBase = path.basename(videoFileName);
+    let videoPath = path.join(REELS_DIR, cleanBase);
+    if (!fs.existsSync(videoPath)) videoPath = path.join(UPLOADS_DIR, cleanBase);
+    if (!fs.existsSync(videoPath)) {
+      return res.status(404).json({ error: 'વિડીયો ફાઈલ સિસ્ટમમાં મળી નથી.' });
+    }
+
+    const startSec = Math.max(0, parseFloat(trimStart) || 0);
+    const endSec = Math.max(startSec + 2, parseFloat(trimEnd) || 30);
+    const clipDuration = Math.max(2, endSec - startSec);
+
+    const editedFileName = `edited-${Date.now()}-${cleanBase}`;
+    const outputPath = path.join(REELS_DIR, editedFileName);
+
+    const vFilters = [];
+
+    // 1. Effects: Punch-in Zoom
+    const fxList = Array.isArray(effects) ? effects : (effects ? [effects] : []);
+    const hasZoom = fxList.includes('zoom');
+    if (hasZoom) {
+      vFilters.push('crop=in_w*0.88:in_h*0.88:(in_w-out_w)/2:(in_h-out_h)/2');
+    }
+
+    // 2. Scale & Pad to 9:16 Vertical
+    vFilters.push('scale=1080:1920:force_original_aspect_ratio=decrease');
+    vFilters.push('pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black');
+
+    // 3. Color Filters
+    const selectedFilter = filter || 'none';
+    if (selectedFilter === 'warm-gold') {
+      vFilters.push('eq=saturation=1.28:contrast=1.18:brightness=0.03');
+    } else if (selectedFilter === 'vibrant') {
+      vFilters.push('eq=saturation=1.45:contrast=1.22:brightness=0.02');
+    } else if (selectedFilter === 'noir') {
+      vFilters.push('hue=s=0,eq=contrast=1.35:brightness=0.01');
+    } else if (selectedFilter === 'teal-orange') {
+      vFilters.push('eq=saturation=1.22:contrast=1.15,colorbalance=rs=0.12:gs=-0.02:bs=-0.1');
+    } else if (selectedFilter === 'vintage') {
+      vFilters.push('eq=saturation=0.88:contrast=1.06:brightness=0.03');
+    }
+
+    // 4. Vignette Effect
+    if (fxList.includes('vignette')) {
+      vFilters.push('vignette=PI/4');
+    }
+
+    // 5. Dynamic Subtitles / Text
+    let assPath = null;
+    if (customCaption && customCaption.trim()) {
+      const fontSizeMap = { small: 56, medium: 72, large: 92, huge: 110 };
+      const chosenSize = fontSizeMap[textSize] || 72;
+      const alignMap = { bottom: 2, center: 5, top: 8 };
+      const chosenAlign = alignMap[textPosition] || 2;
+      const marginVMap = { bottom: 360, center: 0, top: 240 };
+      const chosenMarginV = marginVMap[textPosition] || 360;
+
+      const colorMap = {
+        yellow: '&H0000FFFF&',
+        gold: '&H00D7FF&',
+        white: '&H00FFFFFF&',
+        green: '&H0000FF00&',
+        rose: '&H006600FF&',
+        amethyst: '&H00FF0099&'
+      };
+      const chosenCol = colorMap[textColor] || '&H0000FFFF&';
+
+      assPath = path.join(os.tmpdir(), `editor-sub-${Date.now()}.ass`);
+      const lines = customCaption.split('\n').filter(l => l.trim());
+      let assEvents = '';
+      const step = clipDuration / Math.max(1, lines.length);
+
+      lines.forEach((line, idx) => {
+        const sTime = formatAssTime(idx * step);
+        const eTime = formatAssTime((idx + 1) * step);
+        const cleanText = line.toUpperCase().replace(/[{}]/g, '').trim();
+        assEvents += `Dialogue: 0,${sTime},${eTime},EditorStyle,,0,0,0,,{\\c${chosenCol}}${cleanText}\n`;
+      });
+
+      const assContent = `[Script Info]
+Title: Timeline Studio Subtitles
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: EditorStyle,Arial,${chosenSize},${chosenCol},&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,3,${chosenAlign},60,60,${chosenMarginV},1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+${assEvents}`;
+
+      fs.writeFileSync(assPath, assContent, 'utf8');
+      const escapedAss = path.resolve(assPath).replace(/\\/g, '/').replace(/:/g, '\\:');
+      vFilters.push(`subtitles='${escapedAss}'`);
+    }
+
+    console.log(`🎬 [Timeline Studio] Rendering edited reel: Start ${startSec}s, Duration ${clipDuration}s, Filter: ${selectedFilter}, FX: ${fxList.join(',')}`);
+
+    await new Promise((resolve, reject) => {
+      ffmpeg(videoPath)
+        .setStartTime(startSec)
+        .setDuration(clipDuration)
+        .videoFilters(vFilters)
+        .outputOptions([
+          '-c:v libx264',
+          '-preset fast',
+          '-crf 22',
+          '-pix_fmt yuv420p',
+          '-c:a aac',
+          '-b:a 192k',
+          '-movflags +faststart'
+        ])
+        .save(outputPath)
+        .on('end', () => resolve())
+        .on('error', (err) => reject(err));
+    });
+
+    if (assPath && fs.existsSync(assPath)) {
+      try { await fsp.unlink(assPath); } catch (_) {}
+    }
+
+    return res.json({
+      success: true,
+      videoUrl: `/rendered-reels/${editedFileName}`,
+      downloadUrl: `/rendered-reels/${editedFileName}`,
+      fileName: editedFileName,
+      duration: `${Math.round(clipDuration)}s`,
+      appliedSettings: {
+        trimStart: startSec,
+        trimEnd: endSec,
+        filter: selectedFilter,
+        effects: fxList,
+        textSize,
+        textPosition
+      }
+    });
+
+  } catch (err) {
+    console.error('Timeline Studio edit error:', err);
+    res.status(500).json({ error: `વિડીયો એડિટ કરવામાં ભૂલ આવી: ${err.message}` });
+  }
+});
+
 // 6. Social Media Publishing (YouTube Shorts & Instagram Reels)
 app.post('/api/social/publish-youtube', async (req, res) => {
   try {

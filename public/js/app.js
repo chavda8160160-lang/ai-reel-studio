@@ -1407,6 +1407,11 @@ function initVideoStudio() {
           thumbQuickBar.classList.remove('hidden');
         }
 
+        const timelineQuickBar = document.getElementById('timelineQuickBar');
+        if (timelineQuickBar) {
+          timelineQuickBar.classList.remove('hidden');
+        }
+
         // Cache thumbnail studio state (Clean Frame default to eliminate duplicate names & clutter)
         window.activeReelThumbnail = {
           fileName: data.fileName,
@@ -2517,5 +2522,426 @@ function renderAnalyticsReelsGrid(reels) {
       </div>
     `;
   }).join('');
+}
+
+// ==========================================
+// 🎬 9. AI INTERACTIVE TIMELINE STUDIO & FX EDITOR
+// ==========================================
+function initTimelineStudio() {
+  const modal = document.getElementById('timelineStudioModal');
+  const btnOpen = document.getElementById('btnOpenTimelineStudio');
+  const btnClose = document.getElementById('btnCloseTimelineModal');
+  const btnCloseFooter = document.getElementById('btnCloseTimelineModalFooter');
+  const videoPreview = document.getElementById('timelinePreviewVideo');
+  const btnTogglePlay = document.getElementById('btnTimelineTogglePlay');
+  const playIcon = document.getElementById('timelinePlayIcon');
+  const lblCurrentTime = document.getElementById('lblTimelineCurrentTime');
+  const lblClipDuration = document.getElementById('lblTimelineClipDuration');
+  const lblRangeDisplay = document.getElementById('lblTimelineRangeDisplay');
+  const rngTrimStart = document.getElementById('rngTrimStart');
+  const rngTrimEnd = document.getElementById('rngTrimEnd');
+  const lblTrimStartVal = document.getElementById('lblTrimStartVal');
+  const lblTrimEndVal = document.getElementById('lblTrimEndVal');
+  const btnAiAuto = document.getElementById('btnTimelineAiAuto');
+  const subBadge = document.getElementById('timelineLiveSubBadge');
+  const vignetteOverlay = document.getElementById('timelineVignetteOverlay');
+  const customSubInput = document.getElementById('txtTimelineCustomSub');
+  const chkZoom = document.getElementById('chkFxZoom');
+  const chkVignette = document.getElementById('chkFxVignette');
+  const btnReset = document.getElementById('btnTimelineReset');
+  const btnApply = document.getElementById('btnApplyTimelineEdits');
+
+  if (!modal) return;
+
+  // State object
+  let editorState = {
+    trimStart: 0,
+    trimEnd: 30,
+    duration: 30,
+    filter: 'none',
+    textSize: 'large',
+    textPosition: 'bottom',
+    textColor: 'yellow',
+    customText: 'VIRAL MOMENT 🔥',
+    zoom: false,
+    vignette: false
+  };
+
+  function openTimelineStudio() {
+    const renderedVideo = document.getElementById('renderedVideoPlayer');
+    const sourceVideo = (currentRenderedReel && (currentRenderedReel.reelUrl || currentRenderedReel.videoUrl)) 
+      || (renderedVideo && renderedVideo.src) 
+      || '/rendered-reels/reel-demo.mp4';
+
+    if (!sourceVideo || sourceVideo.endsWith('/')) {
+      showToast('કૃપા કરીને પહેલાં એક રીલ વિડીયો બનાવો અથવા અપલોડ કરો! 🎬', true);
+      return;
+    }
+
+    videoPreview.src = sourceVideo;
+    videoPreview.load();
+    videoPreview.play().catch(() => {});
+    modal.classList.remove('hidden');
+
+    // Sync video duration when metadata loads
+    videoPreview.onloadedmetadata = () => {
+      const realDur = Math.round(videoPreview.duration) || 30;
+      rngTrimStart.max = realDur;
+      rngTrimEnd.max = realDur;
+      rngTrimEnd.value = Math.min(realDur, 30);
+      editorState.trimEnd = parseFloat(rngTrimEnd.value);
+      editorState.duration = realDur;
+      updateTrimDisplay();
+    };
+
+    updateLivePreview();
+  }
+
+  function closeTimelineStudio() {
+    videoPreview.pause();
+    modal.classList.add('hidden');
+  }
+
+  if (btnOpen) btnOpen.addEventListener('click', openTimelineStudio);
+  if (btnClose) btnClose.addEventListener('click', closeTimelineStudio);
+  if (btnCloseFooter) btnCloseFooter.addEventListener('click', closeTimelineStudio);
+
+  // Play / Pause Toggle
+  if (btnTogglePlay) {
+    btnTogglePlay.addEventListener('click', () => {
+      if (videoPreview.paused) {
+        videoPreview.play();
+        if (playIcon) playIcon.className = 'fa-solid fa-pause';
+      } else {
+        videoPreview.pause();
+        if (playIcon) playIcon.className = 'fa-solid fa-play';
+      }
+    });
+  }
+
+  // Playhead constraints to trim boundaries
+  videoPreview.ontimeupdate = () => {
+    const cur = videoPreview.currentTime;
+    if (lblCurrentTime) {
+      const mins = Math.floor(cur / 60);
+      const secs = Math.floor(cur % 60);
+      lblCurrentTime.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Loop within trim range
+    if (cur < editorState.trimStart) {
+      videoPreview.currentTime = editorState.trimStart;
+    } else if (cur > editorState.trimEnd) {
+      videoPreview.currentTime = editorState.trimStart;
+    }
+  };
+
+  // Tab Switching
+  const tabBtns = modal.querySelectorAll('.editor-tab-btn');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const targetId = btn.dataset.tab;
+      modal.querySelectorAll('.editor-tab-pane').forEach(pane => {
+        if (pane.id === targetId) {
+          pane.classList.remove('hidden');
+        } else {
+          pane.classList.add('hidden');
+        }
+      });
+    });
+  });
+
+  // Range Sliders (Trim Start & End)
+  function updateTrimDisplay() {
+    let s = parseFloat(rngTrimStart.value) || 0;
+    let e = parseFloat(rngTrimEnd.value) || 30;
+    if (s >= e - 2) {
+      s = Math.max(0, e - 2);
+      rngTrimStart.value = s;
+    }
+    editorState.trimStart = s;
+    editorState.trimEnd = e;
+    const clipDur = (e - s).toFixed(1);
+
+    if (lblTrimStartVal) lblTrimStartVal.textContent = `${s.toFixed(1)}s`;
+    if (lblTrimEndVal) lblTrimEndVal.textContent = `${e.toFixed(1)}s`;
+    if (lblClipDuration) lblClipDuration.textContent = `${clipDur}s`;
+    if (lblRangeDisplay) lblRangeDisplay.textContent = `${s.toFixed(1)}s – ${e.toFixed(1)}s (${clipDur}s)`;
+  }
+
+  if (rngTrimStart) {
+    rngTrimStart.addEventListener('input', () => {
+      updateTrimDisplay();
+      videoPreview.currentTime = editorState.trimStart;
+    });
+  }
+
+  if (rngTrimEnd) {
+    rngTrimEnd.addEventListener('input', () => {
+      updateTrimDisplay();
+    });
+  }
+
+  // Quick Cut Chips
+  modal.querySelectorAll('.btn-quick-cut').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const s = parseFloat(chip.dataset.start) || 0;
+      let e = chip.dataset.end === 'max' ? (parseFloat(rngTrimEnd.max) || 30) : parseFloat(chip.dataset.end);
+      rngTrimStart.value = s;
+      rngTrimEnd.value = e;
+      updateTrimDisplay();
+      videoPreview.currentTime = s;
+    });
+  });
+
+  // Filters Selection
+  const filterCards = modal.querySelectorAll('.timeline-filter-card');
+  filterCards.forEach(card => {
+    card.addEventListener('click', () => {
+      filterCards.forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      editorState.filter = card.dataset.filter || 'none';
+      updateLivePreview();
+    });
+  });
+
+  // Text Size Chips
+  const textSizeChips = modal.querySelectorAll('.btn-text-size');
+  textSizeChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      textSizeChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      editorState.textSize = chip.dataset.size;
+      updateLivePreview();
+    });
+  });
+
+  // Text Position Chips
+  const textPosChips = modal.querySelectorAll('.btn-text-pos');
+  textPosChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      textPosChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      editorState.textPosition = chip.dataset.pos;
+      updateLivePreview();
+    });
+  });
+
+  // Text Color Chips
+  const textColorChips = modal.querySelectorAll('.btn-text-col');
+  textColorChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      textColorChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      editorState.textColor = chip.dataset.col;
+      updateLivePreview();
+    });
+  });
+
+  // Custom text input
+  if (customSubInput) {
+    customSubInput.addEventListener('input', () => {
+      editorState.customText = customSubInput.value || 'VIRAL MOMENT 🔥';
+      if (subBadge) subBadge.textContent = editorState.customText;
+    });
+  }
+
+  // Effects Checkboxes
+  if (chkZoom) {
+    chkZoom.addEventListener('change', () => {
+      editorState.zoom = chkZoom.checked;
+      updateLivePreview();
+    });
+  }
+
+  if (chkVignette) {
+    chkVignette.addEventListener('change', () => {
+      editorState.vignette = chkVignette.checked;
+      updateLivePreview();
+    });
+  }
+
+  // Live CSS Update Function (Instant 60fps response)
+  function updateLivePreview() {
+    // 1. Filter class on video
+    videoPreview.className = '';
+    videoPreview.classList.add(`v-filter-${editorState.filter}`);
+    if (editorState.zoom) {
+      videoPreview.classList.add('v-fx-zoom');
+    }
+
+    // 2. Vignette
+    if (vignetteOverlay) {
+      if (editorState.vignette) vignetteOverlay.classList.remove('hidden');
+      else vignetteOverlay.classList.add('hidden');
+    }
+
+    // 3. Subtitle styling
+    if (subBadge) {
+      const sizePxMap = { small: '1.05rem', medium: '1.25rem', large: '1.5rem', huge: '1.85rem' };
+      subBadge.style.fontSize = sizePxMap[editorState.textSize] || '1.45rem';
+
+      const colorMap = {
+        yellow: '#facc15',
+        white: '#ffffff',
+        green: '#22c55e',
+        rose: '#fb7185',
+        amethyst: '#c084fc'
+      };
+      subBadge.style.color = colorMap[editorState.textColor] || '#facc15';
+
+      if (editorState.textPosition === 'top') {
+        subBadge.style.top = '14%';
+        subBadge.style.bottom = 'auto';
+      } else if (editorState.textPosition === 'center') {
+        subBadge.style.top = '45%';
+        subBadge.style.bottom = 'auto';
+      } else {
+        subBadge.style.top = 'auto';
+        subBadge.style.bottom = '18%';
+      }
+
+      subBadge.textContent = editorState.customText;
+    }
+  }
+
+  // ✨ 1-Click AI Auto-Enhance Button
+  if (btnAiAuto) {
+    btnAiAuto.addEventListener('click', () => {
+      // Pick best viral warm gold, large Hormozi text, zoom, and 30s cut
+      editorState.filter = 'warm-gold';
+      editorState.textSize = 'large';
+      editorState.textPosition = 'bottom';
+      editorState.textColor = 'yellow';
+      editorState.zoom = true;
+      editorState.vignette = true;
+      if (chkZoom) chkZoom.checked = true;
+      if (chkVignette) chkVignette.checked = true;
+
+      // Update UI active buttons
+      filterCards.forEach(c => c.classList.toggle('active', c.dataset.filter === 'warm-gold'));
+      textSizeChips.forEach(c => c.classList.toggle('active', c.dataset.size === 'large'));
+      textPosChips.forEach(c => c.classList.toggle('active', c.dataset.pos === 'bottom'));
+      textColorChips.forEach(c => c.classList.toggle('active', c.dataset.col === 'yellow'));
+
+      updateLivePreview();
+      showToast('✨ AI Smart Auto-Enhance applied to live preview!');
+    });
+  }
+
+  // Reset to original
+  if (btnReset) {
+    btnReset.addEventListener('click', () => {
+      editorState = {
+        trimStart: 0,
+        trimEnd: Math.min(30, parseFloat(rngTrimEnd.max) || 30),
+        duration: 30,
+        filter: 'none',
+        textSize: 'large',
+        textPosition: 'bottom',
+        textColor: 'yellow',
+        customText: 'VIRAL MOMENT 🔥',
+        zoom: false,
+        vignette: false
+      };
+      if (rngTrimStart) rngTrimStart.value = 0;
+      if (rngTrimEnd) rngTrimEnd.value = editorState.trimEnd;
+      if (chkZoom) chkZoom.checked = false;
+      if (chkVignette) chkVignette.checked = false;
+
+      filterCards.forEach(c => c.classList.toggle('active', c.dataset.filter === 'none'));
+      textSizeChips.forEach(c => c.classList.toggle('active', c.dataset.size === 'large'));
+      textPosChips.forEach(c => c.classList.toggle('active', c.dataset.pos === 'bottom'));
+      textColorChips.forEach(c => c.classList.toggle('active', c.dataset.col === 'yellow'));
+
+      updateTrimDisplay();
+      updateLivePreview();
+      showToast('↩️ Settings reset to original AI output');
+    });
+  }
+
+  // ⚡ Apply & Re-Render Reel (HD)
+  if (btnApply) {
+    btnApply.addEventListener('click', async () => {
+      if (!currentRenderedReel || !currentRenderedReel.fileName) {
+        showToast('કોઈ વિડીયો ફાઈલ મળી નથી.', true);
+        return;
+      }
+
+      const activeEffects = [];
+      if (editorState.zoom) activeEffects.push('zoom');
+      if (editorState.vignette) activeEffects.push('vignette');
+
+      btnApply.disabled = true;
+      btnApply.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>🎬 Re-Rendering HD Reel...</span>';
+      showToast('⚡ FFmpeg થી તમારા કસ્ટમ કટ, ફિલ્ટર્સ અને ઇફેક્ટ્સ રેન્ડર થઈ રહ્યા છે...');
+
+      try {
+        const res = await fetch('/api/video/edit-timeline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoFileName: currentRenderedReel.fileName,
+            trimStart: editorState.trimStart,
+            trimEnd: editorState.trimEnd,
+            filter: editorState.filter,
+            textSize: editorState.textSize,
+            textPosition: editorState.textPosition,
+            textColor: editorState.textColor,
+            effects: activeEffects,
+            customCaption: editorState.customText
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Re-rendering failed.');
+        }
+
+        // Update currentRenderedReel state
+        currentRenderedReel.fileName = data.fileName;
+        currentRenderedReel.reelUrl = data.videoUrl;
+        currentRenderedReel.downloadUrl = data.downloadUrl;
+        currentRenderedReel.duration = data.duration;
+
+        // Update main video player
+        const mainPlayer = document.getElementById('renderedVideoPlayer');
+        if (mainPlayer) {
+          mainPlayer.src = data.videoUrl;
+          mainPlayer.load();
+          mainPlayer.play().catch(() => {});
+        }
+
+        const btnDownload = document.getElementById('btnDownloadReel');
+        if (btnDownload) {
+          btnDownload.href = data.downloadUrl;
+          btnDownload.setAttribute('download', data.fileName);
+        }
+
+        const pillDuration = document.getElementById('pillDuration');
+        if (pillDuration) {
+          pillDuration.textContent = data.duration;
+        }
+
+        closeTimelineStudio();
+        showToast('🎉 નવો એડિટ કરેલો HD રીલ વિડીયો સફળતાપૂર્વક તૈયાર થઈ ગયો!');
+      } catch (err) {
+        console.error('Apply timeline error:', err);
+        showToast(`ભૂલ આવી: ${err.message}`, true);
+      } finally {
+        btnApply.disabled = false;
+        btnApply.innerHTML = '<i class="fa-solid fa-bolt" style="color: #e5c870;"></i> <span>⚡ Apply & Re-Render Reel (HD)</span>';
+      }
+    });
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initTimelineStudio);
+} else {
+  initTimelineStudio();
 }
 

@@ -2093,4 +2093,115 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   color: #7f1d1d;
 }
 
+/* 🎬 Timeline Studio & Video FX Editor Styles */
+.editor-tabs-nav {
+  display: flex;
+  background: #ede8df;
+  padding: 0.28rem;
+  border-radius: 12px;
+  gap: 0.3rem;
+  border: 1px solid rgba(215, 206, 192, 0.8);
+}
+
+.editor-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #57524d;
+  font-family: var(--font-main);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
+}
+
+.editor-tab-btn:hover {
+  color: #201d1a;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.editor-tab-btn.active {
+  background: #ffffff;
+  color: #201d1a;
+  font-weight: 700;
+  border-color: rgba(197, 168, 128, 0.4);
+  box-shadow: 0 2px 6px rgba(28, 25, 23, 0.06);
+}
+
+.timeline-filter-card {
+  background: #faf8f5;
+  border: 1.5px solid rgba(215, 206, 192, 0.7);
+  border-radius: 10px;
+  padding: 0.75rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.timeline-filter-card b {
+  font-size: 0.8rem;
+  color: #201d1a;
+}
+
+.timeline-filter-card small {
+  font-size: 0.68rem;
+  color: #878077;
+}
+
+.timeline-filter-card:hover {
+  border-color: #b89758;
+  background: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+.timeline-filter-card.active {
+  background: #fbf7ef;
+  border-color: #946e2b;
+  box-shadow: 0 0 0 2px rgba(184, 151, 88, 0.25);
+}
+
+.timeline-filter-card.active b {
+  color: #946e2b;
+}
+
+/* Real-Time Live CSS Filters for Video Element */
+.v-filter-none {
+  filter: none !important;
+}
+
+.v-filter-warm-gold {
+  filter: sepia(0.22) contrast(1.15) brightness(1.04) saturate(1.22) !important;
+}
+
+.v-filter-vibrant {
+  filter: contrast(1.24) saturate(1.42) brightness(1.02) !important;
+}
+
+.v-filter-noir {
+  filter: grayscale(1) contrast(1.32) brightness(1.01) !important;
+}
+
+.v-filter-teal-orange {
+  filter: contrast(1.16) saturate(1.18) hue-rotate(185deg) !important;
+}
+
+.v-filter-vintage {
+  filter: sepia(0.36) contrast(1.05) brightness(1.06) !important;
+}
+
+.v-fx-zoom {
+  transform: scale(1.15) !important;
+}
+
 

@@ -461,16 +461,29 @@
             </div>
 
             <!-- Thumbnail Quick Preview Strip -->
-            <div id="thumbQuickBar" class="hidden" style="width: 100%; max-width: 300px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.65rem 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+            <div id="thumbQuickBar" class="hidden" style="width: 100%; max-width: 300px; background: #faf8f5; border: 1px solid rgba(215, 206, 192, 0.7); border-radius: 12px; padding: 0.65rem 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
               <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
-                <img id="thumbMiniPreview" src="" alt="Cover" style="width: 36px; height: 56px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                <img id="thumbMiniPreview" src="" alt="Cover" style="width: 36px; height: 56px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(197, 168, 128, 0.4); flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
                 <div style="min-width: 0;">
-                  <div style="font-size: 0.8rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🖼️ AI Cover Photo</div>
-                  <div id="thumbMiniHeadline" style="font-size: 0.7rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Alex Hormozi 9:16</div>
+                  <div style="font-size: 0.8rem; font-weight: 700; color: #201d1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🖼️ AI Cover Photo</div>
+                  <div id="thumbMiniHeadline" style="font-size: 0.7rem; color: #878077; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Alex Hormozi 9:16</div>
                 </div>
               </div>
-              <button type="button" id="btnEditThumbnailMini" class="btn btn-ghost" style="font-size: 0.74rem; padding: 0.35rem 0.65rem; border: 1px solid #f59e0b; color: #b45309; background: #fffbeb; white-space: nowrap; font-weight: 600;">
+              <button type="button" id="btnEditThumbnailMini" class="btn btn-ghost" style="font-size: 0.74rem; padding: 0.35rem 0.65rem; border: 1px solid rgba(197, 168, 128, 0.5); color: #946e2b; background: #fffdfa; white-space: nowrap; font-weight: 600;">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> Edit Cover
+              </button>
+            </div>
+
+            <!-- Timeline Studio Quick Action Button -->
+            <div id="timelineQuickBar" class="hidden" style="width: 100%; max-width: 300px; margin-top: 0.5rem;">
+              <button type="button" id="btnOpenTimelineStudio" class="btn btn-ghost" style="width: 100%; padding: 0.65rem 0.9rem; border: 1px solid rgba(197, 168, 128, 0.5); background: #ffffff; color: #201d1a; font-size: 0.84rem; font-weight: 700; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm);">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <i class="fa-solid fa-sliders" style="color: #b89758; font-size: 1rem;"></i>
+                  <span>🎬 AI Timeline & FX Editor</span>
+                </div>
+                <span class="badge" style="background: #fbf7ef; color: #946e2b; font-size: 0.68rem; padding: 0.15rem 0.45rem; border: 1px solid rgba(197, 168, 128, 0.35);">
+                  Cut • Filter • FX
+                </span>
               </button>
             </div>
           </div>
@@ -1235,6 +1248,263 @@
           <a id="btnDownloadThumbnailFinal" href="#" download class="btn btn-success" style="font-weight: 700; padding: 0.55rem 1.2rem; border-radius: 8px;">
             <i class="fa-solid fa-download"></i> Download HD Cover (.jpg)
           </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🎬 AI Interactive Timeline & Video FX Studio Modal -->
+  <div id="timelineStudioModal" class="modal-backdrop hidden">
+    <div class="modal-card glass-card" style="max-width: 960px; width: 96vw; max-height: 94vh; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
+      <!-- Modal Header -->
+      <div class="modal-header" style="padding: 1.1rem 1.4rem; border-bottom: 1px solid rgba(215, 206, 192, 0.7); background: #ffffff; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #1c1917, #2c2724); border: 1px solid rgba(197, 168, 128, 0.4); display: flex; align-items: center; justify-content: center; color: #e5c870; font-size: 1.15rem;">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #1c1917; font-family: var(--font-serif); display: flex; align-items: center; gap: 0.5rem;">
+              <span>AI Timeline & Video FX Editor</span>
+              <span class="badge" style="background: #fbf7ef; color: #946e2b; font-size: 0.68rem; padding: 0.15rem 0.5rem; border: 1px solid rgba(197, 168, 128, 0.4);">Pro Studio</span>
+            </h3>
+            <p style="margin: 0; font-size: 0.76rem; color: #78716c;">લાઈવ 9:16 પ્રિવ્યૂ સાથે ટાઈમલાઈન કટ, સિનેમેટિક ફિલ્ટર્સ, ટેક્સ્ટ સાઈઝ અને વાયરલ ઇફેક્ટ્સ</p>
+          </div>
+        </div>
+        <button id="btnCloseTimelineModal" class="btn-icon" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #78716c;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Modal Body (Two Columns: Left 9:16 Live Preview, Right Controls) -->
+      <div class="modal-body" style="padding: 1.3rem; overflow-y: auto; display: grid; grid-template-columns: 290px 1fr; gap: 1.4rem; align-items: start; background: #faf8f5;">
+        <!-- Left: 9:16 Live Interactive Preview Frame -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.65rem;">
+          <div style="position: relative; width: 100%; aspect-ratio: 9/16; max-height: 480px; background: #000000; border-radius: 16px; overflow: hidden; box-shadow: 0 16px 36px rgba(28,25,23,0.22); border: 1px solid rgba(197, 168, 128, 0.35); display: flex; align-items: center; justify-content: center;">
+            <video id="timelinePreviewVideo" playsinline loop style="width: 100%; height: 100%; object-fit: cover; transition: filter 0.2s ease, transform 0.2s ease;"></video>
+            
+            <!-- Vignette FX Overlay -->
+            <div id="timelineVignetteOverlay" class="hidden" style="position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 70px rgba(0,0,0,0.85); border-radius: 16px;"></div>
+
+            <!-- Dynamic Live Subtitle Badge Overlay -->
+            <div id="timelineLiveSubBadge" style="position: absolute; bottom: 18%; left: 8%; right: 8%; text-align: center; color: #facc15; font-size: 1.45rem; font-weight: 800; font-family: Impact, sans-serif; text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; pointer-events: none; line-height: 1.15; letter-spacing: 0.03em; transition: all 0.2s ease;">
+              VIRAL MOMENT 🔥
+            </div>
+
+            <!-- Floating Mini Play/Pause Overlay -->
+            <button type="button" id="btnTimelineTogglePlay" style="position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; background: rgba(28,25,23,0.7); color: #fff; border: 1px solid rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px);">
+              <i class="fa-solid fa-play" id="timelinePlayIcon"></i>
+            </button>
+          </div>
+
+          <!-- Video Timecode & Scrub Status -->
+          <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; font-weight: 600; color: #78716c;">
+            <span>Time: <b id="lblTimelineCurrentTime" style="color: #201d1a;">00:00</b></span>
+            <span>Duration: <b id="lblTimelineClipDuration" style="color: #946e2b; font-family: var(--font-serif); font-size: 0.85rem;">30s</b></span>
+          </div>
+        </div>
+
+        <!-- Right: Multi-Tool Tabs & Controls -->
+        <div style="display: flex; flex-direction: column; gap: 1rem; min-width: 0;">
+          <!-- 1. AI Auto-Enhance Banner -->
+          <div style="background: #ffffff; border: 1px solid rgba(197, 168, 128, 0.45); border-radius: 12px; padding: 0.85rem 1.1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; box-shadow: var(--shadow-sm);">
+            <div>
+              <div style="font-size: 0.86rem; font-weight: 700; color: #201d1a; display: flex; align-items: center; gap: 0.4rem;">
+                <i class="fa-solid fa-wand-magic-sparkles" style="color: #b89758;"></i>
+                <span>✨ 1-Click AI Smart Auto-Enhance</span>
+              </div>
+              <p style="font-size: 0.74rem; color: #78716c; margin: 0.15rem 0 0 0;">AI જાતે બેસ્ટ ફિલ્ટર, હૂક કટ અને હોર્મોઝી ટેક્સ્ટ ઇફેક્ટ સેટ કરી દેશે</p>
+            </div>
+            <button type="button" id="btnTimelineAiAuto" class="btn" style="padding: 0.45rem 0.95rem; font-size: 0.78rem; font-weight: 700; background: linear-gradient(135deg, #1c1917, #2c2724); color: #f7eedb; border: 1px solid rgba(197, 168, 128, 0.4); border-radius: 8px; white-space: nowrap;">
+              Apply AI Auto
+            </button>
+          </div>
+
+          <!-- 2. Tool Tabs Header -->
+          <div class="editor-tabs-nav" style="display: flex; background: #f0ece3; padding: 0.25rem; border-radius: 10px; gap: 0.25rem;">
+            <button type="button" class="editor-tab-btn active" data-tab="tabTimelineTrim">
+              <i class="fa-solid fa-scissors"></i> ✂️ Cut / Trim
+            </button>
+            <button type="button" class="editor-tab-btn" data-tab="tabTimelineFilter">
+              <i class="fa-solid fa-palette"></i> 🎨 Filters
+            </button>
+            <button type="button" class="editor-tab-btn" data-tab="tabTimelineText">
+              <i class="fa-solid fa-font"></i> ✍️ Text & Subs
+            </button>
+            <button type="button" class="editor-tab-btn" data-tab="tabTimelineFX">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> ✨ Effects
+            </button>
+          </div>
+
+          <!-- TAB 1: ✂️ Cut / Trim -->
+          <div id="tabTimelineTrim" class="editor-tab-pane">
+            <div style="background: #ffffff; border: 1px solid rgba(215, 206, 192, 0.7); border-radius: 12px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.9rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label style="font-weight: 700; font-size: 0.82rem; color: #201d1a; display: flex; align-items: center; gap: 0.4rem;">
+                  <i class="fa-solid fa-timeline" style="color: #b89758;"></i> વિડીયો ટાઈમલાઈન કટ (Trim Start & End):
+                </label>
+                <span id="lblTimelineRangeDisplay" style="font-size: 0.76rem; font-weight: 700; color: #946e2b; background: #fbf7ef; padding: 0.15rem 0.5rem; border-radius: 6px; border: 1px solid rgba(197, 168, 128, 0.35);">
+                  0.0s – 30.0s (30s)
+                </span>
+              </div>
+
+              <!-- Draggable Range Controls -->
+              <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 0.74rem; color: #78716c; margin-bottom: 0.2rem;">
+                    <span>🟢 શરુઆત (Start Cut): <b id="lblTrimStartVal" style="color: #201d1a;">0.0s</b></span>
+                  </div>
+                  <input type="range" id="rngTrimStart" min="0" max="60" step="0.5" value="0" style="width: 100%; accent-color: #1c1917; cursor: pointer;">
+                </div>
+
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 0.74rem; color: #78716c; margin-bottom: 0.2rem;">
+                    <span>🔴 સમાપ્તિ (End Cut): <b id="lblTrimEndVal" style="color: #201d1a;">30.0s</b></span>
+                  </div>
+                  <input type="range" id="rngTrimEnd" min="2" max="60" step="0.5" value="30" style="width: 100%; accent-color: #b89758; cursor: pointer;">
+                </div>
+              </div>
+
+              <!-- Quick Presets -->
+              <div style="display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; padding-top: 0.3rem;">
+                <span style="font-size: 0.72rem; color: #78716c; font-weight: 600;">⚡ Quick Cut:</span>
+                <button type="button" class="chip btn-quick-cut" data-start="0" data-end="15">First 15s</button>
+                <button type="button" class="chip btn-quick-cut" data-start="0" data-end="30">Viral Hook 30s</button>
+                <button type="button" class="chip btn-quick-cut" data-start="15" data-end="45">Middle 30s</button>
+                <button type="button" class="chip btn-quick-cut" data-start="0" data-end="max">Full Length</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: 🎨 Cinematic Filters -->
+          <div id="tabTimelineFilter" class="editor-tab-pane hidden">
+            <div style="background: #ffffff; border: 1px solid rgba(215, 206, 192, 0.7); border-radius: 12px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.85rem;">
+              <label style="font-weight: 700; font-size: 0.82rem; color: #201d1a;">
+                <i class="fa-solid fa-wand-magic" style="color: #b89758;"></i> સિનેમેટિક કલર ગ્રેડિંગ (Live Real-Time):
+              </label>
+              <div class="filter-options-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem;">
+                <button type="button" class="timeline-filter-card active" data-filter="none">
+                  <span style="font-size: 1.1rem;">✨</span>
+                  <b>Original</b>
+                  <small>No Filter</small>
+                </button>
+                <button type="button" class="timeline-filter-card" data-filter="warm-gold">
+                  <span style="font-size: 1.1rem;">🌅</span>
+                  <b>Warm Gold</b>
+                  <small>Royal Glow</small>
+                </button>
+                <button type="button" class="timeline-filter-card" data-filter="vibrant">
+                  <span style="font-size: 1.1rem;">⚡</span>
+                  <b>Vibrant Pop</b>
+                  <small>High Saturation</small>
+                </button>
+                <button type="button" class="timeline-filter-card" data-filter="noir">
+                  <span style="font-size: 1.1rem;">🎬</span>
+                  <b>B&W Noir</b>
+                  <small>Classic Film</small>
+                </button>
+                <button type="button" class="timeline-filter-card" data-filter="teal-orange">
+                  <span style="font-size: 1.1rem;">🌊</span>
+                  <b>Teal & Orange</b>
+                  <small>Hollywood Tone</small>
+                </button>
+                <button type="button" class="timeline-filter-card" data-filter="vintage">
+                  <span style="font-size: 1.1rem;">📼</span>
+                  <b>Vintage Film</b>
+                  <small>90s Retro</small>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: ✍️ Subtitles & Text -->
+          <div id="tabTimelineText" class="editor-tab-pane hidden">
+            <div style="background: #ffffff; border: 1px solid rgba(215, 206, 192, 0.7); border-radius: 12px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.85rem;">
+              <!-- Font Size -->
+              <div>
+                <label style="font-weight: 700; font-size: 0.82rem; color: #201d1a; margin-bottom: 0.4rem; display: block;">
+                  <i class="fa-solid fa-text-height" style="color: #b89758;"></i> સબટાઈટલ સાઈઝ (Text Size):
+                </label>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <button type="button" class="chip btn-text-size" data-size="small">Small (24px)</button>
+                  <button type="button" class="chip btn-text-size" data-size="medium">Medium (32px)</button>
+                  <button type="button" class="chip btn-text-size active" data-size="large">Hormozi (42px)</button>
+                  <button type="button" class="chip btn-text-size" data-size="huge">Huge (52px)</button>
+                </div>
+              </div>
+
+              <!-- Position -->
+              <div>
+                <label style="font-weight: 700; font-size: 0.82rem; color: #201d1a; margin-bottom: 0.4rem; display: block;">
+                  <i class="fa-solid fa-arrows-up-down" style="color: #b89758;"></i> પોઝિશન (Position):
+                </label>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <button type="button" class="chip btn-text-pos active" data-pos="bottom">🔽 Bottom Center</button>
+                  <button type="button" class="chip btn-text-pos" data-pos="center">🎯 Middle Center</button>
+                  <button type="button" class="chip btn-text-pos" data-pos="top">🔝 Top Hook</button>
+                </div>
+              </div>
+
+              <!-- Color -->
+              <div>
+                <label style="font-weight: 700; font-size: 0.82rem; color: #201d1a; margin-bottom: 0.4rem; display: block;">
+                  <i class="fa-solid fa-droplet" style="color: #b89758;"></i> હાઇલાઇટ કલર:
+                </label>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <button type="button" class="chip btn-text-col active" data-col="yellow" style="color: #ca8a04;">🟡 Yellow Gold</button>
+                  <button type="button" class="chip btn-text-col" data-col="white" style="color: #1c1917;">⚪ White</button>
+                  <button type="button" class="chip btn-text-col" data-col="green" style="color: #16a34a;">🟢 Neon Mint</button>
+                  <button type="button" class="chip btn-text-col" data-col="rose" style="color: #be185d;">🔴 Coral Rose</button>
+                  <button type="button" class="chip btn-text-col" data-col="amethyst" style="color: #7c3aed;">🟣 Amethyst</button>
+                </div>
+              </div>
+
+              <!-- Custom Text Input -->
+              <div>
+                <label for="txtTimelineCustomSub" style="font-weight: 700; font-size: 0.82rem; color: #201d1a; margin-bottom: 0.3rem; display: block;">
+                  કસ્ટમ સબટાઈટલ લાઈન્સ (Custom Overlay Text):
+                </label>
+                <input type="text" id="txtTimelineCustomSub" placeholder="દા.ત. MUST WATCH 🔥 / EXCLUSIVE HANDLOOM" value="VIRAL MOMENT 🔥" class="custom-input" style="font-size: 0.85rem;">
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 4: ✨ Viral FX Effects -->
+          <div id="tabTimelineFX" class="editor-tab-pane hidden">
+            <div style="background: #ffffff; border: 1px solid rgba(215, 206, 192, 0.7); border-radius: 12px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+              <label style="font-weight: 700; font-size: 0.82rem; color: #201d1a;">
+                <i class="fa-solid fa-sparkles" style="color: #b89758;"></i> વાયરલ વિડીયો ઇફેક્ટ્સ (Visual FX On-Demand):
+              </label>
+
+              <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.8rem; background: #faf8f5; border: 1px solid rgba(215, 206, 192, 0.6); border-radius: 8px; cursor: pointer;">
+                <div>
+                  <b style="font-size: 0.84rem; color: #201d1a;">🔍 Punch-in Zoom (1.15x)</b>
+                  <p style="margin: 0.1rem 0 0 0; font-size: 0.74rem; color: #78716c;">સેન્ટર પર ઝૂમ કરી વધુ વાયરલ ફોકસ બનાવે</p>
+                </div>
+                <input type="checkbox" id="chkFxZoom" style="width: 18px; height: 18px; accent-color: #1c1917; cursor: pointer;">
+              </label>
+
+              <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.8rem; background: #faf8f5; border: 1px solid rgba(215, 206, 192, 0.6); border-radius: 8px; cursor: pointer;">
+                <div>
+                  <b style="font-size: 0.84rem; color: #201d1a;">🌫️ Cinematic Vignette Glow</b>
+                  <p style="margin: 0.1rem 0 0 0; font-size: 0.74rem; color: #78716c;">કિનારીઓ ડાર્ક કરીને થિયેટ્રિકલ લુક આપે</p>
+                </div>
+                <input type="checkbox" id="chkFxVignette" style="width: 18px; height: 18px; accent-color: #1c1917; cursor: pointer;">
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer" style="padding: 1rem 1.4rem; border-top: 1px solid rgba(215, 206, 192, 0.7); background: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <button type="button" id="btnTimelineReset" class="btn btn-ghost" style="font-size: 0.82rem; border-radius: 8px;">
+          <i class="fa-solid fa-rotate-left"></i> ↩️ Reset to AI Original
+        </button>
+
+        <div style="display: flex; gap: 0.6rem; align-items: center;">
+          <button type="button" id="btnCloseTimelineModalFooter" class="btn btn-ghost" style="border-radius: 8px;">બંધ કરો</button>
+          <button type="button" id="btnApplyTimelineEdits" class="btn btn-primary" style="padding: 0.65rem 1.4rem; font-weight: 700; font-size: 0.92rem; border-radius: 10px;">
+            <i class="fa-solid fa-bolt" style="color: #e5c870;"></i>
+            <span>⚡ Apply & Re-Render Reel (HD)</span>
+          </button>
         </div>
       </div>
     </div>
