@@ -1268,6 +1268,11 @@ function initVideoStudio() {
       formData.append('subtitlesStyle', videoSubtitlesSelect.value);
     }
 
+    const videoStyleSelect = document.getElementById('videoStyleSelect');
+    if (videoStyleSelect) {
+      formData.append('videoStyle', videoStyleSelect.value);
+    }
+
     // Feature #3: Append BGM Settings
     if (videoBgmSelect) {
       formData.append('bgmTrack', videoBgmSelect.value);
@@ -1389,12 +1394,12 @@ function initVideoStudio() {
         if (btnOpenThumbnailStudio) {
           btnOpenThumbnailStudio.style.display = 'inline-flex';
         }
-        const rawHeadline = data.recipe?.viralTitle || 'THE ART OF PATOLA';
+        const rawHeadline = data.recipe?.viralTitle || 'MUST WATCH 🎬';
         const cleanHeadline = rawHeadline.replace(/#\w+/g, '').replace(/[:]/g, '').trim();
 
         if (thumbQuickBar && thumbMiniPreview && thumbMiniHeadline) {
           thumbMiniPreview.src = data.thumbnailUrl;
-          thumbMiniHeadline.textContent = cleanHeadline || 'Alex Hormozi 9:16';
+          thumbMiniHeadline.textContent = cleanHeadline || 'Viral 9:16';
           thumbQuickBar.classList.remove('hidden');
         }
 
@@ -1402,7 +1407,7 @@ function initVideoStudio() {
         window.activeReelThumbnail = {
           fileName: data.fileName,
           thumbnailUrl: data.thumbnailUrl,
-          headlineText: cleanHeadline || 'THE ART OF PATOLA',
+          headlineText: cleanHeadline || 'MUST WATCH 🎬',
           hookBadge: '',
           bottomText: '',
           positionMode: 'none',
@@ -2103,7 +2108,7 @@ function initThumbnailStudio() {
 
   function openStudio() {
     const state = window.activeReelThumbnail || {};
-    let headline = (state.headlineText || 'THE ART OF PATOLA')
+    let headline = (state.headlineText || 'MUST WATCH 🎬')
       .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}★✦✧✨🔥⚡👑🧵😱❌💡]/gu, '')
       .replace(/#\w+/g, '')
       .trim();

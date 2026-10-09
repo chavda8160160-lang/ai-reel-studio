@@ -1267,10 +1267,10 @@ app.post('/api/video/auto-edit', upload.single('videoFile'), async (req, res) =>
     }
 
     const inputPath = req.file.path;
-    const { niche = 'Patola Saree & Ethnic Fashion', targetDuration = '30', customInstructions = '' } = req.body;
+    const { niche = 'Auto-Detect (Any Video - Movies, Kids, Fashion, etc.)', targetDuration = '30', customInstructions = '', videoStyle = 'auto' } = req.body;
     const apiKey = req.body.apiKey || process.env.GEMINI_API_KEY;
 
-    console.log(`🎬 [Video AI] Processing video: ${req.file.originalname} (${(req.file.size / (1024*1024)).toFixed(1)}MB)`);
+    console.log(`🎬 [Video AI] Processing video: ${req.file.originalname} (${(req.file.size / (1024*1024)).toFixed(1)}MB) | Niche: ${niche} | Style: ${videoStyle}`);
 
     // Step 1: Extract representative snapshot frame using FFmpeg for AI Vision
     const snapshotPath = path.join(UPLOADS_DIR, `snap-${Date.now()}-${Math.round(Math.random()*1000)}.jpg`);
@@ -1328,23 +1328,31 @@ app.post('/api/video/auto-edit', upload.single('videoFile'), async (req, res) =>
 
         const promptText = `You are a World-Class AI Video Director and Viral Social Media Strategist.
 ${frameBase64 ? 'LOOK CAREFULLY AT THIS REAL VIDEO FRAME EXTRACTED FROM THE UPLOADED VIDEO.' : ''}
-The user uploaded a video. It could be ANY topic (e.g. Cars, Gym/Fitness, Food & Cooking, Fashion, Nature & Travel, Gaming, Tech, Comedy, Vlog, Business, Jewelry, Sarees, etc.).
-User note/instructions: "${customInstructions || niche || 'Analyze the visual content and automatically pick the best cinematic editing style'}".
+The user uploaded a video. It could be ANY topic:
+- MOVIES & CINEMA (Movie scenes, dialogues, dramatic acting, movie quotes, action, web series, Bollywood, Hollywood)
+- LITTLE BOY & KIDS (Cute toddlers, babies, funny kids moments, parenting, innocent comedy, family)
+- FASHION & SAREES (Ethnic wear, Patola, luxury clothing)
+- CARS, GYM, FOOD, TRAVEL, COMEDY, TECH, etc.
+
+User selected niche/note: "${customInstructions || niche || 'Auto-Detect exact topic from visual frame'}".
+Selected color style preference: "${videoStyle || 'auto'}".
 
 Tasks:
-1. Inspect the visual content (subject, lighting, colors, objects, environment).
+1. Inspect the visual content carefully (who/what is the main subject? Is it a movie actor/scene? A cute boy/child? Clothes? Food? Gym?).
 2. Determine "detectedTopic": A concise 1-sentence description of what you SEE in this video.
-3. Choose the optimal color grading parameters for this exact content:
-   - "themeName": Catchy aesthetic style name (e.g. "Sunset Amber Drift", "Hyper-Crisp Gourmet", "Heavy Iron Gym Mood", "Royal Heritage Silk", "Neon Cyberpunk", "Vivid Nature Bloom")
-   - "saturation": Number between 1.10 and 1.40 (higher for food/nature/fashion, moderate for dark scenes/gym)
-   - "contrast": Number between 1.05 and 1.20
+3. Choose optimal color grading parameters for THIS SPECIFIC CONTENT:
+   - For MOVIES / CINEMA: "themeName": "Cinematic Movie Teal & Orange" or "Dramatic Film Noir" or "Hollywood Gold Drama", saturation: 1.15 - 1.25, contrast: 1.18 - 1.25, brightness: 0.01
+   - For LITTLE BOY / KIDS: "themeName": "Warm Sunny Pastel" or "Vivid Cute Glow" or "Golden Hour Sweetness", saturation: 1.20 - 1.30, contrast: 1.08 - 1.14, brightness: 0.03
+   - For other topics: choose matching atmospheric style.
+   - "saturation": Number between 1.10 and 1.35
+   - "contrast": Number between 1.05 and 1.25
    - "brightness": Number between -0.02 and 0.04
-4. Create Viral Metadata tailored to THIS SPECIFIC CONTENT:
-   - "viralTitle": Irresistible YouTube Shorts title (with emojis & #Shorts)
-   - "viralCaption": Engaging Instagram Reels caption with hook, description of the scene, question to audience & CTA
-   - "viralHashtags": 12-15 targeted viral hashtags matching this exact niche
-   - "hookOverlay": Catchy 3-4 word explosive hook for top badge (e.g. "WAIT TILL THE END 😱", "SECRET EXPOSED 💡", "NEVER DO THIS ❌")
-   - "captions": Array of 3-5 timed punchy uppercase subtitle items for 30s video, e.g. [{"startSec": 0.5, "endSec": 3.5, "text": "SHORT EXPLOSIVE HOOK", "highlightColor": "&H0000FFFF&"}]
+4. Create Viral Metadata tailored precisely to THIS SPECIFIC NICHE & CONTENT:
+   - "viralTitle": Irresistible YouTube Shorts title (with relevant emojis & #Shorts). If movie, mention the scene/vibe. If kid/boy, use cute heartwarming phrasing.
+   - "viralCaption": High-converting Instagram Reels caption with hook, scene description, engagement question & call to action.
+   - "viralHashtags": 12-15 targeted viral hashtags matching this exact niche (e.g. for movies: #MovieClips #BestScenes #Cinema #FilmScene #Shorts; for kids: #CuteBaby #LittleBoy #KidsOfInstagram #CuteMoments #FunnyKids #Shorts).
+   - "hookOverlay": Catchy 3-4 word explosive hook for top badge (e.g. for movie: "THIS SCENE 🎬", "UNBELIEVABLE ACTING 👏", "WAIT FOR THE DIALOGUE 🔥"; for kids: "TOO CUTE 🥰", "WAIT FOR HIS REACTION 👶", "PURE INNOCENCE ❤️").
+   - "captions": Array of 3-5 timed punchy uppercase subtitle items for 30s video, matching the dialogue, action or emotion in the scene.
 
 Respond ONLY with valid JSON:`;
 
@@ -1382,9 +1390,21 @@ Respond ONLY with valid JSON:`;
     const outputPath = path.join(REELS_DIR, outputFileName);
     const maxSec = parseInt(targetDuration, 10) || 30;
 
-    const sat = Math.max(1.0, Math.min(1.5, Number(aiDirectorRecipe.saturation) || 1.25));
-    const con = Math.max(1.0, Math.min(1.3, Number(aiDirectorRecipe.contrast) || 1.12));
-    const bri = Math.max(-0.1, Math.min(0.1, Number(aiDirectorRecipe.brightness) || 0.02));
+    let sat = Math.max(1.0, Math.min(1.5, Number(aiDirectorRecipe.saturation) || 1.25));
+    let con = Math.max(1.0, Math.min(1.3, Number(aiDirectorRecipe.contrast) || 1.12));
+    let bri = Math.max(-0.1, Math.min(0.1, Number(aiDirectorRecipe.brightness) || 0.02));
+
+    if (videoStyle === 'cinematic-movie') {
+      sat = 1.18; con = 1.22; bri = 0.01;
+    } else if (videoStyle === 'kids-sunny') {
+      sat = 1.28; con = 1.08; bri = 0.03;
+    } else if (videoStyle === 'royal-silk') {
+      sat = 1.25; con = 1.15; bri = 0.02;
+    } else if (videoStyle === 'heritage-gold') {
+      sat = 1.20; con = 1.12; bri = 0.02;
+    } else if (videoStyle === 'cinematic-vibrant') {
+      sat = 1.35; con = 1.22; bri = 0.02;
+    }
 
     console.log(`🎬 Rendering 30s 9:16 Reel with Saturation: ${sat}, Contrast: ${con}...`);
 
@@ -1515,7 +1535,7 @@ Respond ONLY with valid JSON:`;
       await generateViralThumbnail({
         videoPath: outputPath,
         outputPath: thumbOutputPath,
-        headlineText: aiDirectorRecipe.viralTitle || 'THE ART OF PATOLA',
+        headlineText: aiDirectorRecipe.viralTitle || 'MUST WATCH 🎬',
         hookBadge: '',
         bottomText: '',
         positionMode: 'none', // Default to Clean Frame! Prevents duplicate text / title clashes!
@@ -1613,7 +1633,7 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
     const result = await generateViralThumbnail({
       videoPath,
       outputPath,
-      headlineText: headlineText !== undefined ? headlineText : 'THE ART OF PATOLA',
+      headlineText: headlineText !== undefined ? headlineText : 'MUST WATCH 🎬',
       hookBadge: hookBadge !== undefined ? hookBadge : '',
       bottomText: bottomText !== undefined ? bottomText : '',
       positionMode: positionMode || 'title-only',
