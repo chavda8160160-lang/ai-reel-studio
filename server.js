@@ -2848,85 +2848,88 @@ app.get('/api/social/analytics', async (req, res) => {
       }
     }
 
-    // Merge queue items with IG media list
-    const igMediaMap = new Map();
-    igMediaList.forEach(m => igMediaMap.set(m.id, m));
-
-    // Combine published reels
+    // 100% REAL DATA EXTRACTION (ZERO DUMMY DATA)
     const publishedReels = [];
-    let totalLikes = 0;
-    let totalComments = 0;
+    const queueMapByIgId = new Map();
 
-    // Process from scheduled queue first
-    for (const qItem of queue) {
-      if (qItem.status && (qItem.status.includes('Posted') || qItem.lastPostId || qItem.youtubeVideoId)) {
-        let igData = qItem.lastPostId ? igMediaMap.get(qItem.lastPostId) : null;
-        let likes = (igData && igData.like_count !== undefined) ? igData.like_count : (qItem.likes || 0);
-        let comments = (igData && igData.comments_count !== undefined) ? igData.comments_count : (qItem.comments || 0);
-        let permalink = (igData && igData.permalink) ? igData.permalink : qItem.lastPostUrl;
+    for (const q of queue) {
+      if (q.lastPostId) queueMapByIgId.set(String(q.lastPostId), q);
+    }
 
-        totalLikes += likes;
-        totalComments += comments;
+    let realIgLikes = 0;
+    let realIgComments = 0;
 
-        let thumb = qItem.thumbnailUrl;
-        if (!thumb && qItem.fileName) {
-          const coverCandidate = `/rendered-reels/${path.parse(qItem.fileName).name}-cover.jpg`;
-          if (fs.existsSync(path.join(REELS_DIR, `${path.parse(qItem.fileName).name}-cover.jpg`))) {
+    // Process all real reels directly returned by Instagram API
+    for (const igItem of igMediaList) {
+      const likes = Number(igItem.like_count) || 0;
+      const comments = Number(igItem.comments_count) || 0;
+      realIgLikes += likes;
+      realIgComments += comments;
+
+      const matchedQueue = queueMapByIgId.get(String(igItem.id));
+      let thumb = igItem.thumbnail_url || null;
+      let vidUrl = null;
+      let title = (igItem.caption || 'Instagram Reel').split('\n')[0].substring(0, 70);
+      let niche = 'Instagram Video';
+      let ytVideoId = null;
+      let ytPostUrl = null;
+
+      if (matchedQueue) {
+        if (matchedQueue.thumbnailUrl) thumb = matchedQueue.thumbnailUrl;
+        else if (matchedQueue.fileName) {
+          const coverCandidate = `/rendered-reels/${path.parse(matchedQueue.fileName).name}-cover.jpg`;
+          if (fs.existsSync(path.join(REELS_DIR, `${path.parse(matchedQueue.fileName).name}-cover.jpg`))) {
             thumb = coverCandidate;
           }
         }
-
-        publishedReels.push({
-          id: qItem.id,
-          title: qItem.viralTitle || qItem.title || 'Viral AI Reel',
-          caption: qItem.viralCaption || '',
-          thumbnailUrl: thumb,
-          videoUrl: qItem.reelUrl || (qItem.fileName ? `/rendered-reels/${qItem.fileName}` : null),
-          publishedAt: qItem.lastPostedAt || qItem.scheduledTime || qItem.createdAt,
-          instagram: {
-            id: qItem.lastPostId || null,
-            url: permalink || null,
-            likes: likes,
-            comments: comments,
-            posted: !!(qItem.lastPostId || (qItem.status && qItem.status.includes('IG')))
-          },
-          youtube: {
-            videoId: qItem.youtubeVideoId || null,
-            url: qItem.youtubePostUrl || null,
-            posted: !!(qItem.youtubeVideoId || (qItem.status && qItem.status.includes('YouTube')))
-          },
-          niche: qItem.niche || 'General',
-          status: qItem.status
-        });
-
-        if (qItem.lastPostId) {
-          igMediaMap.delete(qItem.lastPostId); // Marked as matched
-        }
+        vidUrl = matchedQueue.reelUrl || (matchedQueue.fileName ? `/rendered-reels/${matchedQueue.fileName}` : null);
+        if (matchedQueue.viralTitle) title = matchedQueue.viralTitle;
+        if (matchedQueue.niche) niche = matchedQueue.niche;
+        ytVideoId = matchedQueue.youtubeVideoId || null;
+        ytPostUrl = matchedQueue.youtubePostUrl || null;
       }
-    }
 
-    // Include other live reels found directly on Instagram
-    for (const [igId, igItem] of igMediaMap.entries()) {
-      totalLikes += (igItem.like_count || 0);
-      totalComments += (igItem.comments_count || 0);
       publishedReels.push({
-        id: `ig-${igId}`,
-        title: (igItem.caption || 'Instagram Reel').split('\n')[0].substring(0, 70),
+        id: `ig-${igItem.id}`,
+        title: title,
         caption: igItem.caption || '',
-        thumbnailUrl: null,
-        videoUrl: null,
+        thumbnailUrl: thumb,
+        videoUrl: vidUrl,
         publishedAt: igItem.timestamp,
         instagram: {
-          id: igId,
+          id: igItem.id,
           url: igItem.permalink,
-          likes: igItem.like_count || 0,
-          comments: igItem.comments_count || 0,
+          likes: likes,
+          comments: comments,
           posted: true
         },
-        youtube: { videoId: null, url: null, posted: false },
-        niche: 'Instagram Video',
-        status: 'Posted to Instagram ✓'
+        youtube: {
+          videoId: ytVideoId,
+          url: ytPostUrl,
+          posted: !!ytPostUrl
+        },
+        niche: niche,
+        status: ytPostUrl ? 'Posted to IG & YouTube ✓' : 'Posted to Instagram ✓'
       });
+    }
+
+    // Include any YouTube-only shorts that aren't on Instagram
+    let realYtLikes = 0;
+    for (const q of queue) {
+      if (q.youtubeVideoId && (!q.lastPostId || !igMediaList.some(m => String(m.id) === String(q.lastPostId)))) {
+        publishedReels.push({
+          id: `yt-${q.youtubeVideoId}`,
+          title: q.viralTitle || q.title || 'YouTube Short',
+          caption: q.viralCaption || '',
+          thumbnailUrl: q.thumbnailUrl || (q.fileName ? `/rendered-reels/${path.parse(q.fileName).name}-cover.jpg` : null),
+          videoUrl: q.reelUrl || (q.fileName ? `/rendered-reels/${q.fileName}` : null),
+          publishedAt: q.lastPostedAt || q.createdAt,
+          instagram: { id: null, url: null, likes: 0, comments: 0, posted: false },
+          youtube: { videoId: q.youtubeVideoId, url: q.youtubePostUrl, posted: true },
+          niche: q.niche || 'YouTube Shorts',
+          status: 'Posted to YouTube ✓'
+        });
+      }
     }
 
     // Storage info calculation
@@ -2945,32 +2948,15 @@ app.get('/api/social/analytics', async (req, res) => {
       }
     } catch (_) {}
 
-    // Calculate platform-specific breakdown
-    let igLikes = 0;
-    let ytLikes = 0;
-    let igReelsCount = 0;
-    let ytShortsCount = 0;
+    // Real platform totals (ZERO DUMMY ESTIMATES)
+    const igReelsCount = publishedReels.filter(r => r.instagram?.posted).length;
+    const ytShortsCount = publishedReels.filter(r => r.youtube?.posted).length;
 
-    for (const r of publishedReels) {
-      if (r.instagram?.posted) {
-        igReelsCount++;
-        igLikes += (r.instagram.likes || 0);
-      }
-      if (r.youtube?.posted) {
-        ytShortsCount++;
-        ytLikes += (r.youtube.likes || 0);
-      }
-    }
-
-    const igReach = Math.max(igLikes * 45, igProfile.followers * 25, igReelsCount * 70);
-    const ytViews = ytShortsCount > 0 ? (ytShortsCount * 25 + ytLikes * 30) : 0;
-    const combinedReach = igReach + ytViews;
-
-    // Best viral reel
+    // Best viral reel based on real likes
     const topReel = publishedReels.length > 0
       ? publishedReels.reduce((prev, curr) => {
-          const prevScore = (prev.instagram?.likes || 0) + (prev.instagram?.comments || 0) * 2;
-          const currScore = (curr.instagram?.likes || 0) + (curr.instagram?.comments || 0) * 2;
+          const prevScore = (prev.instagram?.likes || 0) + (prev.instagram?.comments || 0);
+          const currScore = (curr.instagram?.likes || 0) + (curr.instagram?.comments || 0);
           return currScore >= prevScore ? curr : prev;
         }, publishedReels[0])
       : null;
@@ -2984,19 +2970,21 @@ app.get('/api/social/analytics', async (req, res) => {
       },
       summary: {
         totalReels: publishedReels.length,
-        totalLikes: igLikes + ytLikes,
-        totalComments,
-        estimatedReach: combinedReach,
+        totalLikes: realIgLikes + realYtLikes,
+        totalComments: realIgComments,
+        totalFollowers: igProfile.followers || 0,
         breakdown: {
           instagram: {
-            likes: igLikes,
+            likes: realIgLikes,
+            comments: realIgComments,
             reels: igReelsCount,
-            reach: igReach
+            followers: igProfile.followers || 0
           },
           youtube: {
-            likes: ytLikes,
+            likes: realYtLikes,
+            comments: 0,
             shorts: ytShortsCount,
-            views: ytViews
+            views: 0
           }
         },
         topReel

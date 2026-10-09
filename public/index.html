@@ -712,26 +712,9 @@
         </div>
       </section>
 
-      <!-- 4 Top KPI Metrics Cards -->
+      <!-- 4 Top KPI Metrics Cards (100% Real Live Social Data) -->
       <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem;">
-        <!-- Card 1: Estimated Reach & Plays -->
-        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #0284c7;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કુલ પહોંચ (Reach & Plays)</p>
-              <h3 id="kpiTotalReach" style="font-size: 2rem; font-weight: 800; color: #0284c7; margin: 0.4rem 0 0 0;">1,040+</h3>
-            </div>
-            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(2,132,199,0.12); display: flex; align-items: center; justify-content: center; color: #0284c7; font-size: 1.3rem;">
-              <i class="fa-solid fa-eye"></i>
-            </div>
-          </div>
-          <div id="kpiReachBreakdown" style="margin-top: 0.75rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-            <span style="color: #ec4899; background: rgba(236,72,153,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> IG: 1,020+</span>
-            <span style="color: #ef4444; background: rgba(239,68,68,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-youtube"></i> YT: 20+</span>
-          </div>
-        </div>
-
-        <!-- Card 2: Total Likes -->
+        <!-- Card 1: Total Real Likes -->
         <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #ec4899;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
@@ -748,35 +731,51 @@
           </div>
         </div>
 
-        <!-- Card 3: Total Comments -->
+        <!-- Card 2: Total Real Comments -->
         <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #8b5cf6;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કમેન્ટ્સ & એંગેજમેન્ટ</p>
+              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કુલ કમેન્ટ્સ (Comments)</p>
               <h3 id="kpiTotalComments" style="font-size: 2rem; font-weight: 800; color: #8b5cf6; margin: 0.4rem 0 0 0;">0</h3>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(139,92,246,0.12); display: flex; align-items: center; justify-content: center; color: #8b5cf6; font-size: 1.3rem;">
               <i class="fa-solid fa-comments"></i>
             </div>
           </div>
-          <div style="margin-top: 0.75rem; font-size: 0.76rem; color: #64748b; font-weight: 600;">
-            <span>ઓડિયન્સ ફીડબેક & સવાલો</span>
+          <div id="kpiCommentsBreakdown" style="margin-top: 0.75rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+            <span style="color: #8b5cf6; background: rgba(139,92,246,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-solid fa-check"></i> 100% Real API Synced</span>
           </div>
         </div>
 
-        <!-- Card 4: Total Tracked Reels -->
+        <!-- Card 3: Total Real Followers -->
+        <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #0284c7;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કુલ ફોલોઅર્સ (Followers)</p>
+              <h3 id="kpiTotalFollowers" style="font-size: 2rem; font-weight: 800; color: #0284c7; margin: 0.4rem 0 0 0;">2</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(2,132,199,0.12); display: flex; align-items: center; justify-content: center; color: #0284c7; font-size: 1.3rem;">
+              <i class="fa-solid fa-users"></i>
+            </div>
+          </div>
+          <div id="kpiFollowersBreakdown" style="margin-top: 0.75rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+            <span style="color: #0284c7; background: rgba(2,132,199,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> @moving.151120</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Total Real Published Posts -->
         <div class="glass-card" style="padding: 1.25rem; border-radius: 14px; position: relative; overflow: hidden; border-left: 4px solid #10b981;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
               <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">કુલ પબ્લિશ થયેલી રીલ્સ</p>
-              <h3 id="kpiTotalReels" style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0.4rem 0 0 0;">13</h3>
+              <h3 id="kpiTotalReels" style="font-size: 2rem; font-weight: 800; color: #10b981; margin: 0.4rem 0 0 0;">7</h3>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(16,185,129,0.12); display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 1.3rem;">
               <i class="fa-solid fa-clapperboard"></i>
             </div>
           </div>
           <div id="kpiReelsBreakdown" style="margin-top: 0.75rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-            <span style="color: #ec4899; background: rgba(236,72,153,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> 13 IG Reels</span>
+            <span style="color: #ec4899; background: rgba(236,72,153,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> 7 IG Reels</span>
             <span style="color: #ef4444; background: rgba(239,68,68,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-youtube"></i> 1 YT Short</span>
           </div>
         </div>

@@ -2357,39 +2357,46 @@ async function fetchAnalyticsOverview(showFeedback = false) {
     if (followersCount) followersCount.textContent = `${data.instagram?.followers || 0} Followers`;
     if (lastUpdated) lastUpdated.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-    // 2. Top KPI Cards
-    const kpiReach = document.getElementById('kpiTotalReach');
+    // 2. Top KPI Cards (100% Real Live Metrics)
     const kpiLikes = document.getElementById('kpiTotalLikes');
     const kpiComments = document.getElementById('kpiTotalComments');
+    const kpiFollowers = document.getElementById('kpiTotalFollowers');
     const kpiReels = document.getElementById('kpiTotalReels');
 
-    if (kpiReach) kpiReach.textContent = (data.summary?.estimatedReach || 0).toLocaleString('en-IN') + '+';
     if (kpiLikes) kpiLikes.textContent = data.summary?.totalLikes || 0;
     if (kpiComments) kpiComments.textContent = data.summary?.totalComments || 0;
+    if (kpiFollowers) kpiFollowers.textContent = data.summary?.totalFollowers || 0;
     if (kpiReels) kpiReels.textContent = data.summary?.totalReels || 0;
 
     // Platform Breakdown Badges
     const b = data.summary?.breakdown || {};
     const igLikes = b.instagram?.likes || 0;
     const ytLikes = b.youtube?.likes || 0;
-    const igReach = (b.instagram?.reach || 0).toLocaleString('en-IN');
-    const ytViews = (b.youtube?.views || 0).toLocaleString('en-IN');
+    const igComments = b.instagram?.comments || 0;
+    const ytComments = b.youtube?.comments || 0;
     const igReels = b.instagram?.reels || 0;
     const ytShorts = b.youtube?.shorts || 0;
-
-    const reachBreakdown = document.getElementById('kpiReachBreakdown');
-    if (reachBreakdown) {
-      reachBreakdown.innerHTML = `
-        <span style="color: #ec4899; background: rgba(236,72,153,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> IG: ${igReach}+</span>
-        <span style="color: #ef4444; background: rgba(239,68,68,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-youtube"></i> YT: ${ytViews}+</span>
-      `;
-    }
 
     const likesBreakdown = document.getElementById('kpiLikesBreakdown');
     if (likesBreakdown) {
       likesBreakdown.innerHTML = `
         <span style="color: #ec4899; background: rgba(236,72,153,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> IG: ${igLikes} Likes</span>
         <span style="color: #ef4444; background: rgba(239,68,68,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-youtube"></i> YT: ${ytLikes} Likes</span>
+      `;
+    }
+
+    const commentsBreakdown = document.getElementById('kpiCommentsBreakdown');
+    if (commentsBreakdown) {
+      commentsBreakdown.innerHTML = `
+        <span style="color: #8b5cf6; background: rgba(139,92,246,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> IG: ${igComments}</span>
+        <span style="color: #ef4444; background: rgba(239,68,68,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-youtube"></i> YT: ${ytComments}</span>
+      `;
+    }
+
+    const followersBreakdown = document.getElementById('kpiFollowersBreakdown');
+    if (followersBreakdown) {
+      followersBreakdown.innerHTML = `
+        <span style="color: #0284c7; background: rgba(2,132,199,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> @${data.instagram?.username || 'moving.151120'} (Live)</span>
       `;
     }
 
