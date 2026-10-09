@@ -2945,8 +2945,26 @@ app.get('/api/social/analytics', async (req, res) => {
       }
     } catch (_) {}
 
-    // Sort published reels by newest first
-    publishedReels.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+    // Calculate platform-specific breakdown
+    let igLikes = 0;
+    let ytLikes = 0;
+    let igReelsCount = 0;
+    let ytShortsCount = 0;
+
+    for (const r of publishedReels) {
+      if (r.instagram?.posted) {
+        igReelsCount++;
+        igLikes += (r.instagram.likes || 0);
+      }
+      if (r.youtube?.posted) {
+        ytShortsCount++;
+        ytLikes += (r.youtube.likes || 0);
+      }
+    }
+
+    const igReach = Math.max(igLikes * 45, igProfile.followers * 25, igReelsCount * 70);
+    const ytViews = ytShortsCount > 0 ? (ytShortsCount * 25 + ytLikes * 30) : 0;
+    const combinedReach = igReach + ytViews;
 
     // Best viral reel
     const topReel = publishedReels.length > 0
@@ -2966,9 +2984,21 @@ app.get('/api/social/analytics', async (req, res) => {
       },
       summary: {
         totalReels: publishedReels.length,
-        totalLikes,
+        totalLikes: igLikes + ytLikes,
         totalComments,
-        estimatedReach: Math.max(totalLikes * 45 + totalComments * 20, igProfile.followers * 25, publishedReels.length * 80),
+        estimatedReach: combinedReach,
+        breakdown: {
+          instagram: {
+            likes: igLikes,
+            reels: igReelsCount,
+            reach: igReach
+          },
+          youtube: {
+            likes: ytLikes,
+            shorts: ytShortsCount,
+            views: ytViews
+          }
+        },
         topReel
       },
       reels: publishedReels,

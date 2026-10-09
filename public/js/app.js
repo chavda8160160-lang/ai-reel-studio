@@ -2368,6 +2368,39 @@ async function fetchAnalyticsOverview(showFeedback = false) {
     if (kpiComments) kpiComments.textContent = data.summary?.totalComments || 0;
     if (kpiReels) kpiReels.textContent = data.summary?.totalReels || 0;
 
+    // Platform Breakdown Badges
+    const b = data.summary?.breakdown || {};
+    const igLikes = b.instagram?.likes || 0;
+    const ytLikes = b.youtube?.likes || 0;
+    const igReach = (b.instagram?.reach || 0).toLocaleString('en-IN');
+    const ytViews = (b.youtube?.views || 0).toLocaleString('en-IN');
+    const igReels = b.instagram?.reels || 0;
+    const ytShorts = b.youtube?.shorts || 0;
+
+    const reachBreakdown = document.getElementById('kpiReachBreakdown');
+    if (reachBreakdown) {
+      reachBreakdown.innerHTML = `
+        <span style="color: #ec4899; background: rgba(236,72,153,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> IG: ${igReach}+</span>
+        <span style="color: #ef4444; background: rgba(239,68,68,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-youtube"></i> YT: ${ytViews}+</span>
+      `;
+    }
+
+    const likesBreakdown = document.getElementById('kpiLikesBreakdown');
+    if (likesBreakdown) {
+      likesBreakdown.innerHTML = `
+        <span style="color: #ec4899; background: rgba(236,72,153,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> IG: ${igLikes} Likes</span>
+        <span style="color: #ef4444; background: rgba(239,68,68,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-youtube"></i> YT: ${ytLikes} Likes</span>
+      `;
+    }
+
+    const reelsBreakdown = document.getElementById('kpiReelsBreakdown');
+    if (reelsBreakdown) {
+      reelsBreakdown.innerHTML = `
+        <span style="color: #ec4899; background: rgba(236,72,153,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> ${igReels} IG Reels</span>
+        <span style="color: #ef4444; background: rgba(239,68,68,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-youtube"></i> ${ytShorts} YT Short</span>
+      `;
+    }
+
     // 3. Storage Info
     const storageSize = document.getElementById('storageSizeLabel');
     const storageFiles = document.getElementById('storageFilesLabel');
