@@ -28,6 +28,10 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
+// Authentication Routes & User Isolation
+const { authRouter, optionalAuth, authMiddleware } = require('./routes/auth');
+app.use('/api/auth', authRouter);
+
 // Root directories
 const GENERATED_DIR = path.join(__dirname, 'generated-projects');
 const UPLOADS_DIR = path.join(__dirname, 'uploads', 'videos');
@@ -976,307 +980,25 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Helper to sanitize Gemini response text and extract JSON
-function extractJsonFromText(text) {
-  let cleaned = text.trim();
-  // Strip Markdown code fences if present
-  if (cleaned.startsWith('```json')) {
-    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/\s*```$/, '');
-  } else if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```\w*\s*/i, '').replace(/\s*```$/, '');
-  }
-  return JSON.parse(cleaned.trim());
-}
-
-// 2. Full-stack Project Generation via Gemini API
-app.post('/api/generate', async (req, res) => {
-  try {
-    const { prompt, techStack, apiKey: userKey, model = 'gemini-3.8-flash' } = req.body;
-    const apiKey = userKey || process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-      return res.status(400).json({
-        error: 'API Key Missing: Please provide your Gemini API Key in the settings or .env file.'
-      });
-    }
-
-    if (!prompt || !prompt.trim()) {
-      return res.status(400).json({ error: 'Please describe what application you want to build.' });
-    }
-
-    const {
-      dbEngine = 'SQL Server',
-      backendFramework = 'ASP.NET Core C#',
-      frontendFramework = 'React'
-    } = techStack || {};
-
-    const systemInstruction = `You are a Principal Full-Stack Software Architect and Staff Engineer.
-The user wants to generate a complete, working, industry-standard full-stack web application based on their description.
-Your goal is to generate:
-1. Complete Database Schema (${dbEngine}) with tables, columns, primary keys, foreign keys, constraints, and realistic seed data.
-2. Complete Backend Application (${backendFramework}) with Models, Repositories/Services, and REST API Controllers implementing full CRUD operations.
-3. Complete Frontend Application (${frontendFramework}) with clean components, state management, modern styling, and realistic UI.
-4. An interactive single-page standalone HTML preview (previewHtml) that can be rendered directly in an iframe so the user can test the UI instantly!
-5. Setup & Run instructions (runGuide) with clear step-by-step guidance in simple Gujarati + English.
-
-CRITICAL INSTRUCTIONS:
-- You MUST respond ONLY with a single valid JSON object.
-- DO NOT wrap with explanation text outside JSON.
-- Ensure all quotes and special characters inside code strings are properly escaped so JSON.parse never fails.
-
-JSON SCHEMA:
-{
-  "projectName": "slug-name-without-spaces",
-  "projectTitle": "Human Friendly Title",
-  "description": "Brief description of the generated app",
-  "techStack": {
-    "database": "${dbEngine}",
-    "backend": "${backendFramework}",
-    "frontend": "${frontendFramework}"
-  },
-  "database": {
-    "fileName": "schema.sql",
-    "script": "-- Full SQL script...",
-    "notes": "Key database points and tables explanation"
-  },
-  "backend": {
-    "files": [
-      {
-        "path": "Controllers/ExampleController.cs or server.js",
-        "description": "Controller or API handler",
-        "content": "// Full code..."
-      },
-      {
-        "path": "Models/ExampleModel.cs or models/Example.js",
-        "description": "Data models or entities",
-        "content": "// Full code..."
-      }
-    ],
-    "setupInstructions": "Command to install dependencies and run"
-  },
-  "frontend": {
-    "files": [
-      {
-        "path": "src/App.jsx or index.html",
-        "description": "Main frontend file",
-        "content": "// Full code..."
-      },
-      {
-        "path": "src/styles.css",
-        "description": "Styling",
-        "content": "/* Full modern CSS */"
-      }
-    ],
-    "previewHtml": "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Live Preview</title><style>/* Embedded CSS */</style></head><body><!-- Fully working interactive mock UI with dummy data and click interactions --></body><script>// Interactive mockup JS</script></html>"
-  },
-  "runGuide": "Step-by-step Gujarati/English guide to run database, backend, and frontend locally."
-}`;
-
-    console.log(`\n⚡ [${new Date().toLocaleTimeString()}] Generating full-stack project for prompt: "${prompt.slice(0, 50)}..."`);
-    const candidateModels = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-flash-latest'];
-    let lastError = null;
-    let candidateText = null;
-
-    for (const currentModel of candidateModels) {
-      try {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
-        const payload = {
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: `PROJECT REQUIREMENT:\n${prompt}\n\nPREFERRED TECH STACK:\n- Database: ${dbEngine}\n- Backend: ${backendFramework}\n- Frontend: ${frontendFramework}\n\nGenerate the complete full-stack project as defined in the JSON schema.`
-                }
-              ]
-            }
-          ],
-          systemInstruction: {
-            parts: [{ text: systemInstruction }]
-          },
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.2
-          }
-        };
-
-        const response = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errorJson;
-          try { errorJson = JSON.parse(errorText); } catch (_) {}
-          const msg = errorJson?.error?.message || errorText || `Status ${response.status}`;
-          lastError = new Error(`Model ${currentModel}: ${msg}`);
-          console.warn(`Model ${currentModel} returned error: ${msg}. Trying next fallback model...`);
-          continue;
-        }
-
-        const data = await response.json();
-        candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (candidateText) {
-          console.log(`✓ Successfully generated using model: ${currentModel}`);
-          break;
-        }
-      } catch (reqErr) {
-        lastError = reqErr;
-        console.warn(`Model ${currentModel} request failed: ${reqErr.message}. Trying next fallback...`);
-      }
-    }
-
-    if (!candidateText) {
-      return res.status(500).json({ error: lastError?.message || 'Could not generate project with any AI model.' });
-    }
-
-    let parsedProject;
-    try {
-      parsedProject = extractJsonFromText(candidateText);
-    } catch (parseErr) {
-      console.error('Failed to parse Gemini output:', candidateText.slice(0, 500));
-      return res.status(500).json({
-        error: 'JSON Parsing error in generated code. Please try again.',
-        raw: candidateText
-      });
-    }
-
-    return res.json({ success: true, project: parsedProject });
-  } catch (err) {
-    console.error('Error generating project:', err);
-    return res.status(500).json({ error: err.message || 'Internal server error' });
-  }
-});
-
-// 3. Save Project directly to PC disk
-app.post('/api/save-project', async (req, res) => {
-  try {
-    const { project, targetDirectory } = req.body;
-    if (!project || !project.projectName) {
-      return res.status(400).json({ error: 'Invalid project data.' });
-    }
-
-    const folderName = project.projectName.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const baseDir = targetDirectory && targetDirectory.trim() 
-      ? path.resolve(targetDirectory.trim())
-      : path.join(GENERATED_DIR, folderName);
-
-    await fsp.mkdir(baseDir, { recursive: true });
-
-    // 1. Save Database script
-    if (project.database?.script) {
-      const dbDir = path.join(baseDir, 'database');
-      await fsp.mkdir(dbDir, { recursive: true });
-      const dbFileName = project.database.fileName || 'schema.sql';
-      await fsp.writeFile(path.join(dbDir, dbFileName), project.database.script, 'utf8');
-    }
-
-    // 2. Save Backend files
-    if (Array.isArray(project.backend?.files)) {
-      const backendDir = path.join(baseDir, 'backend');
-      for (const file of project.backend.files) {
-        const filePath = path.join(backendDir, file.path);
-        await fsp.mkdir(path.dirname(filePath), { recursive: true });
-        await fsp.writeFile(filePath, file.content || '', 'utf8');
-      }
-    }
-
-    // 3. Save Frontend files
-    if (Array.isArray(project.frontend?.files)) {
-      const frontendDir = path.join(baseDir, 'frontend');
-      for (const file of project.frontend.files) {
-        const filePath = path.join(frontendDir, file.path);
-        await fsp.mkdir(path.dirname(filePath), { recursive: true });
-        await fsp.writeFile(filePath, file.content || '', 'utf8');
-      }
-    }
-
-    // 4. Save Readme / Run Guide
-    const readmeContent = `# ${project.projectTitle || project.projectName}
-Generated by AI Full-Stack App Builder
-
-## Overview
-${project.description || ''}
-
-## Tech Stack
-- Database: ${project.techStack?.database || 'SQL'}
-- Backend: ${project.techStack?.backend || 'REST API'}
-- Frontend: ${project.techStack?.frontend || 'Web'}
-
-## Setup & Run Guide
-${project.runGuide || 'Follow standard setup for the chosen tech stack.'}
-`;
-    await fsp.writeFile(path.join(baseDir, 'README.md'), readmeContent, 'utf8');
-
-    return res.json({
-      success: true,
-      savedPath: baseDir,
-      message: `Project successfully saved to: ${baseDir}`
-    });
-  } catch (err) {
-    console.error('Error saving project to disk:', err);
-    return res.status(500).json({ error: err.message || 'Failed to save project.' });
-  }
-});
-
-// 4. Download project as ZIP
-app.post('/api/download-zip', async (req, res) => {
-  try {
-    const { project } = req.body;
-    if (!project || !project.projectName) {
-      return res.status(400).json({ error: 'Invalid project data' });
-    }
-
-    const archive = archiver('zip', { zlib: { level: 9 } });
-    const filename = `${project.projectName || 'generated-app'}.zip`;
-
-    res.attachment(filename);
-    archive.pipe(res);
-
-    // Database
-    if (project.database?.script) {
-      archive.append(project.database.script, { name: `database/${project.database.fileName || 'schema.sql'}` });
-    }
-
-    // Backend
-    if (Array.isArray(project.backend?.files)) {
-      project.backend.files.forEach(f => {
-        archive.append(f.content || '', { name: `backend/${f.path}` });
-      });
-    }
-
-    // Frontend
-    if (Array.isArray(project.frontend?.files)) {
-      project.frontend.files.forEach(f => {
-        archive.append(f.content || '', { name: `frontend/${f.path}` });
-      });
-    }
-
-    // Readme
-    const readme = `# ${project.projectTitle || project.projectName}\n\n${project.description || ''}\n\n## Run Guide\n${project.runGuide || ''}`;
-    archive.append(readme, { name: 'README.md' });
-
-    await archive.finalize();
-  } catch (err) {
-    console.error('Zip generation error:', err);
-    res.status(500).json({ error: 'Failed to create zip.' });
-  }
-});
-
 // 5. AI Video Reel Generator & Smart Auto-Editor
-app.post('/api/video/auto-edit', upload.single('videoFile'), async (req, res) => {
+app.post('/api/video/auto-edit', upload.fields([{ name: 'videoFile', maxCount: 1 }, { name: 'customAudio', maxCount: 1 }]), async (req, res) => {
+  let customAudioPath = null;
   try {
-    if (!req.file) {
+    const videoFile = (req.files && req.files.videoFile && req.files.videoFile[0]) ? req.files.videoFile[0] : req.file;
+    if (!videoFile) {
       return res.status(400).json({ error: 'કૃપા કરીને વિડીયો ફાઈલ અપલોડ કરો.' });
     }
 
-    const inputPath = req.file.path;
+    if (req.files && req.files.customAudio && req.files.customAudio[0]) {
+      customAudioPath = req.files.customAudio[0].path;
+      console.log(`🎵 [Custom Song] User uploaded custom audio file for video: ${req.files.customAudio[0].originalname} (${(req.files.customAudio[0].size / (1024*1024)).toFixed(2)} MB)`);
+    }
+
+    const inputPath = videoFile.path;
     const { niche = 'Auto-Detect (Any Video - Movies, Kids, Fashion, etc.)', targetDuration = '30', customInstructions = '', videoStyle = 'auto' } = req.body;
     const apiKey = req.body.apiKey || process.env.GEMINI_API_KEY;
 
-    console.log(`🎬 [Video AI] Processing video: ${req.file.originalname} (${(req.file.size / (1024*1024)).toFixed(1)}MB) | Niche: ${niche} | Style: ${videoStyle}`);
+    console.log(`🎬 [Video AI] Processing video: ${videoFile.originalname} (${(videoFile.size / (1024*1024)).toFixed(1)}MB) | Niche: ${niche} | Style: ${videoStyle}`);
 
     // Step 1: Extract representative snapshot frame using FFmpeg for AI Vision
     const snapshotPath = path.join(UPLOADS_DIR, `snap-${Date.now()}-${Math.round(Math.random()*1000)}.jpg`);
@@ -1439,10 +1161,12 @@ Respond ONLY with valid JSON:`;
       }
     }
 
-    // Feature #3: Background Music (BGM) Engine
+    // Feature #3: Background Music (BGM) Engine (Preset or Custom Uploaded Song)
     const bgmTrack = req.body.bgmTrack || 'none';
     const bgmVolume = Math.max(0.05, Math.min(1.0, parseFloat(req.body.bgmVolume) || 0.25));
-    const bgmFilePath = bgmTrack !== 'none' ? path.join(__dirname, 'public', 'audio', 'bgm', `${bgmTrack}.mp3`) : null;
+    const bgmFilePath = (customAudioPath && fs.existsSync(customAudioPath))
+      ? customAudioPath
+      : (bgmTrack !== 'none' && bgmTrack !== 'custom' ? path.join(__dirname, 'public', 'audio', 'bgm', `${bgmTrack}.mp3`) : null);
     const hasValidBgm = bgmFilePath && fs.existsSync(bgmFilePath);
 
     let hasVideoAudio = false;
@@ -1554,7 +1278,7 @@ Respond ONLY with valid JSON:`;
       console.warn('⚠️ Thumbnail generation fallback:', thumbErr.message);
     }
 
-    const isScheduled = req.body.isScheduled === 'true' || !!req.body.scheduledTime;
+    const isScheduled = req.body.isScheduled === 'true' && !!req.body.scheduledTime;
     const scheduledTime = req.body.scheduledTime || null;
     const recurringDaily = req.body.recurringDaily === 'true';
     let scheduledItem = null;
@@ -1613,6 +1337,327 @@ Respond ONLY with valid JSON:`;
   } catch (err) {
     console.error('Video processing error:', err);
     res.status(500).json({ error: `વિડીયો પ્રોસેસ કરવામાં ભૂલ આવી: ${err.message}` });
+  } finally {
+    if (customAudioPath && fs.existsSync(customAudioPath)) {
+      try { await fsp.unlink(customAudioPath); } catch (_) {}
+    }
+  }
+});
+
+// 📸 5B. AI Photos-to-Reel Generator (Create 30s Viral Reel from 2-8 Photos)
+app.post('/api/video/photos-to-reel', upload.fields([{ name: 'photoFiles', maxCount: 6 }, { name: 'customAudio', maxCount: 1 }]), async (req, res) => {
+  let customAudioPath = null;
+  try {
+    let photoPaths = [];
+    const usePreset = req.body.usePreset;
+
+    // Support 1-Click Patola Saree preset photos (Exact 6 High-Res Photos)
+    if (usePreset === 'patola') {
+      const patolaImgDir = path.resolve(__dirname, '..', 'patola-saree-web', 'patola-copy', 'patola-copy', 'assets', 'images');
+      const presetFiles = [
+        'saree_royal_blue.jpg',
+        'saree_emerald_chhabdi.jpg',
+        'saree_nari_kunjar.jpg',
+        'saree_ratanchowk.jpg',
+        'patola_pallu.jpg',
+        'hero.jpg'
+      ];
+      for (const pf of presetFiles) {
+        const fullP = path.join(patolaImgDir, pf);
+        if (fs.existsSync(fullP)) photoPaths.push(fullP);
+      }
+    }
+
+    let uploadedPhotos = [];
+    if (req.files && req.files.photoFiles) {
+      uploadedPhotos = req.files.photoFiles;
+    } else if (Array.isArray(req.files)) {
+      uploadedPhotos = req.files;
+    }
+    if (uploadedPhotos.length > 0) {
+      photoPaths = photoPaths.concat(uploadedPhotos.map(f => f.path));
+    }
+
+    if (req.files && req.files.customAudio && req.files.customAudio[0]) {
+      customAudioPath = req.files.customAudio[0].path;
+      console.log(`🎵 [Custom Song] User uploaded custom audio file for Photo Reel: ${req.files.customAudio[0].originalname} (${(req.files.customAudio[0].size / (1024*1024)).toFixed(2)} MB)`);
+    }
+
+    // Strictly enforce maximum 6 photos limit
+    photoPaths = photoPaths.slice(0, 6);
+
+    if (photoPaths.length === 0) {
+      return res.status(400).json({ error: 'કૃપા કરીને ઓછામાં ઓછો ૧ અથવા વધુ ફોટા પસંદ કરો.' });
+    }
+
+    const {
+      productTitle = 'રાજવી પટોળા સિલ્ક સાડી',
+      productPrice = '₹3,800',
+      badgeText = 'સ્પેશિયલ ઓફર 🔥',
+      niche = 'Patola Sarees & Fashion',
+      targetDuration = '30',
+      videoStyle = 'auto',
+      subtitlesStyle = 'hormozi',
+      bgmTrack = 'luxury-saree',
+      bgmVolume = '0.35',
+      customInstructions = '',
+      transitionEffect = 'kenburns-fade'
+    } = req.body;
+
+    const apiKey = req.body.apiKey || process.env.GEMINI_API_KEY;
+    const targetDur = parseInt(targetDuration) || 30;
+    const secPerPhoto = Math.max(2, Math.min(8, Math.round((targetDur / photoPaths.length) * 10) / 10));
+    const totalDuration = Math.round(photoPaths.length * secPerPhoto);
+
+    console.log(`📸 [Photos-to-Reel] Composing ${photoPaths.length} photos into ${totalDuration}s 9:16 Reel. Title: "${productTitle}", Price: "${productPrice}", Niche: "${niche}", Style: "${videoStyle}", Subtitles: "${subtitlesStyle}", Effect: "${transitionEffect}"`);
+
+    // AI Copy Generation (Title, sales caption, hashtags) with Gemini
+    let aiTitle = `✨ ${productTitle} | ${badgeText} ${productPrice}`;
+    let aiCaption = `🔥 પ્રીમિયમ કલેક્શન: ${productTitle}\n\n💰 ખાસ કિંમત: ${productPrice}\n✨ ${badgeText}\n✨ ૧૦૦% ઓથેન્ટિક ડિઝાઈન અને રિચ કલર!\n\n📲 ઓર્ડર કરવા માટે અત્યારે જ DM કરો અથવા WhatsApp પર મેસેજ મોકલો!\n\n#PatolaSaree #TraditionalFashion #SareeLove #Handloom #OnlineShopping #IndianEthnic`;
+    let aiHashtags = `#PatolaSaree #FashionReels #IndianWear #Handloom #SareeCollection #TrendingReels #ShopOnline`;
+
+    if (apiKey) {
+      try {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const prompt = `You are a viral social media copywriter for Indian Reels and YouTube Shorts.
+Category/Niche: ${niche}
+Product: "${productTitle}" priced at "${productPrice}" (Badge: "${badgeText}")
+Brand & Special Instructions: "${customInstructions || 'Handcrafted luxury, pure silk, limited edition'}"
+Write a viral, high-converting social media Reel caption, catchy short title, and 10 trending hashtags for an Instagram Reel.
+The audience is Gujarati and Indian fashion/saree buyers.
+Respond ONLY with JSON:
+{
+  "viralTitle": "Short catchy title with emojis",
+  "viralCaption": "Persuasive sales caption with price, qualities, and call to action to DM/WhatsApp",
+  "viralHashtags": "#tags"
+}`;
+        const gRes = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.3 } })
+        });
+        if (gRes.ok) {
+          const gData = await gRes.json();
+          const parsed = JSON.parse(gData.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
+          if (parsed.viralTitle) aiTitle = parsed.viralTitle;
+          if (parsed.viralCaption) aiCaption = parsed.viralCaption;
+          if (parsed.viralHashtags) aiHashtags = parsed.viralHashtags;
+        }
+      } catch (gErr) {
+        console.warn('AI Copy generation warning for photo reel:', gErr.message);
+      }
+    }
+
+    const outputFileName = `reel-photos-${Date.now()}.mp4`;
+    const outputPath = path.join(REELS_DIR, outputFileName);
+    const parsedVol = Math.max(0.05, Math.min(1.0, parseFloat(bgmVolume) || 0.35));
+    const bgmFilePath = (customAudioPath && fs.existsSync(customAudioPath))
+      ? customAudioPath
+      : (bgmTrack !== 'none' && bgmTrack !== 'custom' ? path.join(__dirname, 'public', 'audio', 'bgm', `${bgmTrack}.mp3`) : null);
+    const hasValidBgm = bgmFilePath && fs.existsSync(bgmFilePath);
+
+    // Color Grading Configuration
+    let sat = 1.0, con = 1.0, bri = 0.0;
+    if (videoStyle === 'royal-silk') {
+      sat = 1.30; con = 1.15; bri = 0.02;
+    } else if (videoStyle === 'heritage-gold') {
+      sat = 1.25; con = 1.12; bri = 0.02;
+    } else if (videoStyle === 'cinematic-movie') {
+      sat = 1.20; con = 1.18; bri = 0.0;
+    } else if (videoStyle === 'cinematic-vibrant') {
+      sat = 1.38; con = 1.22; bri = 0.02;
+    } else if (videoStyle === 'kids-sunny') {
+      sat = 1.25; con = 1.08; bri = 0.03;
+    }
+    const colorFilter = (videoStyle !== 'auto') ? `eq=saturation=${sat}:contrast=${con}:brightness=${bri},` : '';
+
+    // Build FFmpeg Filter Complex with CapCut effects, Ken Burns motion & transitions
+    const filterComplex = [];
+    const frames = Math.round(secPerPhoto * 30);
+    const isCapcutFlash = (transitionEffect === 'capcut-flash' || transitionEffect === 'capcut-blur-bg');
+    const fadeDur = isCapcutFlash ? 0.28 : 0.45;
+    const fadeOutSt = Math.max(0.1, secPerPhoto - fadeDur).toFixed(2);
+    const fadeColor = isCapcutFlash ? ':color=white' : '';
+
+    for (let i = 0; i < photoPaths.length; i++) {
+      let motionFilter = '';
+      if (transitionEffect === 'kenburns-fade' || transitionEffect === 'capcut-flash' || transitionEffect === 'capcut-blur-bg') {
+        if (i % 2 === 0) {
+          motionFilter = `zoompan=z='min(zoom+0.0016,1.18)':d=${frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30,`;
+        } else {
+          motionFilter = `zoompan=z='if(lte(zoom,1.0),1.18,max(1.001,zoom-0.0016))':d=${frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30,`;
+        }
+      } else if (transitionEffect === 'zoom-in') {
+        motionFilter = `zoompan=z='min(zoom+0.0016,1.18)':d=${frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30,`;
+      }
+
+      if (transitionEffect === 'capcut-blur-bg') {
+        // CapCut Blur Background Canvas: blurred full screen behind, sharp photo on top + White Flash
+        filterComplex.push(
+          `[${i}:v]split=2[bg_in${i}][fg_in${i}]`,
+          `[bg_in${i}]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=25:5,eq=brightness=-0.08[bg${i}]`,
+          `[fg_in${i}]scale=1080:1920:force_original_aspect_ratio=decrease[fg${i}]`,
+          `[bg${i}][fg${i}]overlay=(W-w)/2:(H-h)/2,${colorFilter}${motionFilter}setsar=1,fps=30,trim=duration=${secPerPhoto},setpts=PTS-STARTPTS,fade=t=in:st=0:d=${fadeDur}${fadeColor},fade=t=out:st=${fadeOutSt}:d=${fadeDur}${fadeColor}[v${i}]`
+        );
+      } else {
+        filterComplex.push(
+          `[${i}:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,${colorFilter}${motionFilter}setsar=1,fps=30,trim=duration=${secPerPhoto},setpts=PTS-STARTPTS,fade=t=in:st=0:d=${fadeDur}${fadeColor},fade=t=out:st=${fadeOutSt}:d=${fadeDur}${fadeColor}[v${i}]`
+        );
+      }
+    }
+    const concatInputs = photoPaths.map((_, i) => `[v${i}]`).join('');
+    
+    // Subtitles burning support for Photo Reels
+    let assSubFilter = '';
+    let assFilePath = null;
+    if (subtitlesStyle && subtitlesStyle !== 'none') {
+      try {
+        const photoCaptions = [
+          { text: productTitle, start: 0.5, end: Math.min(4, totalDuration / 2) },
+          { text: `${badgeText} • ${productPrice}`, start: Math.min(4, totalDuration / 2), end: Math.min(8, totalDuration) },
+          { text: "✨ ૧૦૦% શુદ્ધ કલેક્શન • ઓર્ડર માટે DM કરો", start: Math.min(8, totalDuration), end: Math.max(9, totalDuration - 1) }
+        ];
+        assFilePath = generateAssSubtitleFile(photoCaptions, productTitle, totalDuration, subtitlesStyle);
+        if (assFilePath && fs.existsSync(assFilePath)) {
+          const escapedAss = path.resolve(assFilePath).replace(/\\/g, '/').replace(/:/g, '\\:');
+          assSubFilter = `,subtitles='${escapedAss}'`;
+        }
+      } catch (assErr) {
+        console.warn('⚠️ Subtitles notice for photo reel:', assErr.message);
+      }
+    }
+
+    filterComplex.push(`${concatInputs}concat=n=${photoPaths.length}:v=1:a=0,drawbox=y=ih-260:color=black@0.65:width=iw:height=260:t=fill${assSubFilter}[vout]`);
+
+    const audioInputIndex = photoPaths.length;
+    if (hasValidBgm) {
+      filterComplex.push(`[${audioInputIndex}:a]volume=${parsedVol},afade=t=in:st=0:d=1.0,afade=t=out:st=${Math.max(1, totalDuration - 2)}:d=2.0[aout]`);
+    }
+
+    const ffmpegCmd = ffmpeg();
+    for (const p of photoPaths) {
+      ffmpegCmd.input(p).inputOptions(['-loop 1', `-t ${secPerPhoto}`]);
+    }
+    if (hasValidBgm) {
+      ffmpegCmd.input(bgmFilePath);
+    }
+
+    ffmpegCmd.complexFilter(filterComplex);
+
+    const outOpts = [
+      '-map [vout]',
+      '-c:v libx264',
+      '-preset fast',
+      '-crf 22',
+      '-pix_fmt yuv420p',
+      `-t ${totalDuration}`,
+      '-movflags +faststart'
+    ];
+    if (hasValidBgm) {
+      outOpts.push('-map [aout]', '-c:a aac', '-b:a 192k');
+    }
+
+    ffmpegCmd.outputOptions(outOpts);
+
+    await new Promise((resolve, reject) => {
+      ffmpegCmd.save(outputPath)
+        .on('end', () => {
+          console.log(`✅ [Photos-to-Reel] 30s Reel render completed: ${outputFileName}`);
+          resolve();
+        })
+        .on('error', (err) => {
+          console.error('FFmpeg photos-to-reel error:', err);
+          reject(err);
+        });
+    });
+
+    // Generate cover thumbnail
+    const thumbFileName = outputFileName.replace('.mp4', '-cover.jpg');
+    const thumbOutputPath = path.join(REELS_DIR, thumbFileName);
+    try {
+      await generateViralThumbnail({
+        videoPath: outputPath,
+        outputPath: thumbOutputPath,
+        headlineText: productTitle,
+        hookBadge: productPrice,
+        positionMode: 'none',
+        fontStyle: 'classic',
+        colorStyle: 'gold',
+        timestamp: 1.0
+      });
+    } catch (_) {}
+
+    // Cleanup uploaded temp photos
+    if (uploadedPhotos && uploadedPhotos.length > 0) {
+      for (const f of uploadedPhotos) {
+        try { await fsp.unlink(f.path); } catch (_) {}
+      }
+    }
+
+    // Schedule handling for Photo Reels
+    const isScheduled = req.body.isScheduled === 'true' && !!req.body.scheduledTime;
+    const scheduledTime = req.body.scheduledTime || null;
+    const recurringDaily = req.body.recurringDaily === 'true';
+    let scheduledItem = null;
+
+    if (isScheduled && scheduledTime) {
+      const queue = getScheduledQueue();
+      const schedDate = new Date(scheduledTime);
+      const isPastOrNow = isNaN(schedDate.getTime()) || (new Date() >= schedDate);
+
+      scheduledItem = {
+        id: `sched-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        reelUrl: `/rendered-reels/${outputFileName}`,
+        downloadUrl: `/rendered-reels/${outputFileName}`,
+        fileName: outputFileName,
+        scheduledTime: scheduledTime,
+        scheduledTimeFormatted: !isNaN(schedDate.getTime()) 
+          ? schedDate.toLocaleString('gu-IN', { dateStyle: 'medium', timeStyle: 'short' })
+          : scheduledTime,
+        recurringDaily,
+        recurringCycle: 1,
+        duration: `${totalDuration}s`,
+        thumbnailUrl: `/rendered-reels/${thumbFileName}`,
+        niche: niche || 'Patola Sarees & Fashion',
+        viralTitle: aiTitle,
+        viralCaption: aiCaption,
+        viralHashtags: aiHashtags,
+        detectedTopic: niche,
+        themeName: 'Luxury Photo Reel',
+        status: isPastOrNow ? 'Ready to Post' : 'Scheduled',
+        createdAt: new Date().toISOString()
+      };
+
+      queue.unshift(scheduledItem);
+      saveScheduledQueue(queue);
+      console.log(`⏰ [Photo Reel Scheduled] Saved reel "${outputFileName}" scheduled for ${scheduledItem.scheduledTimeFormatted}`);
+    }
+
+    return res.json({
+      success: true,
+      videoUrl: `/rendered-reels/${outputFileName}`,
+      coverUrl: `/rendered-reels/${thumbFileName}`,
+      fileName: outputFileName,
+      duration: `${totalDuration} સેકન્ડ`,
+      aspectRatio: '9:16 (1080x1920) - Instagram Reels / YouTube Shorts',
+      isScheduled,
+      scheduledItem,
+      recipe: {
+        themeName: 'Luxury Product Photo Reel',
+        detectedTopic: niche,
+        viralTitle: aiTitle,
+        viralCaption: aiCaption,
+        viralHashtags: aiHashtags
+      }
+    });
+
+  } catch (err) {
+    console.error('Photos-to-reel error:', err);
+    res.status(500).json({ error: `ફોટામાંથી રીલ બનાવવામાં ભૂલ આવી: ${err.message}` });
+  } finally {
+    if (customAudioPath && fs.existsSync(customAudioPath)) {
+      try { await fsp.unlink(customAudioPath); } catch (_) {}
+    }
   }
 });
 
@@ -3771,7 +3816,6 @@ Instructions:
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 AI Full-Stack & Video Automation running at http://localhost:${PORT}`);
-  console.log(`📁 Generated projects will be saved to: ${GENERATED_DIR}`);
+  console.log(`🚀 ForgeAI Reel Studio & Video Automation running at http://localhost:${PORT}`);
   console.log(`🎬 Rendered 30s Reels stored in: ${REELS_DIR}`);
 });

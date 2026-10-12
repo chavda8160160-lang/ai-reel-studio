@@ -1,35 +1,3 @@
-// Global State
-let currentProject = null;
-let activeBackendFileIndex = 0;
-let activeFrontendFileIndex = 0;
-
-// DOM Elements
-const promptInput = document.getElementById('promptInput');
-const dbEngineSelect = document.getElementById('dbEngine');
-const backendSelect = document.getElementById('backendFramework');
-const frontendSelect = document.getElementById('frontendFramework');
-const btnGenerate = document.getElementById('btnGenerate');
-const generationLoader = document.getElementById('generationLoader');
-const loaderStatus = document.getElementById('loaderStatus');
-
-const projectTitleDisplay = document.getElementById('projectTitleDisplay');
-const projectDescDisplay = document.getElementById('projectDescDisplay');
-const projectActionButtons = document.getElementById('projectActionButtons');
-const btnSaveToDisk = document.getElementById('btnSaveToDisk');
-const btnDownloadZip = document.getElementById('btnDownloadZip');
-
-// Preview & Code Elements
-const previewIframe = document.getElementById('previewIframe');
-const dbCodeArea = document.getElementById('dbCodeArea');
-const dbFileName = document.getElementById('dbFileName');
-const backendFileList = document.getElementById('backendFileList');
-const backendCodeArea = document.getElementById('backendCodeArea');
-const backendCurrentFileName = document.getElementById('backendCurrentFileName');
-const frontendFileList = document.getElementById('frontendFileList');
-const frontendCodeArea = document.getElementById('frontendCodeArea');
-const frontendCurrentFileName = document.getElementById('frontendCurrentFileName');
-const guideContent = document.getElementById('guideContent');
-
 // Settings Modal
 const btnSettings = document.getElementById('btnSettings');
 const settingsModal = document.getElementById('settingsModal');
@@ -44,9 +12,7 @@ const toast = document.getElementById('toast');
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   loadApiKeyStatus();
-  initTabs();
   initCopyButtons();
-  initChips();
   initModeSwitcher();
   initVideoStudio();
   initSchedulerView();
@@ -569,225 +535,6 @@ function initCopyButtons() {
   });
 }
 
-// Generate Full-Stack App
-if (btnGenerate) {
-  btnGenerate.addEventListener('click', async () => {
-  const prompt = promptInput.value.trim();
-  if (!prompt) {
-    showToast('Please enter your project requirements.', true);
-    promptInput.focus();
-    return;
-  }
-
-  const apiKey = getSavedApiKey();
-  // Server will automatically use GEMINI_API_KEY from .env if frontend apiKey is empty.
-
-  // Set Loading UI
-  btnGenerate.disabled = true;
-  generationLoader.classList.remove('hidden');
-  loaderStatus.textContent = 'AI Architect is generating the full-stack project... (may take ~30s)';
-
-  try {
-    const payload = {
-      prompt,
-      apiKey,
-      techStack: {
-        dbEngine: dbEngineSelect.value,
-        backendFramework: backendSelect.value,
-        frontendFramework: frontendSelect.value
-      }
-    };
-
-    const res = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-
-    if (!res.ok || !data.success) {
-      throw new Error(data.error || 'Failed to generate project.');
-    }
-
-    currentProject = data.project;
-    renderProject(currentProject);
-    showToast('🎉 Your Full-Stack project has been generated successfully!');
-
-  } catch (err) {
-    console.error(err);
-    showToast(`Error: ${err.message}`, true);
-  } finally {
-    btnGenerate.disabled = false;
-    generationLoader.classList.add('hidden');
-  }
-  });
-}
-
-// Render Generated Project to UI
-function renderProject(project) {
-  projectTitleDisplay.textContent = project.projectTitle || project.projectName;
-  projectDescDisplay.textContent = `${project.description || ''} • Tech: ${project.techStack?.database} + ${project.techStack?.backend} + ${project.techStack?.frontend}`;
-  projectActionButtons.classList.remove('hidden');
-
-  // 1. Live Preview
-  if (project.frontend?.previewHtml) {
-    previewIframe.srcdoc = project.frontend.previewHtml;
-  } else {
-    previewIframe.srcdoc = '<body style="font-family:sans-serif;padding:2rem;"><h3>Preview not available</h3></body>';
-  }
-
-  // 2. Database
-  dbFileName.innerHTML = `<i class="fa-solid fa-file-code"></i> ${project.database?.fileName || 'schema.sql'}`;
-  dbCodeArea.textContent = project.database?.script || '-- No SQL generated';
-
-  // 3. Backend Files
-  renderBackendFiles(project.backend?.files || []);
-
-  // 4. Frontend Files
-  renderFrontendFiles(project.frontend?.files || []);
-
-  // 5. Run Guide
-  renderGuide(project);
-
-  // Switch to preview tab by default
-  const previewTabBtn = document.querySelector('.tab-btn[data-tab="preview"]');
-  if (previewTabBtn) previewTabBtn.click();
-}
-
-function renderBackendFiles(files) {
-  backendFileList.innerHTML = '<span class="file-list-heading">Backend Files</span>';
-  if (files.length === 0) {
-    backendFileList.innerHTML += '<div class="file-item">No files</div>';
-    backendCodeArea.textContent = '// No backend files';
-    return;
-  }
-
-  files.forEach((file, idx) => {
-    const item = document.createElement('div');
-    item.className = `file-item ${idx === 0 ? 'active' : ''}`;
-    item.innerHTML = `<i class="fa-regular fa-file"></i> ${file.path}`;
-    item.addEventListener('click', () => {
-      document.querySelectorAll('#backendFileList .file-item').forEach(el => el.classList.remove('active'));
-      item.classList.add('active');
-      activeBackendFileIndex = idx;
-      backendCurrentFileName.innerHTML = `<i class="fa-solid fa-file-code"></i> ${file.path}`;
-      backendCodeArea.textContent = file.content;
-    });
-    backendFileList.appendChild(item);
-  });
-
-  // Select first
-  activeBackendFileIndex = 0;
-  backendCurrentFileName.innerHTML = `<i class="fa-solid fa-file-code"></i> ${files[0].path}`;
-  backendCodeArea.textContent = files[0].content;
-}
-
-function renderFrontendFiles(files) {
-  frontendFileList.innerHTML = '<span class="file-list-heading">Frontend Files</span>';
-  if (files.length === 0) {
-    frontendFileList.innerHTML += '<div class="file-item">No files</div>';
-    frontendCodeArea.textContent = '// No frontend files';
-    return;
-  }
-
-  files.forEach((file, idx) => {
-    const item = document.createElement('div');
-    item.className = `file-item ${idx === 0 ? 'active' : ''}`;
-    item.innerHTML = `<i class="fa-regular fa-file"></i> ${file.path}`;
-    item.addEventListener('click', () => {
-      document.querySelectorAll('#frontendFileList .file-item').forEach(el => el.classList.remove('active'));
-      item.classList.add('active');
-      activeFrontendFileIndex = idx;
-      frontendCurrentFileName.innerHTML = `<i class="fa-solid fa-file-code"></i> ${file.path}`;
-      frontendCodeArea.textContent = file.content;
-    });
-    frontendFileList.appendChild(item);
-  });
-
-  // Select first
-  activeFrontendFileIndex = 0;
-  frontendCurrentFileName.innerHTML = `<i class="fa-solid fa-file-code"></i> ${files[0].path}`;
-  frontendCodeArea.textContent = files[0].content;
-}
-
-function renderGuide(project) {
-  let guideHtml = `<h3>🚀 How to Run ${project.projectTitle || project.projectName}?</h3>`;
-  guideHtml += `<p><strong>Description:</strong> ${project.description || ''}</p><br/>`;
-  guideHtml += `<h4>1. Database Setup (${project.techStack?.database || 'SQL'}):</h4>`;
-  guideHtml += `<pre>${project.database?.notes || 'Execute schema.sql to create database and tables.'}</pre>`;
-  
-  guideHtml += `<h4>2. Backend Setup (${project.techStack?.backend || 'Backend'}):</h4>`;
-  guideHtml += `<pre>${project.backend?.setupInstructions || 'Run backend with dotnet run or npm start.'}</pre>`;
-
-  guideHtml += `<h4>3. Complete Step-by-Step Guide:</h4>`;
-  guideHtml += `<pre>${project.runGuide || 'See README.md for details.'}</pre>`;
-
-  guideContent.innerHTML = guideHtml;
-}
-
-// Save Project directly to PC Disk
-if (btnSaveToDisk) {
-  btnSaveToDisk.addEventListener('click', async () => {
-    if (!currentProject) return;
-    btnSaveToDisk.disabled = true;
-    btnSaveToDisk.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving to PC...';
-
-    try {
-      const res = await fetch('/api/save-project', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: currentProject })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to save project.');
-      }
-      showToast(`✅ Project saved to PC:\n${data.savedPath}`);
-      alert(`Project has been saved to your PC at:\n\n${data.savedPath}`);
-    } catch (err) {
-      showToast(`Error: ${err.message}`, true);
-    } finally {
-      btnSaveToDisk.disabled = false;
-      btnSaveToDisk.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save to PC';
-    }
-  });
-}
-
-// Download ZIP
-if (btnDownloadZip) {
-  btnDownloadZip.addEventListener('click', async () => {
-    if (!currentProject) return;
-    btnDownloadZip.disabled = true;
-    btnDownloadZip.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating ZIP...';
-
-    try {
-      const res = await fetch('/api/download-zip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: currentProject })
-      });
-      if (!res.ok) throw new Error('Failed to download ZIP file.');
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${currentProject.projectName || 'project'}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      showToast('📦 ZIP file downloaded successfully!');
-    } catch (err) {
-      showToast(`Error: ${err.message}`, true);
-    } finally {
-      btnDownloadZip.disabled = false;
-      btnDownloadZip.innerHTML = '<i class="fa-solid fa-file-zipper"></i> Download ZIP';
-    }
-  });
-}
-
 // ==========================================
 // 🎬 MODE SWITCHER & VIDEO STUDIO IMPLEMENTATION
 // ==========================================
@@ -795,11 +542,10 @@ if (btnDownloadZip) {
 function initModeSwitcher() {
   const navTabs = document.querySelectorAll('.mode-tab');
   const allViews = [
-    document.getElementById('appBuilderView'),
     document.getElementById('videoStudioView'),
     document.getElementById('schedulerView'),
     document.getElementById('analyticsView')
-  ];
+  ].filter(Boolean);
 
   navTabs.forEach(tab => {
     tab.addEventListener('click', () => {
@@ -1187,34 +933,547 @@ function initVideoStudio() {
     showToast(`Video loaded: ${file.name}`);
   }
 
-  // Feature #3: Background Music (BGM) UI & Preview Controls
+  // ========================================================
+  // 📸 PHOTOS-TO-REEL (IMAGE REEL GENERATOR) IMPLEMENTATION
+  // ========================================================
+  const tabSourceVideo = document.getElementById('tabSourceVideo');
+  const tabSourcePhotos = document.getElementById('tabSourcePhotos');
+  const videoSourcePanel = document.getElementById('videoSourcePanel');
+  const photosSourcePanel = document.getElementById('photosSourcePanel');
+
+  if (tabSourceVideo && tabSourcePhotos) {
+    tabSourceVideo.addEventListener('click', () => {
+      tabSourceVideo.classList.add('active');
+      tabSourcePhotos.classList.remove('active');
+      tabSourceVideo.style.background = '#ffffff';
+      tabSourceVideo.style.color = '#1c1917';
+      tabSourceVideo.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
+      tabSourcePhotos.style.background = 'transparent';
+      tabSourcePhotos.style.color = '#78716c';
+      tabSourcePhotos.style.boxShadow = 'none';
+
+      if (videoSourcePanel) {
+        videoSourcePanel.classList.remove('hidden');
+        videoSourcePanel.style.display = 'block';
+      }
+      if (photosSourcePanel) {
+        photosSourcePanel.classList.add('hidden');
+        photosSourcePanel.style.display = 'none';
+      }
+      if (btnProcessVideoText) {
+        btnProcessVideoText.textContent = '🎬 AI Auto-Edit & Generate 30s Reel';
+      }
+    });
+
+    tabSourcePhotos.addEventListener('click', () => {
+      tabSourcePhotos.classList.add('active');
+      tabSourceVideo.classList.remove('active');
+      tabSourcePhotos.style.background = '#ffffff';
+      tabSourcePhotos.style.color = '#1c1917';
+      tabSourcePhotos.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
+      tabSourceVideo.style.background = 'transparent';
+      tabSourceVideo.style.color = '#78716c';
+      tabSourceVideo.style.boxShadow = 'none';
+
+      if (photosSourcePanel) {
+        photosSourcePanel.classList.remove('hidden');
+        photosSourcePanel.style.display = 'flex';
+      }
+      if (videoSourcePanel) {
+        videoSourcePanel.classList.add('hidden');
+        videoSourcePanel.style.display = 'none';
+      }
+      if (btnProcessVideoText) {
+        btnProcessVideoText.textContent = '🎬 ✨ AI ફોટો રીલ બનાવો & પબ્લિશ કરો (Generate Reel)';
+      }
+      if (videoNicheSelect && videoNicheSelect.value.startsWith('Auto-Detect')) {
+        videoNicheSelect.value = 'Patola Sarees, Ethnic & Traditional Wear';
+      }
+    });
+  }
+
+  const btnGoToStep2FromPhotos = document.getElementById('btnGoToStep2FromPhotos');
+  if (btnGoToStep2FromPhotos) {
+    btnGoToStep2FromPhotos.addEventListener('click', () => {
+      if (typeof window.setReelStep === 'function') {
+        window.setReelStep(2);
+      }
+    });
+  }
+
+  const photosDropzone = document.getElementById('photosDropzone');
+  const photoFilesInput = document.getElementById('photoFilesInput');
+  const btnLoadPatolaPresetPhotos = document.getElementById('btnLoadPatolaPresetPhotos');
+  const selectedPhotosGallery = document.getElementById('selectedPhotosGallery');
+  const selectedPhotosCountLabel = document.getElementById('selectedPhotosCountLabel');
+  const selectedPhotosThumbs = document.getElementById('selectedPhotosThumbs');
+  const btnClearPhotos = document.getElementById('btnClearPhotos');
+  const btnGeneratePhotoReel = document.getElementById('btnGeneratePhotoReel');
+
+  let selectedPhotoFilesList = [];
+  let isPatolaPresetActive = false;
+
+  if (photosDropzone && photoFilesInput) {
+    photosDropzone.addEventListener('click', () => photoFilesInput.click());
+
+    photosDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      photosDropzone.classList.add('dragover');
+    });
+
+    photosDropzone.addEventListener('dragleave', () => {
+      photosDropzone.classList.remove('dragover');
+    });
+
+    photosDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      photosDropzone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handlePhotoFilesSelected(Array.from(e.dataTransfer.files));
+      }
+    });
+
+    photoFilesInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handlePhotoFilesSelected(Array.from(e.target.files));
+      }
+    });
+  }
+
+  function handlePhotoFilesSelected(files) {
+    isPatolaPresetActive = false;
+    const validImgs = files.filter(f => f.type.startsWith('image/'));
+    if (validImgs.length === 0) {
+      showToast('કૃપા કરીને ઇમેજ ફાઈલો (JPG, PNG, WEBP) પસંદ કરો.', true);
+      return;
+    }
+    
+    // Append to existing selection (strictly allow up to 6 photos max)
+    const combined = [...selectedPhotoFilesList, ...validImgs];
+    if (combined.length > 6) {
+      showToast('મહત્તમ ૬ ફોટા જ ઉમેરી શકાય છે (૬ ફોટા રાખ્યા છે).', true);
+      selectedPhotoFilesList = combined.slice(0, 6);
+    } else {
+      selectedPhotoFilesList = combined;
+    }
+
+    // Reset input value so user can click to add more photos immediately
+    if (photoFilesInput) photoFilesInput.value = '';
+
+    renderPhotosGalleryPreviews();
+    showToast(`📸 કુલ ${selectedPhotoFilesList.length} ફોટા પસંદ થયા! (૨ થી ૬ ફોટાની રીલ બનશે)`);
+  }
+
+  if (btnLoadPatolaPresetPhotos) {
+    btnLoadPatolaPresetPhotos.addEventListener('click', () => {
+      isPatolaPresetActive = true;
+      selectedPhotoFilesList = [];
+      if (selectedPhotosGallery) {
+        selectedPhotosGallery.classList.remove('hidden');
+        selectedPhotosGallery.style.display = 'flex';
+      }
+      if (selectedPhotosCountLabel) {
+        selectedPhotosCountLabel.innerHTML = '<i class="fa-solid fa-images" style="color: #b89758;"></i> <span>૬ Patola સાડી સેમ્પલ ફોટા (6 Photos Ready ✓)</span>';
+      }
+      if (selectedPhotosThumbs) {
+        const presets = ['Royal Blue', 'Emerald', 'Nari Kunjar', 'Ratan Chowk', 'Rich Pallu', 'Royal Hero'];
+        selectedPhotosThumbs.innerHTML = presets.map((name, i) => `
+          <div style="position: relative; width: 62px; height: 82px; border-radius: 9px; overflow: hidden; border: 2px solid #b89758; flex-shrink: 0; background: #1c1917; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #e5c870; font-size: 0.68rem; text-align: center; font-weight: 700; padding: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.25);">
+            <i class="fa-solid fa-gem" style="font-size: 1rem; margin-bottom: 2px;"></i>
+            <span style="line-height: 1.1;">${name}</span>
+            <span style="position: absolute; bottom: 2px; left: 2px; background: rgba(0,0,0,0.8); color: #fff; font-size: 8px; padding: 1px 3px; border-radius: 3px;">#${i+1}</span>
+          </div>
+        `).join('');
+      }
+      showToast('🥻 ૬ Patola સાડી સેમ્પલ ફોટા સિલેક્ટ થઈ ગયા! હવે "રીલ બનાવો" બટન દબાવો.');
+    });
+  }
+
+  function renderPhotosGalleryPreviews() {
+    if (!selectedPhotosGallery || !selectedPhotosThumbs) return;
+    if (selectedPhotoFilesList.length === 0) {
+      selectedPhotosGallery.classList.add('hidden');
+      selectedPhotosGallery.style.display = 'none';
+      return;
+    }
+    selectedPhotosGallery.classList.remove('hidden');
+    selectedPhotosGallery.style.display = 'flex';
+    if (selectedPhotosCountLabel) {
+      selectedPhotosCountLabel.innerHTML = `<i class="fa-solid fa-images" style="color: #b89758;"></i> <span>${selectedPhotoFilesList.length} / 6 ફોટા પસંદ કર્યા</span>`;
+    }
+    selectedPhotosThumbs.innerHTML = '';
+    selectedPhotoFilesList.forEach((file, idx) => {
+      const url = URL.createObjectURL(file);
+      const thumb = document.createElement('div');
+      thumb.style.cssText = 'position: relative; width: 62px; height: 82px; border-radius: 9px; overflow: hidden; border: 2px solid rgba(197, 168, 128, 0.7); flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.08);';
+      thumb.innerHTML = `
+        <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;">
+        <span style="position: absolute; bottom: 2px; left: 2px; background: rgba(0,0,0,0.7); color: #fff; font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 4px;">#${idx+1}</span>
+        <button type="button" style="position: absolute; top: 2px; right: 2px; background: rgba(220,38,38,0.85); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 800;" title="Remove">✕</button>
+      `;
+      thumb.querySelector('button').addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectedPhotoFilesList.splice(idx, 1);
+        renderPhotosGalleryPreviews();
+      });
+      selectedPhotosThumbs.appendChild(thumb);
+    });
+
+    // Append "+ Add More" card at the end of the strip ONLY IF < 6 photos
+    if (selectedPhotoFilesList.length < 6) {
+      const addCard = document.createElement('div');
+      addCard.style.cssText = 'width: 62px; height: 82px; border-radius: 9px; border: 2px dashed rgba(184, 151, 88, 0.8); background: rgba(184, 151, 88, 0.08); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; cursor: pointer; flex-shrink: 0; color: #b89758; transition: all 0.2s;';
+      addCard.innerHTML = `<i class="fa-solid fa-plus" style="font-size: 1.15rem;"></i><span style="font-size: 0.65rem; font-weight: 800;">ઉમેરો</span>`;
+      addCard.addEventListener('click', () => {
+        if (photoFilesInput) photoFilesInput.click();
+      });
+      selectedPhotosThumbs.appendChild(addCard);
+    }
+  }
+
+  const btnAddMorePhotos = document.getElementById('btnAddMorePhotos');
+  if (btnAddMorePhotos) {
+    btnAddMorePhotos.addEventListener('click', () => {
+      if (selectedPhotoFilesList.length >= 6) {
+        showToast('મહત્તમ ૬ ફોટા જ ઉમેરી શકાય છે.', true);
+        return;
+      }
+      if (photoFilesInput) photoFilesInput.click();
+    });
+  }
+
+  if (btnClearPhotos) {
+    btnClearPhotos.addEventListener('click', () => {
+      selectedPhotoFilesList = [];
+      isPatolaPresetActive = false;
+      if (photoFilesInput) photoFilesInput.value = '';
+      renderPhotosGalleryPreviews();
+    });
+  }
+
+  let isGeneratingReelBusy = false;
+
+  if (btnGeneratePhotoReel) {
+    btnGeneratePhotoReel.addEventListener('click', async () => {
+      if (isGeneratingReelBusy) {
+        showToast('રીલ બનાવવાનું કામ ચાલુ છે, કૃપા કરીને થોડી સેકન્ડ રાહ જુઓ...', true);
+        return;
+      }
+
+      if (!isPatolaPresetActive && selectedPhotoFilesList.length === 0) {
+        showToast('કૃપા કરીને ઓછામાં ઓછો ૧ ફોટો પસંદ કરો અથવા "Patola સાડી સેમ્પલ" બટન દબાવો.', true);
+        if (photoFilesInput) photoFilesInput.click();
+        return;
+      }
+
+      isGeneratingReelBusy = true;
+      btnGeneratePhotoReel.disabled = true;
+      if (btnProcessVideo) btnProcessVideo.disabled = true;
+      videoLoader.classList.remove('hidden');
+      videoLoaderStatus.textContent = '📸 AI તમારા ફોટામાંથી ૩૦-સેકન્ડની સિનેમેટિક રીલ અને મ્યુઝિક રેન્ડર કરી રહ્યું છે... (લગભગ 10-15 સેકન્ડ)';
+
+      try {
+        const formData = new FormData();
+        if (isPatolaPresetActive) {
+          formData.append('usePreset', 'patola');
+        } else {
+          selectedPhotoFilesList.forEach(file => {
+            formData.append('photoFiles', file);
+          });
+        }
+
+        const titleEl = document.getElementById('photoProductTitle');
+        const priceEl = document.getElementById('photoProductPrice');
+        const badgeEl = document.getElementById('photoProductBadge');
+        const bgmEl = document.getElementById('photoBgmTrack');
+        const effectEl = document.getElementById('photoTransitionEffect');
+
+        if (titleEl) formData.append('productTitle', titleEl.value.trim());
+        if (priceEl) formData.append('productPrice', priceEl.value.trim());
+        if (badgeEl) formData.append('badgeText', badgeEl.value.trim());
+        if (effectEl) formData.append('transitionEffect', effectEl.value);
+
+        // 🌟 Link All Video & AI Settings into Photo Reel
+        if (videoNicheSelect) formData.append('niche', videoNicheSelect.value);
+        if (videoDurationSelect) formData.append('targetDuration', videoDurationSelect.value);
+        const videoStyleSelect = document.getElementById('videoStyleSelect');
+        if (videoStyleSelect) formData.append('videoStyle', videoStyleSelect.value);
+        const videoSubtitlesSelect = document.getElementById('videoSubtitlesSelect');
+        if (videoSubtitlesSelect) formData.append('subtitlesStyle', videoSubtitlesSelect.value);
+
+        // Background Music & Volume (Presets or Manual Custom Song Upload)
+        if (selectedCustomAudioFile) {
+          formData.append('customAudio', selectedCustomAudioFile);
+          formData.append('bgmTrack', 'custom');
+        } else if (videoBgmSelect && videoBgmSelect.value !== 'none') {
+          formData.append('bgmTrack', videoBgmSelect.value);
+        } else if (bgmEl) {
+          formData.append('bgmTrack', bgmEl.value);
+        }
+        if (bgmVolumeSlider) formData.append('bgmVolume', bgmVolumeSlider.value);
+
+        // Additional Instructions / Brand Name
+        if (videoCustomPrompt && videoCustomPrompt.value.trim()) {
+          formData.append('customInstructions', videoCustomPrompt.value.trim());
+        }
+
+        // Auto-Pilot Scheduling Support
+        if (isScheduleModeActive && videoScheduleDateTime && videoScheduleDateTime.value) {
+          formData.append('isScheduled', 'true');
+          formData.append('scheduledTime', videoScheduleDateTime.value);
+          if (isRecurringDailyMode) {
+            formData.append('recurringDaily', 'true');
+          }
+        }
+
+        const key = getSavedApiKey();
+        if (key) formData.append('apiKey', key);
+
+        const res = await fetch('/api/video/photos-to-reel', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Failed to generate reel from photos.');
+        }
+
+        currentRenderedReel = data;
+
+        // 1. Play Rendered 9:16 Reel & Set Cover Poster
+        if (reelPlaceholder) {
+          reelPlaceholder.style.display = 'none';
+          reelPlaceholder.classList.add('hidden');
+        }
+        if (data.coverUrl) {
+          renderedVideoPlayer.poster = data.coverUrl;
+        }
+        renderedVideoPlayer.src = data.videoUrl;
+        renderedVideoPlayer.classList.add('active');
+        renderedVideoPlayer.style.display = 'block';
+        renderedVideoPlayer.load();
+        renderedVideoPlayer.play().catch(() => {});
+
+        // 2. Set Recipe Stats & Theme
+        if (recipePills) recipePills.classList.remove('hidden');
+        if (pillTheme) pillTheme.textContent = data.recipe?.themeName || 'Luxury Saree Showcase';
+        if (pillDuration) pillDuration.textContent = data.duration || '24s';
+
+        // 3. Populate captions on social boxes
+        if (viralTitleText) viralTitleText.textContent = data.recipe?.viralTitle || '✨ Royal Patola Saree Showcase';
+        if (viralCaptionText) viralCaptionText.textContent = data.recipe?.viralCaption || '';
+        if (viralHashtagsText) viralHashtagsText.textContent = data.recipe?.viralHashtags || '#PatolaSaree #TraditionalFashion #Handloom';
+
+        // 4. Download buttons
+        if (btnDownloadReel) {
+          btnDownloadReel.href = data.videoUrl;
+          btnDownloadReel.setAttribute('download', data.fileName || 'reel-photos.mp4');
+        }
+        const btnDownloadCover = document.getElementById('btnDownloadCover');
+        if (btnDownloadCover && data.coverUrl) {
+          btnDownloadCover.href = data.coverUrl;
+          btnDownloadCover.setAttribute('download', (data.fileName || 'reel').replace('.mp4', '-cover.jpg'));
+          btnDownloadCover.style.display = 'inline-flex';
+        }
+
+        if (videoActionButtons) videoActionButtons.classList.remove('hidden');
+
+        // 5. Enable social publishing buttons
+        const btnPublishBoth = document.getElementById('btnPublishBoth');
+        const btnPublishInstagram = document.getElementById('btnPublishInstagram');
+        const btnPublishYouTube = document.getElementById('btnPublishYouTube');
+        if (btnPublishBoth) btnPublishBoth.disabled = false;
+        if (btnPublishInstagram) btnPublishInstagram.disabled = false;
+        if (btnPublishYouTube) btnPublishYouTube.disabled = false;
+
+        // 6. Switch stepper on mobile to Step 3 (રીલ & પબ્લિશ)
+        if (typeof window.setReelStep === 'function') {
+          window.setReelStep(3);
+        }
+
+        showToast('🎉 ફોટામાંથી શાનદાર પ્રોફેશનલ રીલ સફળતાપૂર્વક બની ગઈ!');
+      } catch (err) {
+        console.error('Photo reel generation error:', err);
+        showToast(`ભૂલ: ${err.message}`, true);
+      } finally {
+        isGeneratingReelBusy = false;
+        btnGeneratePhotoReel.disabled = false;
+        if (btnProcessVideo) btnProcessVideo.disabled = false;
+        videoLoader.classList.add('hidden');
+      }
+    });
+  }
+
+  // Feature #3: Background Music (BGM) UI & Preview Controls + Custom Song Upload
   const videoBgmSelect = document.getElementById('videoBgmSelect');
   const btnPreviewBgm = document.getElementById('btnPreviewBgm');
   const bgmVolumeRow = document.getElementById('bgmVolumeRow');
   const bgmVolumeSlider = document.getElementById('bgmVolumeSlider');
   const bgmVolumeLabel = document.getElementById('bgmVolumeLabel');
+
+  // Custom Song Manual Upload Elements
+  const customAudioUploadBox = document.getElementById('customAudioUploadBox');
+  const customAudioInput = document.getElementById('customAudioInput');
+  const btnChooseCustomAudio = document.getElementById('btnChooseCustomAudio');
+  const customAudioFileStatus = document.getElementById('customAudioFileStatus');
+  const customAudioPlayerRow = document.getElementById('customAudioPlayerRow');
+  const btnPlayCustomAudio = document.getElementById('btnPlayCustomAudio');
+  const customAudioNameDisplay = document.getElementById('customAudioNameDisplay');
+  const customAudioDurationDisplay = document.getElementById('customAudioDurationDisplay');
+  const btnRemoveCustomAudio = document.getElementById('btnRemoveCustomAudio');
+
   let currentBgmAudio = null;
+  let selectedCustomAudioFile = null;
+  let customAudioPreviewObj = null;
+
+  function stopAllBgmPlayback() {
+    if (currentBgmAudio) {
+      currentBgmAudio.pause();
+      currentBgmAudio = null;
+    }
+    if (customAudioPreviewObj) {
+      customAudioPreviewObj.pause();
+    }
+    if (btnPreviewBgm) btnPreviewBgm.innerHTML = '<i class="fa-solid fa-play"></i>';
+    if (btnPlayCustomAudio) btnPlayCustomAudio.innerHTML = '<i class="fa-solid fa-play"></i>';
+  }
 
   if (videoBgmSelect) {
     videoBgmSelect.addEventListener('change', () => {
-      if (currentBgmAudio) {
-        currentBgmAudio.pause();
-        currentBgmAudio = null;
-        if (btnPreviewBgm) btnPreviewBgm.innerHTML = '<i class="fa-solid fa-play"></i>';
-      }
-      if (videoBgmSelect.value !== 'none') {
+      stopAllBgmPlayback();
+
+      if (videoBgmSelect.value === 'custom') {
+        if (customAudioUploadBox) customAudioUploadBox.style.display = 'block';
+        if (bgmVolumeRow) bgmVolumeRow.style.display = 'flex';
+        // Auto-open file chooser if no custom song selected yet
+        if (!selectedCustomAudioFile && customAudioInput) {
+          customAudioInput.click();
+        }
+      } else if (videoBgmSelect.value !== 'none') {
+        if (customAudioUploadBox) customAudioUploadBox.style.display = 'none';
         if (bgmVolumeRow) bgmVolumeRow.style.display = 'flex';
       } else {
+        if (customAudioUploadBox) customAudioUploadBox.style.display = 'none';
         if (bgmVolumeRow) bgmVolumeRow.style.display = 'none';
       }
     });
   }
 
+  if (btnChooseCustomAudio && customAudioInput) {
+    btnChooseCustomAudio.addEventListener('click', () => {
+      customAudioInput.click();
+    });
+  }
+
+  if (customAudioInput) {
+    customAudioInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('audio/') && !file.name.match(/\.(mp3|wav|m4a|aac|ogg)$/i)) {
+        showToast('કૃપા કરીને માન્ય ઑડિયો/સોંગ ફાઇલ (MP3, WAV, M4A) પસંદ કરો.', true);
+        return;
+      }
+
+      stopAllBgmPlayback();
+      selectedCustomAudioFile = file;
+
+      if (videoBgmSelect) {
+        videoBgmSelect.value = 'custom';
+      }
+      if (customAudioUploadBox) customAudioUploadBox.style.display = 'block';
+      if (bgmVolumeRow) bgmVolumeRow.style.display = 'flex';
+
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      if (customAudioFileStatus) {
+        customAudioFileStatus.innerHTML = `<span style="color: #16a34a; font-weight: 600;"><i class="fa-solid fa-circle-check"></i> ફાઈલ સિલેક્ટ થઈ</span>`;
+      }
+      if (customAudioNameDisplay) {
+        customAudioNameDisplay.textContent = file.name;
+      }
+      if (customAudioDurationDisplay) {
+        customAudioDurationDisplay.textContent = `${sizeMb} MB • લોડિંગ...`;
+      }
+      if (customAudioPlayerRow) {
+        customAudioPlayerRow.style.display = 'flex';
+      }
+
+      try {
+        const audioUrl = URL.createObjectURL(file);
+        customAudioPreviewObj = new Audio(audioUrl);
+        customAudioPreviewObj.volume = bgmVolumeSlider ? parseFloat(bgmVolumeSlider.value) : 0.25;
+
+        customAudioPreviewObj.addEventListener('loadedmetadata', () => {
+          const duration = Math.round(customAudioPreviewObj.duration);
+          const mins = Math.floor(duration / 60);
+          const secs = String(duration % 60).padStart(2, '0');
+          if (customAudioDurationDisplay) {
+            customAudioDurationDisplay.textContent = `${mins}:${secs} (${sizeMb} MB) • તૈયાર છે`;
+          }
+        });
+
+        customAudioPreviewObj.addEventListener('ended', () => {
+          if (btnPlayCustomAudio) btnPlayCustomAudio.innerHTML = '<i class="fa-solid fa-play"></i>';
+          if (btnPreviewBgm) btnPreviewBgm.innerHTML = '<i class="fa-solid fa-play"></i>';
+        });
+
+        showToast(`🎵 "${file.name}" સોંગ પસંદ થઈ ગયું!`);
+      } catch (err) {
+        console.warn('Audio preview object error:', err);
+      }
+    });
+  }
+
+  if (btnPlayCustomAudio) {
+    btnPlayCustomAudio.addEventListener('click', () => {
+      if (!customAudioPreviewObj) {
+        if (customAudioInput) customAudioInput.click();
+        return;
+      }
+      if (customAudioPreviewObj.paused) {
+        if (currentBgmAudio) currentBgmAudio.pause();
+        customAudioPreviewObj.volume = bgmVolumeSlider ? parseFloat(bgmVolumeSlider.value) : 0.25;
+        customAudioPreviewObj.play().then(() => {
+          btnPlayCustomAudio.innerHTML = '<i class="fa-solid fa-pause"></i>';
+          if (btnPreviewBgm && videoBgmSelect?.value === 'custom') {
+            btnPreviewBgm.innerHTML = '<i class="fa-solid fa-pause"></i>';
+          }
+        }).catch(err => console.warn('Play error:', err));
+      } else {
+        customAudioPreviewObj.pause();
+        btnPlayCustomAudio.innerHTML = '<i class="fa-solid fa-play"></i>';
+        if (btnPreviewBgm && videoBgmSelect?.value === 'custom') {
+          btnPreviewBgm.innerHTML = '<i class="fa-solid fa-play"></i>';
+        }
+      }
+    });
+  }
+
+  if (btnRemoveCustomAudio) {
+    btnRemoveCustomAudio.addEventListener('click', () => {
+      stopAllBgmPlayback();
+      selectedCustomAudioFile = null;
+      customAudioPreviewObj = null;
+      if (customAudioInput) customAudioInput.value = '';
+      if (customAudioPlayerRow) customAudioPlayerRow.style.display = 'none';
+      if (customAudioFileStatus) customAudioFileStatus.textContent = 'કોઈ ગીત પસંદ નથી કર્યું';
+      if (videoBgmSelect) videoBgmSelect.value = 'none';
+      if (customAudioUploadBox) customAudioUploadBox.style.display = 'none';
+      if (bgmVolumeRow) bgmVolumeRow.style.display = 'none';
+      showToast('કસ્ટમ સોંગ હટાવી દીધું.');
+    });
+  }
+
   if (bgmVolumeSlider && bgmVolumeLabel) {
     bgmVolumeSlider.addEventListener('input', (e) => {
-      bgmVolumeLabel.textContent = `${Math.round(e.target.value * 100)}%`;
+      const vol = parseFloat(e.target.value);
+      bgmVolumeLabel.textContent = `${Math.round(vol * 100)}%`;
       if (currentBgmAudio) {
-        currentBgmAudio.volume = parseFloat(e.target.value);
+        currentBgmAudio.volume = vol;
+      }
+      if (customAudioPreviewObj) {
+        customAudioPreviewObj.volume = vol;
       }
     });
   }
@@ -1224,6 +1483,14 @@ function initVideoStudio() {
       const track = videoBgmSelect.value;
       if (track === 'none') {
         showToast('કૃપા કરીને પહેલા મ્યુઝિક ટ્રેક પસંદ કરો.');
+        return;
+      }
+      if (track === 'custom') {
+        if (btnPlayCustomAudio) {
+          btnPlayCustomAudio.click();
+        } else if (customAudioInput) {
+          customAudioInput.click();
+        }
         return;
       }
       if (currentBgmAudio && !currentBgmAudio.paused) {
@@ -1247,15 +1514,29 @@ function initVideoStudio() {
     });
   }
 
-  // Process Video with AI Auto-Editing & Effects
+  // Process Video or Photo Reel with AI Auto-Editing & Effects
   btnProcessVideo.addEventListener('click', async () => {
+    if (isGeneratingReelBusy) {
+      showToast('રીલ બનાવવાનું કામ ચાલુ છે, કૃપા કરીને થોડી સેકન્ડ રાહ જુઓ...', true);
+      return;
+    }
+
+    if (tabSourcePhotos && tabSourcePhotos.classList.contains('active')) {
+      if (btnGeneratePhotoReel) {
+        btnGeneratePhotoReel.click();
+        return;
+      }
+    }
+
     if (!selectedVideoFile) {
       showToast('Please upload a video file first.', true);
       fileInput.click();
       return;
     }
 
+    isGeneratingReelBusy = true;
     btnProcessVideo.disabled = true;
+    if (btnGeneratePhotoReel) btnGeneratePhotoReel.disabled = true;
     videoLoader.classList.remove('hidden');
     videoLoaderStatus.textContent = isScheduleModeActive 
       ? 'AI is analyzing video and configuring schedule...' 
@@ -1277,8 +1558,11 @@ function initVideoStudio() {
       formData.append('videoStyle', videoStyleSelect.value);
     }
 
-    // Feature #3: Append BGM Settings
-    if (videoBgmSelect) {
+    // Feature #3: Append BGM Settings (Presets or Manual Custom Song Upload)
+    if (selectedCustomAudioFile) {
+      formData.append('customAudio', selectedCustomAudioFile);
+      formData.append('bgmTrack', 'custom');
+    } else if (videoBgmSelect) {
       formData.append('bgmTrack', videoBgmSelect.value);
     }
     if (bgmVolumeSlider) {
@@ -1444,13 +1728,20 @@ function initVideoStudio() {
         showToast('🎉 30-second AI Reel generated successfully!');
       }
 
+      // On mobile, auto-advance stepper to Step 3 (Preview & Publish)
+      if (typeof window.setReelStep === 'function') {
+        window.setReelStep(3);
+      }
+
       fetchScheduledQueue();
 
     } catch (err) {
       console.error(err);
       showToast(`Error: ${err.message}`, true);
     } finally {
+      isGeneratingReelBusy = false;
       btnProcessVideo.disabled = false;
+      if (btnGeneratePhotoReel) btnGeneratePhotoReel.disabled = false;
       videoLoader.classList.add('hidden');
     }
   });
@@ -2372,7 +2663,33 @@ async function fetchAnalyticsOverview(showFeedback = false) {
       profilePic.src = data.instagram.profilePic;
     }
     if (profileName) profileName.textContent = data.instagram?.name || 'Reel Creator';
-    if (usernameBadge) usernameBadge.textContent = '@' + (data.instagram?.username || 'moving.151120');
+    
+    const igUsername = data.instagram?.username || 'moving.151120';
+    const igProfileUrl = `https://www.instagram.com/${igUsername}/`;
+
+    if (usernameBadge) {
+      usernameBadge.href = igProfileUrl;
+      const uText = document.getElementById('analyticsUsernameText');
+      if (uText) uText.textContent = '@' + igUsername;
+    }
+
+    const btnOpenIg = document.getElementById('btnOpenInstagram');
+    if (btnOpenIg) btnOpenIg.href = igProfileUrl;
+
+    const btnHdrIg = document.getElementById('btnHeaderInstagram');
+    if (btnHdrIg) {
+      btnHdrIg.href = igProfileUrl;
+      const s = btnHdrIg.querySelector('span');
+      if (s) s.textContent = '@' + igUsername + ' ↗';
+    }
+
+    const kpiIgLink = document.getElementById('kpiFollowersProfileLink');
+    if (kpiIgLink) {
+      kpiIgLink.href = igProfileUrl;
+      const s = kpiIgLink.querySelector('span');
+      if (s) s.textContent = '@' + igUsername + ' ↗';
+    }
+
     if (followersCount) followersCount.textContent = `${data.instagram?.followers || 0} Followers`;
     if (lastUpdated) lastUpdated.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
@@ -3090,4 +3407,544 @@ if (document.readyState === 'loading') {
 } else {
   initTimelineStudio();
 }
+
+/* =========================================================================
+   USER AUTHENTICATION & MULTI-USER CREDITS MANAGER (SaaS System)
+   ========================================================================= */
+let currentUser = null;
+
+function initUserAuth() {
+  const btnOpenAuthModal = document.getElementById('btnOpenAuthModal');
+  const btnCloseAuthModal = document.getElementById('btnCloseAuthModal');
+  const authModal = document.getElementById('authModal');
+  const tabAuthLogin = document.getElementById('tabAuthLogin');
+  const tabAuthRegister = document.getElementById('tabAuthRegister');
+  const formAuthLogin = document.getElementById('formAuthLogin');
+  const formAuthRegister = document.getElementById('formAuthRegister');
+  const authAlertBox = document.getElementById('authAlertBox');
+
+  const userProfileChip = document.getElementById('userProfileChip');
+  const headerUserName = document.getElementById('headerUserName');
+  const headerUserCredits = document.getElementById('headerUserCredits');
+  const userAvatarInitials = document.getElementById('userAvatarInitials');
+
+  const userProfileModal = document.getElementById('userProfileModal');
+  const btnCloseProfileModal = document.getElementById('btnCloseProfileModal');
+  const profileName = document.getElementById('profileName');
+  const profileEmail = document.getElementById('profileEmail');
+  const profileAvatarBig = document.getElementById('profileAvatarBig');
+  const profileRoleBadge = document.getElementById('profileRoleBadge');
+  const profileCreditsCount = document.getElementById('profileCreditsCount');
+  const btnLogoutUser = document.getElementById('btnLogoutUser');
+  const btnUpgradeProInModal = document.getElementById('btnUpgradeProInModal');
+
+  // Helper: Show Auth Alert
+  function showAuthAlert(msg, isSuccess = false) {
+    if (!authAlertBox) return;
+    authAlertBox.style.display = 'block';
+    authAlertBox.classList.remove('hidden');
+    if (isSuccess) {
+      authAlertBox.style.background = '#f0fdf4';
+      authAlertBox.style.border = '1px solid #bbf7d0';
+      authAlertBox.style.color = '#15803d';
+    } else {
+      authAlertBox.style.background = '#fef2f2';
+      authAlertBox.style.border = '1px solid #fecaca';
+      authAlertBox.style.color = '#b91c1c';
+    }
+    authAlertBox.innerHTML = msg;
+  }
+
+  function hideAuthAlert() {
+    if (authAlertBox) {
+      authAlertBox.style.display = 'none';
+      authAlertBox.innerHTML = '';
+    }
+  }
+
+  // Update Header UI for logged-in user
+  function renderLoggedInState(user) {
+    currentUser = user;
+    if (btnOpenAuthModal) btnOpenAuthModal.style.display = 'none';
+    if (userProfileChip) {
+      userProfileChip.style.display = 'inline-flex';
+      userProfileChip.classList.remove('hidden');
+    }
+    const initials = (user.name || 'U').charAt(0).toUpperCase();
+    if (userAvatarInitials) userAvatarInitials.textContent = initials;
+    if (headerUserName) headerUserName.textContent = user.name.split(' ')[0] || user.name;
+    if (headerUserCredits) {
+      if (user.plan === 'pro') {
+        headerUserCredits.textContent = '⭐ Pro Unlimited';
+        headerUserCredits.style.background = 'rgba(217, 119, 6, 0.15)';
+        headerUserCredits.style.color = '#b45309';
+      } else {
+        headerUserCredits.textContent = `✨ ${user.credits} Reels`;
+        headerUserCredits.style.background = 'rgba(124, 58, 237, 0.1)';
+        headerUserCredits.style.color = '#7c3aed';
+      }
+    }
+  }
+
+  function renderLoggedOutState() {
+    currentUser = null;
+    if (btnOpenAuthModal) btnOpenAuthModal.style.display = 'inline-flex';
+    if (userProfileChip) {
+      userProfileChip.style.display = 'none';
+      userProfileChip.classList.add('hidden');
+    }
+  }
+
+  // Open / Close Auth Modal
+  if (btnOpenAuthModal) {
+    btnOpenAuthModal.addEventListener('click', () => {
+      hideAuthAlert();
+      authModal.style.display = 'flex';
+      authModal.classList.remove('hidden');
+    });
+  }
+
+  if (btnCloseAuthModal) {
+    btnCloseAuthModal.addEventListener('click', () => {
+      authModal.style.display = 'none';
+      authModal.classList.add('hidden');
+    });
+  }
+
+  // Auth Tabs Toggle
+  if (tabAuthLogin && tabAuthRegister) {
+    tabAuthLogin.addEventListener('click', () => {
+      tabAuthLogin.style.background = '#ffffff';
+      tabAuthLogin.style.color = '#1e1b4b';
+      tabAuthRegister.style.background = 'transparent';
+      tabAuthRegister.style.color = '#c7d2fe';
+      formAuthLogin.style.display = 'block';
+      formAuthRegister.style.display = 'none';
+      hideAuthAlert();
+    });
+
+    tabAuthRegister.addEventListener('click', () => {
+      tabAuthRegister.style.background = '#ffffff';
+      tabAuthRegister.style.color = '#1e1b4b';
+      tabAuthLogin.style.background = 'transparent';
+      tabAuthLogin.style.color = '#c7d2fe';
+      formAuthRegister.style.display = 'block';
+      formAuthLogin.style.display = 'none';
+      hideAuthAlert();
+    });
+  }
+
+  // Login Submit
+  if (formAuthLogin) {
+    formAuthLogin.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('btnSubmitLogin');
+
+      hideAuthAlert();
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>ચકાસી રહ્યા છીએ...</span>';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'લોગિન નિષ્ફળ રહ્યું.');
+        }
+
+        localStorage.setItem('forgeai_token', data.token);
+        renderLoggedInState(data.user);
+        authModal.style.display = 'none';
+        authModal.classList.add('hidden');
+        showToast(`🎉 ${data.message}`);
+      } catch (err) {
+        showAuthAlert(`⚠️ ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🚀 Log In કરો</span>';
+      }
+    });
+  }
+
+  // Register Submit
+  if (formAuthRegister) {
+    formAuthRegister.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const btn = document.getElementById('btnSubmitRegister');
+
+      hideAuthAlert();
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>એકાઉન્ટ બની રહ્યું છે...</span>';
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone, password })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'રજીસ્ટ્રેશન નિષ્ફળ રહ્યું.');
+        }
+
+        localStorage.setItem('forgeai_token', data.token);
+        renderLoggedInState(data.user);
+        authModal.style.display = 'none';
+        authModal.classList.add('hidden');
+        showToast(`🎉 ${data.message}`);
+      } catch (err) {
+        showAuthAlert(`⚠️ ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>✨ એકાઉન્ટ બનાવો & 5 Free Reels મેળવો</span>';
+      }
+    });
+  }
+
+  // User Profile Modal Open / Close
+  if (userProfileChip && userProfileModal) {
+    userProfileChip.addEventListener('click', () => {
+      if (!currentUser) return;
+      if (profileName) profileName.textContent = currentUser.name;
+      if (profileEmail) profileEmail.textContent = currentUser.email;
+      if (profileAvatarBig) profileAvatarBig.textContent = (currentUser.name || 'U').charAt(0).toUpperCase();
+      if (profileRoleBadge) profileRoleBadge.textContent = (currentUser.role || 'user').toUpperCase();
+      if (profileCreditsCount) {
+        profileCreditsCount.textContent = currentUser.plan === 'pro' ? 'અનલિમિટેડ ⭐' : `${currentUser.credits} બાકી`;
+      }
+      updateSocialBadges(currentUser);
+      userProfileModal.style.display = 'flex';
+      userProfileModal.classList.remove('hidden');
+    });
+  }
+
+  const btnConnectInstagramQuick = document.getElementById('btnConnectInstagramQuick');
+  const btnConnectYouTubeQuick = document.getElementById('btnConnectYouTubeQuick');
+  const profileInstaHandle = document.getElementById('profileInstaHandle');
+  const profileInstaStatus = document.getElementById('profileInstaStatus');
+  const profileYtHandle = document.getElementById('profileYtHandle');
+  const profileYtStatus = document.getElementById('profileYtStatus');
+
+  function updateSocialBadges(user) {
+    if (!user) return;
+    const insta = user.social?.instagram;
+    if (insta && insta.connected) {
+      if (profileInstaHandle) profileInstaHandle.textContent = `@${insta.username || 'patola_heritage'}`;
+      if (profileInstaStatus) {
+        profileInstaStatus.textContent = `🟢 કનેક્ટેડ (${insta.pageName || 'Page'})`;
+        profileInstaStatus.style.color = '#15803d';
+      }
+      if (btnConnectInstagramQuick) {
+        btnConnectInstagramQuick.textContent = '✓ Connected';
+        btnConnectInstagramQuick.style.background = '#16a34a';
+      }
+    } else {
+      if (profileInstaHandle) profileInstaHandle.textContent = 'Instagram Reels';
+      if (profileInstaStatus) {
+        profileInstaStatus.textContent = 'કનેક્ટ કરવા ક્લિક કરો';
+        profileInstaStatus.style.color = '#9d174d';
+      }
+      if (btnConnectInstagramQuick) {
+        btnConnectInstagramQuick.textContent = '🔗 Connect';
+        btnConnectInstagramQuick.style.background = 'linear-gradient(135deg, #e1306c, #c13584)';
+      }
+    }
+
+    const yt = user.social?.youtube;
+    if (yt && yt.connected) {
+      if (profileYtHandle) profileYtHandle.textContent = yt.channelTitle || 'Patola Shorts';
+      if (profileYtStatus) {
+        profileYtStatus.textContent = '🟢 કનેક્ટેડ (Active)';
+        profileYtStatus.style.color = '#15803d';
+      }
+      if (btnConnectYouTubeQuick) {
+        btnConnectYouTubeQuick.textContent = '✓ Connected';
+        btnConnectYouTubeQuick.style.background = '#16a34a';
+      }
+    } else {
+      if (profileYtHandle) profileYtHandle.textContent = 'YouTube Shorts';
+      if (profileYtStatus) {
+        profileYtStatus.textContent = 'કનેક્ટ કરવા ક્લિક કરો';
+        profileYtStatus.style.color = '#b91c1c';
+      }
+      if (btnConnectYouTubeQuick) {
+        btnConnectYouTubeQuick.textContent = '🔗 Connect';
+        btnConnectYouTubeQuick.style.background = '#dc2626';
+      }
+    }
+  }
+
+  if (btnConnectInstagramQuick) {
+    btnConnectInstagramQuick.addEventListener('click', async () => {
+      const token = localStorage.getItem('forgeai_token');
+      if (!token) return showToast('કૃપા કરીને પહેલા લોગિન કરો.', true);
+
+      btnConnectInstagramQuick.disabled = true;
+      btnConnectInstagramQuick.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+      try {
+        const res = await fetch('/api/auth/social/connect-instagram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ usePreset: true })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        if (currentUser) {
+          if (!currentUser.social) currentUser.social = {};
+          currentUser.social.instagram = data.instagram;
+        }
+        updateSocialBadges(currentUser);
+        showToast(data.message);
+      } catch (err) {
+        showToast(`ઇન્સ્ટાગ્રામ એરર: ${err.message}`, true);
+      } finally {
+        btnConnectInstagramQuick.disabled = false;
+      }
+    });
+  }
+
+  if (btnConnectYouTubeQuick) {
+    btnConnectYouTubeQuick.addEventListener('click', async () => {
+      const token = localStorage.getItem('forgeai_token');
+      if (!token) return showToast('કૃપા કરીને પહેલા લોગિન કરો.', true);
+
+      btnConnectYouTubeQuick.disabled = true;
+      btnConnectYouTubeQuick.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+      try {
+        const res = await fetch('/api/auth/social/connect-youtube', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ usePreset: true })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        if (currentUser) {
+          if (!currentUser.social) currentUser.social = {};
+          currentUser.social.youtube = data.youtube;
+        }
+        updateSocialBadges(currentUser);
+        showToast(data.message);
+      } catch (err) {
+        showToast(`YouTube એરર: ${err.message}`, true);
+      } finally {
+        btnConnectYouTubeQuick.disabled = false;
+      }
+    });
+  }
+
+  if (btnCloseProfileModal && userProfileModal) {
+    btnCloseProfileModal.addEventListener('click', () => {
+      userProfileModal.style.display = 'none';
+      userProfileModal.classList.add('hidden');
+    });
+  }
+
+  // Logout Click
+  if (btnLogoutUser) {
+    btnLogoutUser.addEventListener('click', async () => {
+      const token = localStorage.getItem('forgeai_token');
+      try {
+        if (token) {
+          await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+          });
+        }
+      } catch (_) {}
+      localStorage.removeItem('forgeai_token');
+      renderLoggedOutState();
+      if (userProfileModal) {
+        userProfileModal.style.display = 'none';
+        userProfileModal.classList.add('hidden');
+      }
+      showToast('સફળતાપૂર્વક Log Out થઈ ગયા છો.');
+    });
+  }
+
+  // Upgrade Pro Button click
+  if (btnUpgradeProInModal) {
+    btnUpgradeProInModal.addEventListener('click', () => {
+      showToast('⚡ Pro Plan (₹૧૯૯/માસ) સબસ્ક્રિપ્શન મોડ્યુલ ટૂંક સમયમાં શરૂ થઈ રહ્યું છે!');
+    });
+  }
+
+  // Auto-Check Session on Page Load
+  const savedToken = localStorage.getItem('forgeai_token');
+  if (savedToken) {
+    fetch('/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${savedToken}` }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.user) {
+          renderLoggedInState(data.user);
+        } else {
+          localStorage.removeItem('forgeai_token');
+          renderLoggedOutState();
+        }
+      })
+      .catch(() => {
+        renderLoggedOutState();
+      });
+  } else {
+    renderLoggedOutState();
+  }
+}
+
+// Global Credit Deductor (used before rendering reel)
+window.useReelCreditIfLoggedIn = async function() {
+  const token = localStorage.getItem('forgeai_token');
+  if (!token) return true; // guest mode allowed or handled
+
+  try {
+    const res = await fetch('/api/auth/use-credit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!data.success && data.creditsExhausted) {
+      showToast(data.error, true);
+      return false;
+    }
+    if (data.success && typeof data.creditsRemaining !== 'undefined') {
+      const headerUserCredits = document.getElementById('headerUserCredits');
+      if (headerUserCredits) {
+        headerUserCredits.textContent = `✨ ${data.creditsRemaining} Reels`;
+      }
+    }
+    return true;
+  } catch (err) {
+    console.warn('Credit deduction error:', err);
+    return true;
+  }
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initUserAuth);
+} else {
+  initUserAuth();
+}
+
+/* =========================================================================
+   MOBILE REEL STEPPER PAGINATION LOGIC (Step 1 -> Step 2 -> Step 3)
+   ========================================================================= */
+function initMobileReelStepper() {
+  const stepTabs = document.querySelectorAll('.stepper-tab');
+  const promptPanel = document.getElementById('studioPromptPanel');
+  const step1 = document.getElementById('stepSectionUpload');
+  const step2 = document.getElementById('stepSectionSettings');
+  const step3 = document.getElementById('stepSectionOutput');
+  const btnGoToStep2 = document.getElementById('btnGoToStep2');
+  const btnBackToStep1 = document.getElementById('btnBackToStep1');
+  const videoFileInput = document.getElementById('videoFileInput');
+
+  function isMobileView() {
+    return window.innerWidth <= 768;
+  }
+
+  window.setReelStep = function(stepNum) {
+    if (!isMobileView()) {
+      if (promptPanel) promptPanel.style.display = 'flex';
+      if (step1) step1.style.display = 'block';
+      if (step2) step2.style.display = 'block';
+      if (step3) step3.style.display = 'flex';
+      return;
+    }
+
+    stepTabs.forEach(tab => {
+      const num = parseInt(tab.getAttribute('data-step'), 10);
+      if (num === stepNum) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    if (stepNum === 1) {
+      if (promptPanel) promptPanel.style.display = 'flex';
+      if (step1) step1.style.display = 'block';
+      if (step2) step2.style.display = 'none';
+      if (step3) step3.style.display = 'none';
+    } else if (stepNum === 2) {
+      if (promptPanel) promptPanel.style.display = 'flex';
+      if (step1) step1.style.display = 'none';
+      if (step2) step2.style.display = 'block';
+      if (step3) step3.style.display = 'none';
+    } else if (stepNum === 3) {
+      if (promptPanel) promptPanel.style.display = 'none';
+      if (step3) step3.style.display = 'flex';
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  stepTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const step = parseInt(tab.getAttribute('data-step'), 10);
+      window.setReelStep(step);
+    });
+  });
+
+  if (btnGoToStep2) {
+    btnGoToStep2.addEventListener('click', () => {
+      window.setReelStep(2);
+    });
+  }
+
+  if (btnBackToStep1) {
+    btnBackToStep1.addEventListener('click', () => {
+      window.setReelStep(1);
+    });
+  }
+
+  // When a file is selected on mobile, auto-advance to Step 2
+  if (videoFileInput) {
+    videoFileInput.addEventListener('change', () => {
+      if (videoFileInput.files && videoFileInput.files.length > 0 && isMobileView()) {
+        setTimeout(() => {
+          window.setReelStep(2);
+        }, 400);
+      }
+    });
+  }
+
+  function updateStepVisibility() {
+    if (isMobileView()) {
+      const activeTab = document.querySelector('.stepper-tab.active');
+      const activeNum = activeTab ? parseInt(activeTab.getAttribute('data-step'), 10) : 1;
+      window.setReelStep(activeNum);
+    } else {
+      if (promptPanel) promptPanel.style.display = 'flex';
+      if (step1) step1.style.display = 'block';
+      if (step2) step2.style.display = 'block';
+      if (step3) step3.style.display = 'flex';
+    }
+  }
+
+  window.addEventListener('resize', updateStepVisibility);
+  updateStepVisibility();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMobileReelStepper);
+} else {
+  initMobileReelStepper();
+}
+
+
 

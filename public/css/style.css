@@ -8,9 +8,9 @@
   --border-glass: rgba(215, 206, 192, 0.7);
   --border-subtle: rgba(226, 219, 205, 0.6);
   --border-focus: #b89758;
-  --text-main: #201d1a;
-  --text-secondary: #57524d;
-  --text-muted: #878077;
+  --text-main: #181512;
+  --text-secondary: #443f39;
+  --text-muted: #6b645b;
   --accent-gold: #c5a880;
   --accent-gold-dark: #946e2b;
   --accent-gold-light: #f7f2e7;
@@ -43,9 +43,9 @@ body {
   background-color: var(--bg-page);
   color: var(--text-main);
   font-family: var(--font-main);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: geometricPrecision;
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
@@ -1024,13 +1024,13 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
 
 .reel-frame {
   width: 100%;
-  max-width: 300px;
+  max-width: 320px;
   aspect-ratio: 9 / 16;
-  background: #0f172a;
+  background: #0c0a09;
   border-radius: 24px;
-  border: 4px solid #ffffff;
+  border: 3px solid #b89758;
   overflow: hidden;
-  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.15), 0 0 0 1px #e2e8f0;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25), 0 0 24px rgba(184, 151, 88, 0.2);
   position: relative;
   display: flex;
   align-items: center;
@@ -1042,6 +1042,7 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   height: 100%;
   object-fit: cover;
   display: none;
+  background: #000;
 }
 
 .reel-video.active {
@@ -1832,6 +1833,65 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   padding: 0.2rem 0.65rem;
   border-radius: 9999px;
   letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+}
+
+.analytics-profile-badge:hover {
+  background: #f5efe3;
+  border-color: rgba(197, 168, 128, 0.75);
+  transform: translateY(-1px);
+}
+
+.btn-open-instagram-profile {
+  background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  color: #ffffff !important;
+  font-family: var(--font-main);
+  font-weight: 700;
+  font-size: 0.84rem;
+  padding: 0.62rem 1.2rem;
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none !important;
+  border: none;
+  box-shadow: 0 4px 14px rgba(220, 39, 67, 0.28);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-open-instagram-profile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(220, 39, 67, 0.45);
+  filter: brightness(1.08);
+  color: #ffffff !important;
+}
+
+.btn-open-youtube-channel {
+  background: #ffffff;
+  color: #dc2626 !important;
+  border: 1.5px solid rgba(220, 38, 38, 0.35);
+  font-family: var(--font-main);
+  font-weight: 700;
+  font-size: 0.84rem;
+  padding: 0.58rem 1.05rem;
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-decoration: none !important;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-open-youtube-channel:hover {
+  background: #fef2f2;
+  border-color: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.18);
+  color: #b91c1c !important;
 }
 
 .analytics-sync-btn {
@@ -2246,5 +2306,471 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   height: 3px;
   background: linear-gradient(90deg, #b89758, #e5c870, #b89758);
 }
+
+/* ==========================================================================
+   MOBILE-FIRST LUXURY TOUCH EXPERIENCE (Large Fonts, Stepper Pagination, Zero Overflow)
+   ========================================================================== */
+
+/* Universal Overflows & Box-Sizing Protection */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Stepper is hidden on desktop by default */
+.mobile-reel-stepper {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  html, body {
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    position: relative !important;
+    font-size: 16px !important;
+  }
+
+  body {
+    padding-bottom: 4.5rem !important;
+    background-color: #faf8f5 !important;
+  }
+
+  /* Layout Container - Zero side clipping */
+  .app-layout {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0.5rem 0.65rem 3.5rem !important;
+    gap: 0.85rem !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Header */
+  .app-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 0.85rem 0.95rem !important;
+    gap: 0.85rem !important;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(215, 206, 192, 0.75) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+    box-sizing: border-box !important;
+  }
+
+  .brand {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.7rem !important;
+    width: 100% !important;
+  }
+
+  .brand-logo {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 1.35rem !important;
+    border-radius: 12px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .brand-title {
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+  }
+
+  .brand-sub {
+    font-size: 0.82rem !important;
+    color: #6b645b !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Top Mode Navigation Tabs */
+  .mode-nav {
+    display: flex !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0.35rem !important;
+    background: #f0ece3 !important;
+    border-radius: 14px !important;
+    gap: 0.4rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .mode-nav::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .mode-tab {
+    flex: 1 0 auto !important;
+    white-space: nowrap !important;
+    padding: 0.7rem 1.1rem !important;
+    font-size: 0.94rem !important;
+    font-weight: 700 !important;
+    min-height: 48px !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.45rem !important;
+    color: #443f39 !important;
+  }
+
+  .mode-tab.active {
+    background: #1c1917 !important;
+    color: #f7eedb !important;
+    box-shadow: 0 4px 12px rgba(28, 25, 23, 0.22) !important;
+  }
+
+  /* Header Actions */
+  .header-actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.55rem !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  .header-actions .btn,
+  #btnOpenAuthModal {
+    min-height: 46px !important;
+    font-size: 0.9rem !important;
+    padding: 0.6rem 1rem !important;
+    border-radius: 9999px !important;
+    font-weight: 700 !important;
+  }
+
+  #userProfileChip {
+    padding: 0.45rem 1rem !important;
+    min-height: 46px !important;
+  }
+
+  #headerUserName {
+    font-size: 0.94rem !important;
+    max-width: 110px !important;
+  }
+
+  #headerUserCredits {
+    font-size: 0.82rem !important;
+    padding: 0.2rem 0.7rem !important;
+  }
+
+  /* ----------------------------------------------------
+     MOBILE STEPPER PAGINATION BAR (3-Step Reel Builder)
+     ---------------------------------------------------- */
+  .mobile-reel-stepper {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    border: 1.5px solid rgba(215, 206, 192, 0.8) !important;
+    border-radius: 16px !important;
+    padding: 0.5rem 0.6rem !important;
+    gap: 0.35rem !important;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.03) !important;
+    margin-bottom: 0.75rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .stepper-tab {
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
+    padding: 0.65rem 0.5rem !important;
+    border: none !important;
+    background: transparent !important;
+    border-radius: 12px !important;
+    font-family: inherit !important;
+    font-size: 0.86rem !important;
+    font-weight: 700 !important;
+    color: #78716c !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    min-height: 46px !important;
+    white-space: nowrap !important;
+  }
+
+  .stepper-tab.active {
+    background: #1c1917 !important;
+    color: #f7eedb !important;
+    box-shadow: 0 3px 10px rgba(28, 25, 23, 0.18) !important;
+  }
+
+  .stepper-tab.active .step-badge-num {
+    background: #b89758 !important;
+    color: #1c1917 !important;
+  }
+
+  .step-badge-num {
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 50% !important;
+    background: #e7e2d8 !important;
+    color: #443f39 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .stepper-divider {
+    width: 8px !important;
+    height: 2px !important;
+    background: #dcd6cb !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Main Container in Single Column Mode */
+  .main-container {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+    gap: 1rem !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Panels & Cards - Clean, Spacious & Uncut */
+  .prompt-panel,
+  .output-panel,
+  .glass-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 1.1rem 1rem !important;
+    border-radius: 18px !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(215, 206, 192, 0.75) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04) !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .panel-header {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .panel-header h2 {
+    font-size: 1.25rem !important;
+    font-weight: 800 !important;
+  }
+
+  /* Upload Dropzone - Large, Inviting Touch Target */
+  .video-dropzone {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 1.8rem 1rem !important;
+    min-height: 160px !important;
+    border-radius: 16px !important;
+    border: 2px dashed rgba(197, 168, 128, 0.7) !important;
+    background: #faf8f5 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  .video-dropzone .drop-icon {
+    font-size: 2.6rem !important;
+    color: #946e2b !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .video-dropzone .dropzone-content h4 {
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    color: #201d1a !important;
+    word-break: break-word !important;
+    line-height: 1.35 !important;
+  }
+
+  .video-dropzone .dropzone-content p {
+    font-size: 0.86rem !important;
+    margin-top: 0.35rem !important;
+    word-break: break-word !important;
+  }
+
+  /* Video & AI Settings Section - Unclipped and Spacious */
+  .tech-stack-section {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 1rem 0.85rem !important;
+    background: #faf8f5 !important;
+    border: 1px solid rgba(215, 206, 192, 0.75) !important;
+    border-radius: 14px !important;
+    margin-top: 0.6rem !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  .tech-stack-header {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 0.85rem !important;
+  }
+
+  .tech-stack-header h3 {
+    font-size: 1.05rem !important;
+    font-weight: 800 !important;
+  }
+
+  .tech-stack-list {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.85rem !important;
+  }
+
+  .tech-stack-row {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.45rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .tech-stack-row label {
+    font-size: 0.92rem !important;
+    font-weight: 700 !important;
+    color: #201d1a !important;
+  }
+
+  /* Select Boxes & Inputs: 100% Width, Ellipsis Truncate, High Touch (50px) */
+  select,
+  .tech-select,
+  .custom-select,
+  .form-input,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    font-size: 16px !important;
+    padding: 0.8rem 1rem !important;
+    min-height: 50px !important;
+    border-radius: 12px !important;
+    background-color: #ffffff !important;
+    border: 1.5px solid rgba(215, 206, 192, 0.85) !important;
+    color: #201d1a !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .custom-select,
+  .tech-select {
+    padding-right: 2.2rem !important;
+  }
+
+  /* Action Buttons (Large, Comfortable Touch) */
+  .btn-large,
+  #btnProcessVideo,
+  #btnRenderVideoReel,
+  #btnPublishBoth,
+  #btnPublishInstagram,
+  #btnPublishYouTube,
+  .mobile-step-nav-btn {
+    width: 100% !important;
+    min-height: 52px !important;
+    font-size: 1.05rem !important;
+    font-weight: 800 !important;
+    padding: 0.95rem 1.25rem !important;
+    border-radius: 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.55rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .social-publish-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+  }
+
+  .social-publish-actions .btn {
+    width: 100% !important;
+    min-height: 50px !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+  }
+
+  /* 9:16 Reel Player Mobile Center */
+  .reel-player-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .reel-frame {
+    width: 100% !important;
+    max-width: 320px !important;
+    aspect-ratio: 9 / 16 !important;
+    border-radius: 20px !important;
+  }
+
+  video {
+    max-width: 100% !important;
+    border-radius: 16px !important;
+  }
+
+  /* Modals Full Screen Mobile Sheet */
+  .modal-overlay {
+    padding: 0.5rem !important;
+    align-items: flex-end !important;
+  }
+
+  .modal-card {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 24px 24px 14px 14px !important;
+    max-height: 92vh !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  .toast {
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    bottom: 1.25rem !important;
+    font-size: 0.95rem !important;
+    padding: 0.9rem 1.25rem !important;
+    border-radius: 14px !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+}
+
 
 

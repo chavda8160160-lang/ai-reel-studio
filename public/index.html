@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ForgeAI - Full-Stack App & AI Video Reels Automation</title>
+  <title>ForgeAI Reel Studio - AI Video Reels & Social Media Automation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400;1,600&family=Noto+Sans+Gujarati:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=classic-smooth-v6">
+  <link rel="stylesheet" href="css/style.css?v=reel-alloptions-v4">
 </head>
 <body>
   <!-- Background Glow & Grid -->
@@ -24,16 +24,13 @@
           <i class="fa-solid fa-wand-magic-sparkles"></i>
         </div>
         <div>
-          <h1 class="brand-title">ForgeAI <span>Studio</span></h1>
-          <p class="brand-sub">Autonomous AI Full-Stack App Builder & Video Reels Automation</p>
+          <h1 class="brand-title">ForgeAI <span>Reel Studio</span></h1>
+          <p class="brand-sub">AI Video Reels Creator & Social Media Automation</p>
         </div>
       </div>
 
       <!-- Mode Switcher Navigation -->
       <nav class="mode-nav">
-        <button id="navModeApp" class="mode-tab" data-target="appBuilderView">
-          <i class="fa-solid fa-laptop-code"></i> 💻 App Builder
-        </button>
         <button id="navModeVideo" class="mode-tab active" data-target="videoStudioView">
           <i class="fa-solid fa-clapperboard"></i> 🎬 Reel Studio
         </button>
@@ -45,7 +42,13 @@
         </button>
       </nav>
 
-      <div class="header-actions" style="display: flex; gap: 0.65rem; align-items: center;">
+      <div class="header-actions" style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+        <!-- Quick Instagram Account Direct Link -->
+        <a id="btnHeaderInstagram" href="https://www.instagram.com/moving.151120/" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" style="border: 1.5px solid rgba(225,48,108,0.35); color: #be185d; background: rgba(225,48,108,0.07); font-size: 0.82rem; padding: 0.45rem 0.95rem; border-radius: 9999px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 700; transition: all 0.2s;" title="Instagram એકાઉન્ટ ખોલો">
+          <i class="fa-brands fa-instagram" style="font-size: 1.05rem; color: #e1306c;"></i>
+          <span>@moving.151120 ↗</span>
+        </a>
+
         <button id="btnHeaderWhatsAppToggle" class="btn btn-ghost" style="border: 1px solid rgba(46,125,90,0.3); color: #2e7d5a; background: rgba(46,125,90,0.06); font-size: 0.82rem; padding: 0.45rem 0.95rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.45rem;" title="WhatsApp Alerts ON / OFF Toggle">
           <i class="fa-brands fa-whatsapp" style="font-size: 1.05rem; color: #2e7d5a;"></i>
           <span id="headerWhatsAppStatusLabel" style="font-weight: 600;">WhatsApp: ON ✓</span>
@@ -54,253 +57,236 @@
           <i class="fa-solid fa-key" style="color: #b89758;"></i>
           <span id="apiKeyStatusLabel" style="font-weight: 600;">API Key Active ✓</span>
         </button>
+
+        <!-- User Auth & Credits Status Button -->
+        <div id="authHeaderWidget" style="display: inline-flex; align-items: center;">
+          <button id="btnOpenAuthModal" class="btn" style="font-size: 0.82rem; padding: 0.45rem 1rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.45rem; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #ffffff; border: none; font-weight: 600; box-shadow: 0 4px 12px rgba(124,58,237,0.3); cursor: pointer;" title="Login or Register for Free Credits">
+            <i class="fa-solid fa-user-circle" style="font-size: 0.95rem;"></i>
+            <span>Sign In / 5 Free Reels ✨</span>
+          </button>
+          <div id="userProfileChip" class="hidden" style="display: none; align-items: center; gap: 0.55rem; background: #ffffff; border: 1px solid rgba(215,206,192,0.85); padding: 0.28rem 0.75rem; border-radius: 9999px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.04);" title="View Account & Credits">
+            <div id="userAvatarInitials" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700;">U</div>
+            <span id="headerUserName" style="font-size: 0.82rem; font-weight: 700; color: #201d1a; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">User</span>
+            <span id="headerUserCredits" style="font-size: 0.72rem; font-weight: 700; background: rgba(124,58,237,0.1); color: #7c3aed; padding: 0.15rem 0.5rem; border-radius: 9999px;">✨ 5 Reels</span>
+          </div>
+        </div>
       </div>
     </header>
 
-    <!-- VIEW 1: Full-Stack Code Builder -->
-    <main class="main-container hidden" id="appBuilderView">
-      <!-- Left Column: Controls & Input -->
-      <section class="prompt-panel glass-card">
-        <div class="panel-header">
-          <h2><i class="fa-solid fa-microchip"></i> What Do You Want to Build?</h2>
-          <span class="badge badge-accent">AI Architect</span>
-        </div>
+    <!-- Mobile Step Pagination Bar (Stepper - For Mobile Devices) -->
+    <div class="mobile-reel-stepper" id="mobileReelStepper">
+      <button type="button" class="stepper-tab active" id="stepTab1" data-step="1">
+        <span class="step-badge-num">1</span>
+        <span class="step-text">વિડિયો અપલોડ</span>
+      </button>
+      <div class="stepper-divider"></div>
+      <button type="button" class="stepper-tab" id="stepTab2" data-step="2">
+        <span class="step-badge-num">2</span>
+        <span class="step-text">AI સેટિંગ્સ</span>
+      </button>
+      <div class="stepper-divider"></div>
+      <button type="button" class="stepper-tab" id="stepTab3" data-step="3">
+        <span class="step-badge-num">3</span>
+        <span class="step-text">રીલ & પબ્લિશ</span>
+      </button>
+    </div>
 
-        <!-- Prompt Textarea -->
-        <div class="form-group">
-          <label for="promptInput">Describe your requirements:</label>
-          <textarea 
-            id="promptInput" 
-            rows="5" 
-            placeholder="e.g. Build an E-commerce Store with Products, Cart, Customer Orders, and Admin Dashboard with SQL Database, C# Backend, and React UI..."
-          ></textarea>
-        </div>
-
-        <!-- Suggested Quick Prompts -->
-        <div class="quick-prompts">
-          <span class="quick-label"><i class="fa-solid fa-bolt"></i> Quick Ideas:</span>
-          <div class="chips">
-            <button class="chip" data-prompt="E-Commerce Store with Products catalog, Shopping Cart, Checkout, Order Tracking, and Admin Product Management">🛍️ E-Commerce Store</button>
-            <button class="chip" data-prompt="Hospital & Clinic Doctor Appointment System with Patients, Doctors, Time slots booking and billing">🏥 Hospital Portal</button>
-            <button class="chip" data-prompt="Inventory & Billing Management System with Customers, Items, Invoices, GST calculations and PDF invoices">📦 Inventory & Billing</button>
-            <button class="chip" data-prompt="Real Estate Property Listing Portal with Buy/Rent properties, Image galleries, Inquiry leads and Agent contact">🏠 Real Estate</button>
-          </div>
-        </div>
-
-        <!-- Tech Stack Configuration -->
-        <div class="tech-stack-section">
-          <div class="tech-stack-header">
-            <h3><i class="fa-solid fa-sliders"></i> Select Tech Stack</h3>
-            <span class="tech-stack-badge">Full-Stack Stack</span>
-          </div>
-          
-          <div class="tech-stack-list">
-            <div class="tech-stack-row">
-              <label for="dbEngine"><i class="fa-solid fa-database"></i> Database</label>
-              <select id="dbEngine" class="custom-select tech-select">
-                <option value="SQL Server" selected>SQL Server (T-SQL)</option>
-                <option value="PostgreSQL">PostgreSQL</option>
-                <option value="SQLite">SQLite</option>
-                <option value="MySQL">MySQL</option>
-              </select>
-            </div>
-
-            <div class="tech-stack-row">
-              <label for="backendFramework"><i class="fa-solid fa-server"></i> Backend</label>
-              <select id="backendFramework" class="custom-select tech-select">
-                <option value="ASP.NET Core C#" selected>ASP.NET Core (C#)</option>
-                <option value="Node.js Express">Node.js (Express)</option>
-                <option value="Python FastAPI">Python (FastAPI)</option>
-              </select>
-            </div>
-
-            <div class="tech-stack-row">
-              <label for="frontendFramework"><i class="fa-solid fa-desktop"></i> Frontend</label>
-              <select id="frontendFramework" class="custom-select tech-select">
-                <option value="React" selected>React (Components)</option>
-                <option value="Modern HTML5/CSS/JS">Vanilla Web (HTML/JS)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Action Button -->
-        <button id="btnGenerate" class="btn btn-primary btn-large">
-          <i class="fa-solid fa-wand-magic-sparkles"></i>
-          <span>Generate Full-Stack Application</span>
-        </button>
-
-        <!-- Loader State -->
-        <div id="generationLoader" class="loader-box hidden">
-          <div class="spinner"></div>
-          <p class="loader-text" id="loaderStatus">AI is generating Schema, Controllers, and UI code...</p>
-          <div class="loader-steps">
-            <span class="step-badge active"><i class="fa-solid fa-check"></i> DB Schema</span>
-            <span class="step-badge active"><i class="fa-solid fa-check"></i> Backend API</span>
-            <span class="step-badge active"><i class="fa-solid fa-check"></i> Frontend UI</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Right Column: Results & Code Viewer -->
-      <section class="output-panel glass-card">
-        <!-- Results Header & Actions -->
-        <div class="output-header">
-          <div class="output-meta">
-            <h2 id="projectTitleDisplay">Your Generated Project</h2>
-            <p id="projectDescDisplay" class="text-muted">Enter your prompt and click "Generate" to view code and live demo.</p>
-          </div>
-          
-          <div class="project-actions hidden" id="projectActionButtons">
-            <button id="btnSaveToDisk" class="btn btn-success" title="Save whole project to PC">
-              <i class="fa-solid fa-floppy-disk"></i> Save to PC
-            </button>
-            <button id="btnDownloadZip" class="btn btn-outline" title="Download ZIP file">
-              <i class="fa-solid fa-file-zipper"></i> Download ZIP
-            </button>
-          </div>
-        </div>
-
-        <!-- Navigation Tabs -->
-        <div class="tab-bar">
-          <button class="tab-btn active" data-tab="preview"><i class="fa-solid fa-play"></i> 1. Live UI Preview</button>
-          <button class="tab-btn" data-tab="database"><i class="fa-solid fa-database"></i> 2. Database (SQL)</button>
-          <button class="tab-btn" data-tab="backend"><i class="fa-solid fa-server"></i> 3. Backend (APIs)</button>
-          <button class="tab-btn" data-tab="frontend"><i class="fa-solid fa-code"></i> 4. Frontend (UI)</button>
-          <button class="tab-btn" data-tab="guide"><i class="fa-solid fa-book-open"></i> 5. Setup & Run Guide</button>
-        </div>
-
-        <!-- Tab Contents -->
-        <div class="tab-content-area">
-          <div class="tab-pane active" id="tab-preview">
-            <div class="preview-wrapper">
-              <iframe id="previewIframe" srcdoc="<body style='font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:85vh;color:#64748b;background:#f8fafc;margin:0;'><div style='text-align:center;padding:2rem;'><div style='font-size:3rem;margin-bottom:1rem;color:#cbd5e1;'>💻</div><h3 style='color:#1e293b;font-weight:700;margin-bottom:0.5rem;'>Live application demo will appear here after code generation</h3><p style='color:#94a3b8;font-size:0.9rem;'>Enter a prompt on the left and click &quot;Generate Full-Stack Application&quot;</p></div></body>"></iframe>
-            </div>
-          </div>
-
-          <div class="tab-pane" id="tab-database">
-            <div class="code-header">
-              <span id="dbFileName"><i class="fa-solid fa-file-code"></i> schema.sql</span>
-              <button class="btn-copy" data-target="dbCodeArea"><i class="fa-regular fa-copy"></i> Copy</button>
-            </div>
-            <pre class="code-block"><code id="dbCodeArea">-- SQL Server Table Schema & Seed Data will appear here</code></pre>
-          </div>
-
-          <div class="tab-pane" id="tab-backend">
-            <div class="file-browser-layout">
-              <div class="file-list" id="backendFileList">
-                <span class="file-list-heading">Files</span>
-              </div>
-              <div class="file-viewer">
-                <div class="code-header">
-                  <span id="backendCurrentFileName"><i class="fa-solid fa-file-code"></i> Backend File</span>
-                  <button class="btn-copy" data-target="backendCodeArea"><i class="fa-regular fa-copy"></i> Copy</button>
-                </div>
-                <pre class="code-block"><code id="backendCodeArea">// Backend Code will appear here</code></pre>
-              </div>
-            </div>
-          </div>
-
-          <div class="tab-pane" id="tab-frontend">
-            <div class="file-browser-layout">
-              <div class="file-list" id="frontendFileList">
-                <span class="file-list-heading">Files</span>
-              </div>
-              <div class="file-viewer">
-                <div class="code-header">
-                  <span id="frontendCurrentFileName"><i class="fa-solid fa-file-code"></i> Frontend File</span>
-                  <button class="btn-copy" data-target="frontendCodeArea"><i class="fa-regular fa-copy"></i> Copy</button>
-                </div>
-                <pre class="code-block"><code id="frontendCodeArea">// Frontend Code will appear here</code></pre>
-              </div>
-            </div>
-          </div>
-
-          <div class="tab-pane" id="tab-guide">
-            <div class="guide-box" id="guideContent">
-              <h3>How to Run This Project?</h3>
-              <p>Step-by-step instructions and run commands will appear here once the project is generated.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <!-- VIEW 2: AI Video 30s Reels & Auto-Post Studio -->
+    <!-- VIEW: AI Video 30s Reels & Auto-Post Studio -->
     <main class="main-container" id="videoStudioView">
       <!-- Left Column: Video Upload & AI Director Settings -->
-      <section class="prompt-panel glass-card">
-        <div class="panel-header">
-          <h2><i class="fa-solid fa-video"></i> Upload Video</h2>
-          <span class="badge badge-accent">AI Video Director</span>
-        </div>
+      <section class="prompt-panel glass-card" id="studioPromptPanel">
+        <!-- STEP 1: Video or Photos Upload -->
+        <div id="stepSectionUpload" class="reel-step-card">
+          <div class="panel-header">
+            <h2><i class="fa-solid fa-clapperboard"></i> Content Studio</h2>
+            <span class="badge badge-accent">AI Reel Creator</span>
+          </div>
 
-        <!-- Drag & Drop Upload Zone -->
-        <div class="video-dropzone" id="videoDropzone">
-          <input type="file" id="videoFileInput" accept="video/mp4,video/quicktime,video/webm,video/mkv" class="file-input-hidden">
-          <div class="dropzone-content">
-            <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
-            <h4>Drag & drop any video here or click to browse</h4>
-            <p class="text-muted">MP4, MOV, WEBM (Any video length)</p>
-            <span class="file-name-badge hidden" id="selectedFileName"></span>
+          <!-- Switcher: Video vs Photos -->
+          <div class="studio-source-tabs" style="display: flex; background: #ede8df; padding: 0.28rem; border-radius: 12px; margin-bottom: 1.1rem; gap: 0.35rem; border: 1px solid rgba(215, 206, 192, 0.8);">
+            <button type="button" id="tabSourceVideo" class="studio-source-btn active" style="flex: 1; padding: 0.6rem 0.8rem; border-radius: 9px; border: none; font-size: 0.86rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: #ffffff; color: #1c1917; box-shadow: 0 2px 6px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; gap: 0.45rem;">
+              <i class="fa-solid fa-video" style="color: #b89758;"></i> <span>🎥 વિડિયોમાંથી રીલ</span>
+            </button>
+            <button type="button" id="tabSourcePhotos" class="studio-source-btn" style="flex: 1; padding: 0.6rem 0.8rem; border-radius: 9999px; border: none; font-size: 0.86rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: #78716c; display: flex; align-items: center; justify-content: center; gap: 0.45rem;">
+              <i class="fa-solid fa-camera" style="color: #be185d;"></i> <span>📸 ફોટામાંથી રીલ (New ✨)</span>
+            </button>
+          </div>
+
+          <!-- SUB-VIEW A: Video Upload Flow -->
+          <div id="videoSourcePanel">
+            <!-- Drag & Drop Upload Zone -->
+            <div class="video-dropzone" id="videoDropzone">
+              <input type="file" id="videoFileInput" accept="video/mp4,video/quicktime,video/webm,video/mkv" class="file-input-hidden">
+              <div class="dropzone-content">
+                <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+                <h4>કોઈપણ વિડિયો અહીં નાખો અથવા પસંદ કરો</h4>
+                <p class="text-muted">MP4, MOV, WEBM (ગેલેરી અથવા કેમેરા)</p>
+                <span class="file-name-badge hidden" id="selectedFileName"></span>
+              </div>
+            </div>
+
+            <!-- Mobile Next Button to Step 2 -->
+            <button type="button" id="btnGoToStep2" class="btn btn-primary mobile-step-nav-btn" style="margin-top: 0.85rem; width: 100%;">
+              <span>આગળ વધો: AI સેટિંગ્સ ⚙️</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+
+          <!-- SUB-VIEW B: Photos-to-Reel Flow (New Feature) -->
+          <div id="photosSourcePanel" class="hidden" style="display: none; flex-direction: column; gap: 0.95rem;">
+            <!-- Photos Dropzone -->
+            <div class="video-dropzone" id="photosDropzone" style="min-height: 140px; padding: 1.25rem 1rem; cursor: pointer;">
+              <input type="file" id="photoFilesInput" accept="image/*" multiple class="file-input-hidden">
+              <div class="dropzone-content">
+                <i class="fa-solid fa-images drop-icon" style="color: #be185d;"></i>
+                <h4 style="font-size: 0.98rem; font-weight: 700;">સાડી અથવા પ્રોડક્ટના ૨ થી ૬ ફોટા પસંદ કરો</h4>
+                <p class="text-muted" style="font-size: 0.78rem;">ગેલેરીમાંથી એકસાથે અથવા એક પછી એક ફોટા ઉમેરો (મહત્તમ ૬ ફોટા)</p>
+                <button type="button" id="btnSelectPhotosFromGallery" style="margin-top: 0.55rem; padding: 0.45rem 1rem; border-radius: 9999px; font-size: 0.82rem; font-weight: 700; background: #ffffff; border: 1.5px solid #be185d; color: #be185d; display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; pointer-events: none;">
+                  <i class="fa-solid fa-folder-open"></i> <span>ગેલેરી ખોલો (Select 2-6 Photos)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 1-Click Load Patola Saree Samples -->
+            <button type="button" id="btnLoadPatolaPresetPhotos" class="btn btn-ghost" style="border: 1.5px dashed rgba(184, 151, 88, 0.7); background: #fbf7ef; color: #946e2b; font-size: 0.84rem; padding: 0.6rem 0.9rem; border-radius: 12px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 700; cursor: pointer;">
+              <i class="fa-solid fa-wand-magic-sparkles" style="color: #b89758;"></i>
+              <span>🥻 Patola સાડી ૬ સેમ્પલ ફોટા લો (1-Click Ready - 6 Photos)</span>
+            </button>
+
+            <!-- Selected Photos Preview Gallery -->
+            <div id="selectedPhotosGallery" class="hidden" style="display: none; flex-direction: column; gap: 0.6rem; background: #faf8f5; border: 1px solid rgba(215, 206, 192, 0.8); border-radius: 14px; padding: 0.85rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <span id="selectedPhotosCountLabel" style="font-size: 0.85rem; font-weight: 800; color: #1c1917; display: flex; align-items: center; gap: 0.4rem;">
+                  <i class="fa-solid fa-images" style="color: #b89758;"></i>
+                  <span>૦ ફોટા પસંદ કર્યા</span>
+                </span>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <button type="button" id="btnAddMorePhotos" style="background: rgba(184, 151, 88, 0.15); border: 1px solid rgba(184, 151, 88, 0.6); color: #946e2b; font-size: 0.76rem; font-weight: 700; padding: 0.28rem 0.7rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <i class="fa-solid fa-plus"></i> વધુ ફોટા ઉમેરો
+                  </button>
+                  <button type="button" id="btnClearPhotos" style="background: none; border: none; font-size: 0.76rem; color: #dc2626; cursor: pointer; font-weight: 700;">સાફ કરો</button>
+                </div>
+              </div>
+              <div id="selectedPhotosThumbs" style="display: flex; gap: 0.6rem; overflow-x: auto; padding: 0.4rem 0; align-items: center;"></div>
+            </div>
+
+            <!-- Product Details Inputs -->
+            <div style="background: #faf8f5; border: 1px solid rgba(215, 206, 192, 0.7); border-radius: 14px; padding: 0.95rem; display: flex; flex-direction: column; gap: 0.75rem;">
+              <div>
+                <label for="photoProductTitle" style="font-size: 0.78rem; font-weight: 700; color: #44403c; display: block; margin-bottom: 0.3rem;">
+                  <i class="fa-solid fa-tag" style="color: #b89758;"></i> પ્રોડક્ટનું નામ (Product Title):
+                </label>
+                <input type="text" id="photoProductTitle" value="રાજવી પટોળા સિલ્ક સાડી" placeholder="દા.ત. પટોળા સાડી #A1" class="form-input" style="padding: 0.55rem 0.85rem !important; min-height: 44px !important; font-size: 0.88rem !important;">
+              </div>
+
+              <div style="display: flex; gap: 0.6rem;">
+                <div style="flex: 1;">
+                  <label for="photoProductPrice" style="font-size: 0.78rem; font-weight: 700; color: #44403c; display: block; margin-bottom: 0.3rem;">
+                    <i class="fa-solid fa-indian-rupee-sign" style="color: #16a34a;"></i> ભાવ (Price):
+                  </label>
+                  <input type="text" id="photoProductPrice" value="₹3,800" placeholder="₹3,800" class="form-input" style="padding: 0.55rem 0.85rem !important; min-height: 44px !important; font-size: 0.88rem !important;">
+                </div>
+                <div style="flex: 1.2;">
+                  <label for="photoProductBadge" style="font-size: 0.78rem; font-weight: 700; color: #44403c; display: block; margin-bottom: 0.3rem;">
+                    <i class="fa-solid fa-fire" style="color: #e11d48;"></i> ઓફર બેજ (Badge):
+                  </label>
+                  <input type="text" id="photoProductBadge" value="સ્પેશિયલ ઓફર 🔥" placeholder="લિમિટેડ સ્ટોક 🔥" class="form-input" style="padding: 0.55rem 0.85rem !important; min-height: 44px !important; font-size: 0.88rem !important;">
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 140px;">
+                  <label for="photoTransitionEffect" style="font-size: 0.78rem; font-weight: 700; color: #44403c; display: block; margin-bottom: 0.3rem;">
+                    <i class="fa-solid fa-wand-magic-sparkles" style="color: #b89758;"></i> ફોટો ઇફેક્ટ (Transition Effect):
+                  </label>
+                  <select id="photoTransitionEffect" class="custom-select tech-select" style="padding: 0.55rem 0.85rem !important; min-height: 44px !important; font-size: 0.86rem !important;">
+                    <option value="capcut-flash" selected>⚡ CapCut White Flash & 3D Zoom (ટ્રેન્ડિંગ વાયરલ)</option>
+                    <option value="capcut-blur-bg">🖼️ CapCut Blur Canvas + White Flash (બ્લર બેકગ્રાઉન્ડ)</option>
+                    <option value="kenburns-fade">🎬 Cinematic Ken Burns Dissolve (લક્ઝરી લુક)</option>
+                    <option value="smooth-fade">✨ Smooth Cross-Dissolve (સોફ્ટ ફેડ)</option>
+                    <option value="zoom-in">🔍 Slow 3D Zoom-In (ધીમો ઝૂમ)</option>
+                  </select>
+                </div>
+
+                <div style="flex: 1; min-width: 140px;">
+                  <label for="photoBgmTrack" style="font-size: 0.78rem; font-weight: 700; color: #44403c; display: block; margin-bottom: 0.3rem;">
+                    <i class="fa-solid fa-music" style="color: #be185d;"></i> બેકગ્રાઉન્ડ મ્યુઝિક (BGM):
+                  </label>
+                  <select id="photoBgmTrack" class="custom-select tech-select" style="padding: 0.55rem 0.85rem !important; min-height: 44px !important; font-size: 0.86rem !important;">
+                    <option value="luxury-saree" selected>🥻 Luxury Saree Theme (શાહી પટોળા વાઇબ્સ)</option>
+                    <option value="royal-heritage">👑 Royal Heritage (રાજવી સંગીત)</option>
+                    <option value="cinematic-ambient">✨ Cinematic Ambient (સ્મૂથ)</option>
+                    <option value="lofi-aesthetic">☕ Lo-Fi Aesthetic (શાંત)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 1 to Step 2 Navigation Button -->
+            <button type="button" id="btnGoToStep2FromPhotos" class="btn btn-primary" style="margin-top: 0.35rem; width: 100%; min-height: 48px; font-size: 0.98rem; font-weight: 700; background: linear-gradient(135deg, #b89758 0%, #8a6828 100%); color: #ffffff; border: none; border-radius: 12px; box-shadow: 0 3px 12px rgba(184,151,88,0.3); display: flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer;">
+              <span>આગળ વધો: AI સેટિંગ્સ & રીલ બનાવો ⚙️</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <button type="button" id="btnGeneratePhotoReel" style="display: none;"></button>
           </div>
         </div>
 
-        <!-- Video AI Settings Card -->
-        <div class="tech-stack-section">
-          <div class="tech-stack-header">
-            <h3><i class="fa-solid fa-sliders"></i> Video & AI Settings</h3>
-            <span class="tech-stack-badge">Reel Optimization</span>
-          </div>
-          
-          <div class="tech-stack-list">
-            <div class="tech-stack-row">
-              <label for="videoNicheSelect"><i class="fa-solid fa-eye"></i> Video Niche</label>
-              <select id="videoNicheSelect" class="custom-select tech-select">
-                <option value="Auto-Detect (Any Video - AI Vision will scan frames)" selected>🤖 AI Auto-Detect (ઓટોમેટિક વિડીયો સ્કેન)</option>
-                <option value="Movies, Cinema Scenes, Film Clips & Dialogue">🎬 Movies & Cinema Clips (ફિલ્મો, સીન્સ, ડાયલોગ)</option>
-                <option value="Little Boy, Cute Kids, Baby & Children Moments">👶 Little Boy & Cute Kids (નાના બાળકો, ક્યૂટ બેબી)</option>
-                <option value="Patola Sarees, Ethnic & Traditional Wear">🥻 Patola Sarees & Fashion</option>
-                <option value="Cars, Bikes & Supercars">🏎️ Cars & Bikes</option>
-                <option value="Gym, Fitness & Workout Motivation">💪 Gym & Fitness</option>
-                <option value="Food, Cooking, Cafe & Street Food">🍔 Food & Cooking</option>
-                <option value="Travel, Nature, Mountains & Tourism">🏔️ Travel & Nature</option>
-                <option value="Gold & Diamond Jewellery Collection">💍 Jewellery & Luxury</option>
-                <option value="Comedy, Memes & Entertainment">😂 Comedy & Entertainment</option>
-                <option value="Tech, Gadgets, Gaming & Unboxing">🎮 Tech & Gadgets</option>
-                <option value="Business, Real Estate, Talks & Podcasts">🎙️ Business & Podcasts</option>
-              </select>
+        <!-- STEP 2: Video AI Settings Card -->
+        <div id="stepSectionSettings" class="reel-step-card">
+          <div class="tech-stack-section">
+            <div class="tech-stack-header">
+              <h3><i class="fa-solid fa-sliders"></i> AI Reel Settings (Video & Photos)</h3>
+              <span class="tech-stack-badge">Reel Optimization</span>
             </div>
+            
+            <div class="tech-stack-list">
+              <div class="tech-stack-row">
+                <label for="videoNicheSelect"><i class="fa-solid fa-eye"></i> Video Niche</label>
+                <select id="videoNicheSelect" class="custom-select tech-select">
+                  <option value="Auto-Detect (Any Video - AI Vision will scan frames)" selected>🤖 AI Auto-Detect (ઓટો સ્કેન)</option>
+                  <option value="Movies, Cinema Scenes, Film Clips & Dialogue">🎬 Movies & Cinema (ફિલ્મો/સીન્સ)</option>
+                  <option value="Little Boy, Cute Kids, Baby & Children Moments">👶 Cute Kids & Baby (બાળકો)</option>
+                  <option value="Patola Sarees, Ethnic & Traditional Wear">🥻 Patola Sarees & Fashion (સાડી)</option>
+                  <option value="Cars, Bikes & Supercars">🏎️ Cars & Bikes (વાહનો)</option>
+                  <option value="Gym, Fitness & Workout Motivation">💪 Gym & Fitness (ફિટનેસ)</option>
+                  <option value="Food, Cooking, Cafe & Street Food">🍔 Food & Cooking (રસોઈ)</option>
+                  <option value="Travel, Nature, Mountains & Tourism">🏔️ Travel & Nature (પ્રવાસ)</option>
+                  <option value="Gold & Diamond Jewellery Collection">💍 Jewellery & Luxury (દાગીના)</option>
+                  <option value="Comedy, Memes & Entertainment">😂 Comedy & Entertainment</option>
+                  <option value="Tech, Gadgets, Gaming & Unboxing">🎮 Tech & Gadgets (ટેક)</option>
+                  <option value="Business, Real Estate, Talks & Podcasts">🎙️ Business & Podcasts</option>
+                </select>
+              </div>
 
-            <div class="tech-stack-row">
-              <label for="videoDurationSelect"><i class="fa-solid fa-stopwatch"></i> Target Duration</label>
-              <select id="videoDurationSelect" class="custom-select tech-select">
-                <option value="30" selected>⚡ 30 Seconds (Best for Reels/Shorts)</option>
-                <option value="15">🔥 15 Seconds (High Retention Hook)</option>
-                <option value="60">⏱️ 60 Seconds (Full Showcase)</option>
-              </select>
-            </div>
+              <div class="tech-stack-row">
+                <label for="videoDurationSelect"><i class="fa-solid fa-stopwatch"></i> Target Duration</label>
+                <select id="videoDurationSelect" class="custom-select tech-select">
+                  <option value="30" selected>⚡ 30 Seconds (Best for Reels)</option>
+                  <option value="15">🔥 15 Seconds (High Retention)</option>
+                  <option value="60">⏱️ 60 Seconds (Full Showcase)</option>
+                </select>
+              </div>
 
-            <div class="tech-stack-row">
-              <label for="videoStyleSelect"><i class="fa-solid fa-palette"></i> Color Grading</label>
-              <select id="videoStyleSelect" class="custom-select tech-select">
-                <option value="auto" selected>🤖 AI Auto-Decide (વિડીયો જોઈને આપોઆપ બેસ્ટ)</option>
-                <option value="cinematic-movie">🎬 Cinematic Movie (Teal & Orange / Deep Drama)</option>
-                <option value="kids-sunny">👶 Cute Kids Warm Glow (સોફ્ટ & વાઈબ્રન્ટ)</option>
-                <option value="royal-silk">✨ Royal Silk Glow (Rich Colors)</option>
-                <option value="heritage-gold">🌟 Heritage Warm Gold</option>
-                <option value="cinematic-vibrant">🔥 High Contrast Vibrant</option>
-              </select>
-            </div>
+              <div class="tech-stack-row">
+                <label for="videoStyleSelect"><i class="fa-solid fa-palette"></i> Color Grading</label>
+                <select id="videoStyleSelect" class="custom-select tech-select">
+                  <option value="auto" selected>🤖 AI Auto-Decide (ઓટો બેસ્ટ)</option>
+                  <option value="cinematic-movie">🎬 Cinematic Movie (ટીલ/ઓરેન્જ)</option>
+                  <option value="kids-sunny">👶 Cute Kids Warm Glow (સોફ્ટ)</option>
+                  <option value="royal-silk">✨ Royal Silk Glow (રીચ કલર્સ)</option>
+                  <option value="heritage-gold">🌟 Heritage Warm Gold (ગોલ્ડ)</option>
+                  <option value="cinematic-vibrant">🔥 High Contrast Vibrant</option>
+                </select>
+              </div>
 
-            <div class="tech-stack-row">
-              <label for="videoSubtitlesSelect"><i class="fa-solid fa-closed-captioning"></i> Dynamic Subtitles</label>
-              <select id="videoSubtitlesSelect" class="custom-select tech-select">
-                <option value="hormozi" selected>🔥 Alex Hormozi Style (Bold Yellow/Neon)</option>
-                <option value="electric-cyan">⚡ Electric Cyan & Yellow</option>
-                <option value="none">🚫 No Subtitles (Clean Video)</option>
-              </select>
-            </div>
+              <div class="tech-stack-row">
+                <label for="videoSubtitlesSelect"><i class="fa-solid fa-closed-captioning"></i> Dynamic Subtitles</label>
+                <select id="videoSubtitlesSelect" class="custom-select tech-select">
+                  <option value="hormozi" selected>🔥 Alex Hormozi Style (Yellow/Neon)</option>
+                  <option value="electric-cyan">⚡ Electric Cyan & Yellow</option>
+                  <option value="none">🚫 No Subtitles (Clean Video)</option>
+                </select>
+              </div>
 
             <!-- Feature #3: AI Background Music & Audio Mixer -->
             <div class="tech-stack-row">
@@ -308,6 +294,7 @@
               <div style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
                 <select id="videoBgmSelect" class="custom-select tech-select" style="flex: 1;">
                   <option value="none" selected>🔇 No BGM (Keep Original Sound)</option>
+                  <option value="custom">🎵 📁 પોતાનું મનપસંદ સોંગ / ગીત અપલોડ કરો (Upload Custom Song)</option>
                   <option value="royal-heritage">👑 Royal Heritage (Sitar & Ambient)</option>
                   <option value="luxury-saree">✨ Luxury Saree (Acoustic Flute)</option>
                   <option value="cinematic-ambient">🎬 Cinematic Ambient Glow</option>
@@ -315,6 +302,29 @@
                 </select>
                 <button type="button" id="btnPreviewBgm" class="btn btn-ghost" title="મ્યુઝિક સાંભળો (Play / Pause)" style="padding: 0.45rem 0.8rem; font-size: 0.85rem; border: 1px solid rgba(215, 206, 192, 0.8); height: 42px; border-radius: var(--radius-sm); flex-shrink: 0;">
                   <i class="fa-solid fa-play"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Custom Audio / Song Upload Box -->
+            <div id="customAudioUploadBox" style="display: none; margin-top: -0.25rem; margin-bottom: 0.6rem; background: rgba(184, 151, 88, 0.08); border: 1.5px dashed rgba(184, 151, 88, 0.5); border-radius: 10px; padding: 0.75rem 0.9rem;">
+              <input type="file" id="customAudioInput" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg" style="display: none;">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="button" id="btnChooseCustomAudio" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.85rem; display: flex; align-items: center; gap: 0.45rem; border-color: #b89758; color: #5d4316; font-weight: 600;">
+                  <i class="fa-solid fa-cloud-arrow-up" style="color: #b89758;"></i> 🎵 ગીત ફાઇલ પસંદ કરો (MP3 / Audio)
+                </button>
+                <span id="customAudioFileStatus" style="font-size: 0.76rem; color: #64748b; font-style: italic;">કોઈ ગીત પસંદ નથી કર્યું</span>
+              </div>
+              <div id="customAudioPlayerRow" style="display: none; margin-top: 0.6rem; align-items: center; gap: 0.6rem; background: #ffffff; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <button type="button" id="btnPlayCustomAudio" class="btn btn-ghost" title="ગીત સાંભળો (Play / Pause)" style="padding: 0; font-size: 0.85rem; height: 34px; width: 34px; border-radius: 50%; background: #f8fafc; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #b89758;">
+                  <i class="fa-solid fa-play"></i>
+                </button>
+                <div style="flex: 1; min-width: 0;">
+                  <div id="customAudioNameDisplay" style="font-size: 0.8rem; font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">song.mp3</div>
+                  <div id="customAudioDurationDisplay" style="font-size: 0.7rem; color: #64748b;">0:00 • તૈયાર છે</div>
+                </div>
+                <button type="button" id="btnRemoveCustomAudio" title="ગીત હટાવો (Remove Song)" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.9rem; padding: 0.3rem 0.5rem; transition: transform 0.15s ease;">
+                  <i class="fa-solid fa-trash-can"></i>
                 </button>
               </div>
             </div>
@@ -404,6 +414,13 @@
           </div>
         </div>
 
+        <!-- Mobile Back Button to Step 1 -->
+        <button type="button" id="btnBackToStep1" class="btn btn-ghost mobile-step-nav-btn" style="margin-top: 0.6rem; width: 100%;">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>⬅️ પાછળ જાઓ (નવો વિડિયો પસંદ કરો)</span>
+        </button>
+      </div>
+
         <!-- Scheduled Queue List in Left Column -->
         <div class="scheduled-queue-card" id="scheduledQueueCard">
           <div class="queue-header">
@@ -416,8 +433,8 @@
         </div>
       </section>
 
-      <!-- Right Column: Video Preview & Social Auto-Publish -->
-      <section class="output-panel glass-card">
+      <!-- Right Column: Video Preview & Social Auto-Publish (STEP 3) -->
+      <section class="output-panel glass-card reel-step-card" id="stepSectionOutput">
         <div class="output-header">
           <div class="output-meta">
             <h2 id="videoResultTitle">✨ Generated 30s Viral Reel</h2>
@@ -694,7 +711,7 @@
       
       <!-- Top Profile & Live Status Header -->
       <section class="analytics-header-card">
-        <div style="display: flex; align-items: center; gap: 1.2rem;">
+        <div style="display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;">
           <div style="position: relative;">
             <img id="analyticsProfilePic" class="analytics-profile-avatar" src="https://ui-avatars.com/api/?name=Reel+Creator&background=1c1917&color=e5c870" alt="Profile">
             <span style="position: absolute; bottom: 2px; right: 2px; width: 13px; height: 13px; background: #16a34a; border: 2px solid #fff; border-radius: 50%;"></span>
@@ -702,9 +719,11 @@
           <div>
             <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
               <h2 id="analyticsProfileName" class="analytics-profile-title">Reel Creator</h2>
-              <span id="analyticsUsernameBadge" class="analytics-profile-badge">
-                @moving.151120
-              </span>
+              <a id="analyticsUsernameBadge" href="https://www.instagram.com/moving.151120/" target="_blank" rel="noopener noreferrer" class="analytics-profile-badge" style="text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;" title="ક્લિક કરીને Instagram એકાઉન્ટ ખોલો">
+                <i class="fa-brands fa-instagram" style="color: #be185d;"></i>
+                <span id="analyticsUsernameText">@moving.151120</span>
+                <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem; opacity: 0.8;"></i>
+              </a>
             </div>
             <p style="font-size: 0.82rem; color: #78716c; margin: 0.3rem 0 0 0; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
               <span><i class="fa-brands fa-instagram" style="color: #be185d;"></i> Instagram: <b id="analyticsFollowersCount" style="color: #1c1917;">2 Followers</b></span>
@@ -714,11 +733,25 @@
           </div>
         </div>
 
-        <div style="display: flex; gap: 0.85rem; align-items: center;">
-          <div style="text-align: right; font-size: 0.78rem; color: #78716c;">
+        <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+          <div style="text-align: right; font-size: 0.78rem; color: #78716c; margin-right: 0.2rem;">
             <span>છેલ્લે અપડેટ:</span> <b id="analyticsLastUpdated" style="color: #1c1917; font-family: var(--font-serif);">હમણાં જ</b>
           </div>
-          <button id="btnRefreshAnalytics" type="button" class="analytics-sync-btn">
+
+          <!-- 📸 DIRECT INSTAGRAM OPEN BUTTON -->
+          <a id="btnOpenInstagram" href="https://www.instagram.com/moving.151120/" target="_blank" rel="noopener noreferrer" class="btn-open-instagram-profile" title="Instagram પ્રોફાઇલ ખોલો">
+            <i class="fa-brands fa-instagram" style="font-size: 1.1rem;"></i>
+            <span>Instagram ખોલો ↗</span>
+          </a>
+
+          <!-- ▶️ YOUTUBE OPEN BUTTON -->
+          <a id="btnOpenYouTube" href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" class="btn-open-youtube-channel" title="YouTube ચેનલ ખોલો">
+            <i class="fa-brands fa-youtube" style="font-size: 1.05rem;"></i>
+            <span>YouTube ↗</span>
+          </a>
+
+          <!-- ⚡ SYNC STATS BUTTON -->
+          <button id="btnRefreshAnalytics" type="button" class="analytics-sync-btn" title="લાઈવ આંકડા અપડેટ કરો">
             <i class="fa-solid fa-rotate" id="analyticsSyncIcon"></i>
             <span>⚡ Sync Live Stats</span>
           </button>
@@ -772,7 +805,10 @@
             </div>
           </div>
           <div id="kpiFollowersBreakdown" style="margin-top: 0.85rem; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-            <span class="analytics-pill-neutral" style="color: #946e2b;"><i class="fa-brands fa-instagram"></i> @moving.151120</span>
+            <a id="kpiFollowersProfileLink" href="https://www.instagram.com/moving.151120/" target="_blank" rel="noopener noreferrer" class="analytics-pill-neutral" style="color: #946e2b; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;" title="Instagram પ્રોફાઇલ ખોલો">
+              <i class="fa-brands fa-instagram"></i>
+              <span>@moving.151120 ↗</span>
+            </a>
           </div>
         </div>
 
@@ -1575,8 +1611,191 @@
       </div>
     </div>
   </div>
+  <!-- AUTH MODAL (Login & Register) -->
+  <div id="authModal" class="modal-overlay hidden" style="display: none; position: fixed; inset: 0; background: rgba(10, 10, 15, 0.75); backdrop-filter: blur(8px); z-index: 99999; justify-content: center; align-items: center; padding: 1rem;">
+    <div class="modal-card" style="max-width: 440px; width: 100%; background: #ffffff; border-radius: 20px; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3); border: 1px solid rgba(215, 206, 192, 0.6); overflow: hidden; animation: modalPop 0.25s ease-out;">
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: #ffffff; padding: 1.5rem; text-align: center; position: relative;">
+        <button type="button" id="btnCloseAuthModal" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255,255,255,0.15); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">✕</button>
+        <div style="width: 48px; height: 48px; margin: 0 auto 0.75rem auto; background: rgba(255,255,255,0.12); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+          ✨
+        </div>
+        <h3 style="margin: 0; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em;">ForgeAI Studio</h3>
+        <p style="margin: 0.35rem 0 0 0; font-size: 0.82rem; color: #c7d2fe;">તમારું એકાઉન્ટ અને ફ્રી રીલ્સ મેનેજ કરો</p>
+
+        <!-- Auth Tabs -->
+        <div style="display: flex; background: rgba(0,0,0,0.25); border-radius: 9999px; padding: 3px; margin-top: 1.1rem; gap: 4px;">
+          <button type="button" id="tabAuthLogin" class="auth-tab active" style="flex: 1; padding: 0.5rem 0; border: none; background: #ffffff; color: #1e1b4b; border-radius: 9999px; font-weight: 700; font-size: 0.84rem; cursor: pointer; transition: all 0.2s;">
+            🔑 Log In
+          </button>
+          <button type="button" id="tabAuthRegister" class="auth-tab" style="flex: 1; padding: 0.5rem 0; border: none; background: transparent; color: #c7d2fe; border-radius: 9999px; font-weight: 600; font-size: 0.84rem; cursor: pointer; transition: all 0.2s;">
+            ✨ Create Free (5 Reels)
+          </button>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 1.5rem;">
+        <!-- Alert / Error message container -->
+        <div id="authAlertBox" class="hidden" style="display: none; padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.82rem; margin-bottom: 1rem; line-height: 1.4;"></div>
+
+        <!-- 1. LOGIN FORM -->
+        <form id="formAuthLogin">
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.35rem;">ઇમેઇલ અથવા મોબાઇલ નંબર (Email or Mobile)</label>
+            <div style="position: relative;">
+              <i class="fa-solid fa-user-circle" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 0.95rem;"></i>
+              <input type="text" id="loginEmail" required placeholder="તમારો ઇમેઇલ અથવા 10 અંકનો નંબર" style="width: 100%; box-sizing: border-box; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 0.9rem; outline: none; transition: border-color 0.2s;">
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.35rem;">પાસવર્ડ (Password)</label>
+            <div style="position: relative;">
+              <i class="fa-solid fa-lock" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 0.85rem;"></i>
+              <input type="password" id="loginPassword" required placeholder="••••••••" style="width: 100%; box-sizing: border-box; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 0.9rem; outline: none; transition: border-color 0.2s;">
+            </div>
+          </div>
+
+          <button type="submit" id="btnSubmitLogin" class="btn" style="width: 100%; padding: 0.85rem; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #ffffff; border: none; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <span>🚀 Log In કરો</span>
+          </button>
+        </form>
+
+        <!-- 2. REGISTER FORM -->
+        <form id="formAuthRegister" style="display: none;">
+          <div style="margin-bottom: 0.9rem;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.35rem;">પૂરું નામ (Full Name)</label>
+            <div style="position: relative;">
+              <i class="fa-solid fa-user" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 0.85rem;"></i>
+              <input type="text" id="regName" required placeholder="તમારું પૂરું નામ" style="width: 100%; box-sizing: border-box; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 0.9rem; outline: none;">
+            </div>
+          </div>
+
+          <div style="margin-bottom: 0.9rem;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.35rem;">ઇમેઇલ એડ્રેસ (Email)</label>
+            <div style="position: relative;">
+              <i class="fa-solid fa-envelope" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 0.85rem;"></i>
+              <input type="email" id="regEmail" required placeholder="name@example.com" style="width: 100%; box-sizing: border-box; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 0.9rem; outline: none;">
+            </div>
+          </div>
+
+          <div style="margin-bottom: 0.9rem;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.35rem;">મોબાઈલ / WhatsApp નંબર</label>
+            <div style="position: relative;">
+              <i class="fa-brands fa-whatsapp" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #16a34a; font-size: 0.95rem;"></i>
+              <input type="tel" id="regPhone" placeholder="9876543210" style="width: 100%; box-sizing: border-box; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 0.9rem; outline: none;">
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.1rem;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.35rem;">પાસવર્ડ (Password - ઓછામાં ઓછો 6 અક્ષર)</label>
+            <div style="position: relative;">
+              <i class="fa-solid fa-lock" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 0.85rem;"></i>
+              <input type="password" id="regPassword" required minlength="6" placeholder="••••••••" style="width: 100%; box-sizing: border-box; padding: 0.75rem 1rem 0.75rem 2.5rem; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 0.9rem; outline: none;">
+            </div>
+          </div>
+
+          <!-- Free credits banner -->
+          <div style="background: #eff6ff; border: 1px dashed #3b82f6; border-radius: 10px; padding: 0.65rem 0.85rem; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.2rem;">🎁</span>
+            <div style="font-size: 0.78rem; color: #1e40af; line-height: 1.35;">
+              <b>વેલકમ ઑફર:</b> રજીસ્ટ્રેશન કરતાં જ <b>૫ HD રીલ્સ ક્રેડિટ્સ</b> ૧૦૦% મફત મળશે!
+            </div>
+          </div>
+
+          <button type="submit" id="btnSubmitRegister" class="btn" style="width: 100%; padding: 0.85rem; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ffffff; border: none; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <span>✨ એકાઉન્ટ બનાવો & 5 Free Reels મેળવો</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- USER PROFILE MODAL -->
+  <div id="userProfileModal" class="modal-overlay hidden" style="display: none; position: fixed; inset: 0; background: rgba(10, 10, 15, 0.75); backdrop-filter: blur(8px); z-index: 99999; justify-content: center; align-items: center; padding: 1rem;">
+    <div class="modal-card" style="max-width: 420px; width: 100%; background: #ffffff; border-radius: 20px; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3); border: 1px solid rgba(215, 206, 192, 0.6); overflow: hidden; animation: modalPop 0.25s ease-out;">
+      <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: #ffffff; padding: 1.4rem; position: relative; display: flex; align-items: center; gap: 1rem;">
+        <button type="button" id="btnCloseProfileModal" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255,255,255,0.15); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+        <div id="profileAvatarBig" style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff; font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.3);">
+          U
+        </div>
+        <div>
+          <h4 id="profileName" style="margin: 0; font-size: 1.15rem; font-weight: 700;">User Name</h4>
+          <p id="profileEmail" style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: #c7d2fe;">email@example.com</p>
+          <span id="profileRoleBadge" style="display: inline-block; margin-top: 0.35rem; font-size: 0.68rem; padding: 0.15rem 0.55rem; background: rgba(255,255,255,0.18); border-radius: 9999px; text-transform: uppercase; font-weight: 700;">USER</span>
+        </div>
+      </div>
+
+      <div style="padding: 1.4rem;">
+        <!-- Credits Box -->
+        <div style="background: #faf5ff; border: 1.5px solid #e9d5ff; border-radius: 14px; padding: 1.1rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.84rem; font-weight: 600; color: #6b21a8;">રીલ્સ ક્રેડિટ્સ સ્ટેટસ:</span>
+            <span id="profileCreditsCount" style="font-size: 1.25rem; font-weight: 800; color: #7c3aed;">5 બાકી</span>
+          </div>
+          <p style="margin: 0; font-size: 0.75rem; color: #7e22ce; line-height: 1.35;">
+            દરેક ૧ રીલ રેન્ડર કરતાં ૧ ક્રેડિટ વપરાશે.
+          </p>
+          <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px dashed #d8b4fe; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.8rem; color: #4c1d95; font-weight: 700;">⭐ Pro Unlimited (₹૧૯૯/માસ)</span>
+            <button type="button" id="btnUpgradeProInModal" style="background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff; border: none; padding: 0.35rem 0.8rem; border-radius: 8px; font-size: 0.74rem; font-weight: 700; cursor: pointer;">અપગ્રેડ</button>
+          </div>
+        </div>
+
+        <!-- Connected Accounts summary with 1-Click Connect Actions -->
+        <div style="margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+            <span style="font-size: 0.78rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">સોશિયલ મીડિયા ચેનલ્સ</span>
+            <span style="font-size: 0.72rem; color: #16a34a; font-weight: 600;">૧-ક્લિક ઓટોમેટિક કનેક્ટ</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+            <!-- Instagram Channel Card -->
+            <div style="padding: 0.75rem 0.85rem; border: 1.5px solid #fbcfe8; background: #fdf2f8; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;">
+              <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem; flex-shrink: 0;">
+                  <i class="fa-brands fa-instagram"></i>
+                </div>
+                <div style="min-width: 0;">
+                  <b id="profileInstaHandle" style="font-size: 0.82rem; color: #831843; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Instagram Reels</b>
+                  <span id="profileInstaStatus" style="font-size: 0.72rem; color: #9d174d; font-weight: 600;">કનેક્ટ કરવા ક્લિક કરો</span>
+                </div>
+              </div>
+              <button type="button" id="btnConnectInstagramQuick" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.76rem; font-weight: 700; background: linear-gradient(135deg, #e1306c, #c13584); color: #fff; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">
+                🔗 Connect
+              </button>
+            </div>
+
+            <!-- YouTube Channel Card -->
+            <div style="padding: 0.75rem 0.85rem; border: 1.5px solid #fecaca; background: #fef2f2; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;">
+              <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #ff0000; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem; flex-shrink: 0;">
+                  <i class="fa-brands fa-youtube"></i>
+                </div>
+                <div style="min-width: 0;">
+                  <b id="profileYtHandle" style="font-size: 0.82rem; color: #991b1b; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">YouTube Shorts</b>
+                  <span id="profileYtStatus" style="font-size: 0.72rem; color: #b91c1c; font-weight: 600;">કનેક્ટ કરવા ક્લિક કરો</span>
+                </div>
+              </div>
+              <button type="button" id="btnConnectYouTubeQuick" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.76rem; font-weight: 700; background: #dc2626; color: #fff; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">
+                🔗 Connect
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logout Action -->
+        <button type="button" id="btnLogoutUser" class="btn btn-ghost" style="width: 100%; border: 1px solid #fca5a5; color: #b91c1c; background: #fff5f5; padding: 0.7rem; border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Log Out (બહાર નીકળો)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
 
-  <script src="js/app.js?v=classic-smooth-v6"></script>
+  <script src="js/app.js?v=reel-antidup-v3"></script>
 </body>
 </html>

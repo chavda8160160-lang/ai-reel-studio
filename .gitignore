@@ -19,3 +19,12 @@ Thumbs.db
 *client_secret*.json
 credentials*.json
 token*.json
+
+# User data and tokens
+data/users.json
+data/sessions.json
+data/scheduled-queue.json
+data/*.json
+
+# Scratch scripts
+scratch/
