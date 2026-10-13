@@ -39,70 +39,9 @@ const REELS_DIR = path.join(__dirname, 'public', 'rendered-reels');
 const DATA_DIR = path.join(__dirname, 'data');
 const SCHEDULER_FILE = path.join(DATA_DIR, 'scheduler-state.json');
 const SCHEDULED_QUEUE_FILE = path.join(DATA_DIR, 'scheduled-queue.json');
-const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
-const INVOICES_FILE = path.join(DATA_DIR, 'invoices.json');
-const SHOP_SETTINGS_FILE = path.join(DATA_DIR, 'shop-settings.json');
-const QR_DIR = path.join(__dirname, 'public', 'uploads', 'qr');
-
-[GENERATED_DIR, UPLOADS_DIR, REELS_DIR, DATA_DIR, QR_DIR].forEach(dir => {
+[GENERATED_DIR, UPLOADS_DIR, REELS_DIR, DATA_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
-
-// Multer storage for shop UPI QR image
-const qrStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, QR_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.png';
-    cb(null, `shop-qr-${Date.now()}${ext}`);
-  }
-});
-const qrUpload = multer({ storage: qrStorage, limits: { fileSize: 10 * 1024 * 1024 } });
-
-// Helper functions for persistent Stock, Invoices & Shop Profile
-function getShopSettings() {
-  try {
-    if (fs.existsSync(SHOP_SETTINGS_FILE)) return JSON.parse(fs.readFileSync(SHOP_SETTINGS_FILE, 'utf8'));
-  } catch (_) {}
-  return { shopName: 'My Store', businessType: 'Retail & Fashion', phone: '', upiId: '', upiQrImage: '' };
-}
-
-function saveShopSettings(settings) {
-  try {
-    fs.writeFileSync(SHOP_SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
-  } catch (e) {
-    console.error('Error saving shop settings:', e);
-  }
-}
-
-function getProducts() {
-  try {
-    if (fs.existsSync(PRODUCTS_FILE)) return JSON.parse(fs.readFileSync(PRODUCTS_FILE, 'utf8'));
-  } catch (_) {}
-  return [];
-}
-
-function saveProducts(products) {
-  try {
-    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2), 'utf8');
-  } catch (e) {
-    console.error('Error saving products:', e);
-  }
-}
-
-function getInvoices() {
-  try {
-    if (fs.existsSync(INVOICES_FILE)) return JSON.parse(fs.readFileSync(INVOICES_FILE, 'utf8'));
-  } catch (_) {}
-  return [];
-}
-
-function saveInvoices(invoices) {
-  try {
-    fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
-  } catch (e) {
-    console.error('Error saving invoices:', e);
-  }
-}
 
 // Multer storage for video uploads
 const storage = multer.diskStorage({
@@ -218,7 +157,7 @@ async function refreshOrUpgradeMetaToken(providedToken) {
   const appSecret = process.env.META_APP_SECRET;
 
   if (!currentToken) {
-    throw new Error('Meta Instagram Access Token ઉપલબ્ધ નથી.');
+    throw new Error('Meta Instagram Access Token is missing.');
   }
 
   console.log('🔄 [Meta Token Refresher] Attempting token refresh / upgrade to permanent Page token...');
@@ -284,7 +223,7 @@ async function refreshOrUpgradeMetaToken(providedToken) {
   // Verify the new token
   const testRes = await checkMetaTokenStatus(finalToken);
   if (!testRes.active) {
-    throw new Error(`ટોકન રિફ્રેશ થઈ શક્યો નથી: ${testRes.error}`);
+    throw new Error(`Token refresh failed: ${testRes.error}`);
   }
 
   return {
@@ -296,8 +235,8 @@ async function refreshOrUpgradeMetaToken(providedToken) {
     isNeverExpiring: testRes.isNeverExpiring || isNeverExpiring,
     expiresAt: testRes.expiresAt,
     message: (testRes.isNeverExpiring || isNeverExpiring)
-      ? `Never-Expiring Permanent Token સક્રિય થઈ ગયો છે! (Page: ${pageName || 'Connected Page'}) 🎉`
-      : 'ટોકન 60 દિવસ માટે સફળતાપૂર્વક રિન્યુ થઈ ગયો છે! ✓'
+      ? `Never-Expiring Permanent Token is active! (Page: ${pageName || 'Connected Page'}) 🎉`
+      : 'Token renewed successfully for 60 days! ✓'
   };
 }
 
@@ -305,7 +244,7 @@ async function refreshOrUpgradeMetaToken(providedToken) {
 async function ensureValidInstagramToken(customToken) {
   let token = customToken || process.env.META_INSTAGRAM_TOKEN;
   if (!token) {
-    throw new Error('Meta Instagram Access Token ઉપલબ્ધ નથી. કૃપા કરીને Settings માં ટોકન ઉમેરો.');
+    throw new Error('Meta Instagram Access Token missing. Please add token in Settings.');
   }
 
   console.log('🔍 [Meta Pre-Check] Validating Instagram Access Token before upload...');
@@ -330,7 +269,7 @@ async function ensureValidInstagramToken(customToken) {
     throw new Error(`ઇન્સ્ટાગ્રામ એક્સેસ ટોકન એક્સપાયર થયેલ છે અને ઓટો-રિફ્રેશ પણ નિષ્ફળ રહ્યો: ${refreshErr.message}. કૃપા કરીને Settings માં નવો Token અથવા Meta App ID & Secret ચકાસો.`);
   }
 
-  throw new Error(`ઇન્સ્ટાગ્રામ ટોકન માન્ય નથી: ${status.error}`);
+  throw new Error(`Instagram token is invalid: ${status.error}`);
 }
 
 // Telegram Instant Alert Dispatcher
@@ -744,11 +683,11 @@ async function publishReelDirectToInstagram(videoPath, caption, customToken, cus
       userId = igAcc.id;
       updateEnvFile({ META_INSTAGRAM_USER_ID: userId });
     } else {
-      throw new Error('Instagram Business Account ID મળ્યો નથી.');
+      throw new Error('Instagram Business Account ID not found.');
     }
   }
 
-  if (!fs.existsSync(videoPath)) throw new Error('વિડીયો ફાઈલ મળી નથી.');
+  if (!fs.existsSync(videoPath)) throw new Error('Video file not found.');
 
   const fileStat = await fsp.stat(videoPath);
   const videoBuffer = await fsp.readFile(videoPath);
@@ -770,7 +709,7 @@ async function publishReelDirectToInstagram(videoPath, caption, customToken, cus
 
   if (!initRes.id || !initRes.uri) {
     console.error('Meta Media Init Error:', initRes);
-    throw new Error(initRes.error?.message || 'Meta Graph API સત્ર શરૂ કરવામાં ભૂલ આવી.');
+    throw new Error(initRes.error?.message || 'Failed to initialize Meta Graph API upload session.');
   }
 
   const containerId = initRes.id;
@@ -788,7 +727,7 @@ async function publishReelDirectToInstagram(videoPath, caption, customToken, cus
   }).then(r => r.json());
 
   if (uploadRes.error) {
-    throw new Error(uploadRes.error.message || 'વિડીયો બાઈટ્સ અપલોડ કરવામાં ભૂલ આવી.');
+    throw new Error(uploadRes.error.message || 'Error uploading video bytes to Meta.');
   }
 
   // Step 3: Wait for Meta to process the video
@@ -803,12 +742,12 @@ async function publishReelDirectToInstagram(videoPath, caption, customToken, cus
       break;
     }
     if (statusRes.status_code === 'ERROR') {
-      throw new Error('Meta Reels પ્રોસેસિંગમાં ભૂલ આવી.');
+      throw new Error('Error processing Meta Reel.');
     }
   }
 
   if (!isReady) {
-    throw new Error('Meta Video પ્રોસેસિંગમાં વધુ સમય લાગી રહ્યો છે.');
+    throw new Error('Meta video processing timed out.');
   }
 
   // Step 4: Publish Reel
@@ -833,7 +772,7 @@ async function publishReelDirectToInstagram(videoPath, caption, customToken, cus
     success: true,
     postId,
     postUrl,
-    message: 'રીલ ૧૦૦% હેન્ડ્સ-ફ્રી સીધી જ Instagram પર પબ્લિશ થઈ ગઈ છે! 🎉'
+    message: 'Reel published directly to Instagram hands-free! 🎉'
   };
 }
 
@@ -980,13 +919,80 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// ========================================================
+// 🎵 ONLINE MUSIC SEARCH & INSTAGRAM-STYLE AUDIO API
+// ========================================================
+app.get('/api/music/search', async (req, res) => {
+  const query = (req.query.q || '').trim();
+  const limit = Math.min(50, parseInt(req.query.limit) || 25);
+  if (!query) {
+    return res.json({ success: true, results: [] });
+  }
+
+  try {
+    const searchUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=song&limit=${limit}`;
+    const apiRes = await fetch(searchUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!apiRes.ok) throw new Error(`iTunes API status ${apiRes.status}`);
+    const data = await apiRes.json();
+
+    const results = (data.results || []).map(item => ({
+      id: item.trackId,
+      title: item.trackName || 'Song',
+      artist: item.artistName || 'Artist',
+      album: item.collectionName || '',
+      artwork: (item.artworkUrl100 || '').replace('100x100bb', '300x300bb'),
+      previewUrl: item.previewUrl || '',
+      duration: Math.round((item.trackTimeMillis || 30000) / 1000)
+    })).filter(item => !!item.previewUrl);
+
+    res.json({ success: true, count: results.length, results });
+  } catch (err) {
+    console.error('Online music search error:', err);
+    res.status(500).json({ success: false, error: err.message, results: [] });
+  }
+});
+
+app.get('/api/music/trending', async (req, res) => {
+  const category = (req.query.genre || req.query.category || 'reels').toLowerCase();
+  const queries = {
+    'reels': 'bollywood hits',
+    'gujarati': 'gujarati garba',
+    'bollywood': 'arijit singh',
+    'lofi': 'hindi lofi',
+    'punjabi': 'punjabi hits',
+    'sitar': 'royal sitar'
+  };
+
+  const searchTerm = queries[category] || queries['reels'];
+  try {
+    const searchUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(searchTerm)}&media=music&entity=song&limit=25`;
+    const apiRes = await fetch(searchUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const data = await apiRes.json();
+
+    const results = (data.results || []).map(item => ({
+      id: item.trackId,
+      title: item.trackName || 'Song',
+      artist: item.artistName || 'Artist',
+      album: item.collectionName || '',
+      artwork: (item.artworkUrl100 || '').replace('100x100bb', '300x300bb'),
+      previewUrl: item.previewUrl || '',
+      duration: Math.round((item.trackTimeMillis || 30000) / 1000)
+    })).filter(item => !!item.previewUrl);
+
+    res.json({ success: true, category, count: results.length, results });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message, results: [] });
+  }
+});
+
 // 5. AI Video Reel Generator & Smart Auto-Editor
 app.post('/api/video/auto-edit', upload.fields([{ name: 'videoFile', maxCount: 1 }, { name: 'customAudio', maxCount: 1 }]), async (req, res) => {
   let customAudioPath = null;
+  let onlineAudioPath = null;
   try {
     const videoFile = (req.files && req.files.videoFile && req.files.videoFile[0]) ? req.files.videoFile[0] : req.file;
     if (!videoFile) {
-      return res.status(400).json({ error: 'કૃપા કરીને વિડીયો ફાઈલ અપલોડ કરો.' });
+      return res.status(400).json({ error: 'Please upload a video file.' });
     }
 
     if (req.files && req.files.customAudio && req.files.customAudio[0]) {
@@ -1101,7 +1107,14 @@ Respond ONLY with valid JSON:`;
           const jsonStr = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
           if (jsonStr) {
             aiDirectorRecipe = { ...aiDirectorRecipe, ...JSON.parse(jsonStr) };
+            if (Array.isArray(aiDirectorRecipe.viralHashtags)) {
+              aiDirectorRecipe.viralHashtags = aiDirectorRecipe.viralHashtags
+                .map(t => String(t).trim().startsWith('#') ? String(t).trim() : `#${String(t).trim()}`)
+                .filter(t => t.length > 1)
+                .join(' ');
+            }
             console.log(`🤖 AI Vision Detected: "${aiDirectorRecipe.detectedTopic}"`);
+            console.log(`🏷️ Tailored Hashtags: "${aiDirectorRecipe.viralHashtags}"`);
             console.log(`🎨 Applied Theme: "${aiDirectorRecipe.themeName}" (Saturation: ${aiDirectorRecipe.saturation})`);
           }
         }
@@ -1116,39 +1129,58 @@ Respond ONLY with valid JSON:`;
     // Step 2: Render with FFmpeg
     const outputFileName = `reel-${Date.now()}-${Math.round(Math.random() * 1000)}.mp4`;
     const outputPath = path.join(REELS_DIR, outputFileName);
-    const maxSec = parseInt(targetDuration, 10) || 30;
+    const isDirectUpload = req.body.isDirectUpload === 'true' || videoStyle === 'original' || targetDuration === 'original';
+
+    let maxSec = 30;
+    if (isDirectUpload) {
+      maxSec = await new Promise((resProbe) => {
+        ffmpeg.ffprobe(inputPath, (err, meta) => {
+          if (!err && meta?.format?.duration) resProbe(Math.round(meta.format.duration));
+          else resProbe(30);
+        });
+      });
+      console.log(`⚡ [Direct Upload Mode] Keeping full original duration: ${maxSec}s without AI trimming.`);
+    } else {
+      maxSec = parseInt(targetDuration, 10) || 30;
+    }
 
     let sat = Math.max(1.0, Math.min(1.5, Number(aiDirectorRecipe.saturation) || 1.25));
     let con = Math.max(1.0, Math.min(1.3, Number(aiDirectorRecipe.contrast) || 1.12));
     let bri = Math.max(-0.1, Math.min(0.1, Number(aiDirectorRecipe.brightness) || 0.02));
 
-    if (videoStyle === 'cinematic-movie') {
-      sat = 1.18; con = 1.22; bri = 0.01;
-    } else if (videoStyle === 'kids-sunny') {
-      sat = 1.28; con = 1.08; bri = 0.03;
-    } else if (videoStyle === 'royal-silk') {
-      sat = 1.25; con = 1.15; bri = 0.02;
-    } else if (videoStyle === 'heritage-gold') {
-      sat = 1.20; con = 1.12; bri = 0.02;
-    } else if (videoStyle === 'cinematic-vibrant') {
-      sat = 1.35; con = 1.22; bri = 0.02;
+    let vFilters = [];
+    if (isDirectUpload) {
+      // Direct Upload: Preserve original colors and frame as-is, just adapt to 9:16 vertical
+      vFilters = [
+        'scale=1080:1920:force_original_aspect_ratio=decrease',
+        'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black'
+      ];
+    } else {
+      if (videoStyle === 'cinematic-movie') {
+        sat = 1.18; con = 1.22; bri = 0.01;
+      } else if (videoStyle === 'kids-sunny') {
+        sat = 1.28; con = 1.08; bri = 0.03;
+      } else if (videoStyle === 'royal-silk') {
+        sat = 1.25; con = 1.15; bri = 0.02;
+      } else if (videoStyle === 'heritage-gold') {
+        sat = 1.20; con = 1.12; bri = 0.02;
+      } else if (videoStyle === 'cinematic-vibrant') {
+        sat = 1.35; con = 1.22; bri = 0.02;
+      }
+
+      vFilters = [
+        'scale=1080:1920:force_original_aspect_ratio=decrease',
+        'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
+        `eq=saturation=${sat}:contrast=${con}:brightness=${bri}`,
+        'fade=t=in:st=0:d=0.8',
+        `fade=t=out:st=${Math.max(1, maxSec - 1.5)}:d=1.5`
+      ];
     }
 
-    console.log(`🎬 Rendering 30s 9:16 Reel with Saturation: ${sat}, Contrast: ${con}...`);
-
-    const vFilters = [
-      // Scale & pad to 1080x1920 (9:16 vertical for Reels & Shorts)
-      'scale=1080:1920:force_original_aspect_ratio=decrease',
-      'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
-      // Color grading
-      `eq=saturation=${sat}:contrast=${con}:brightness=${bri}`,
-      // Fade in at 0s, fade out at end
-      'fade=t=in:st=0:d=0.8',
-      `fade=t=out:st=${Math.max(1, maxSec - 1.5)}:d=1.5`
-    ];
+    console.log(`🎬 Rendering 9:16 Reel (${maxSec}s) | Direct Mode: ${isDirectUpload}`);
 
     let assFilePath = null;
-    if (subtitlesStyle !== 'none') {
+    if (!isDirectUpload && subtitlesStyle !== 'none') {
       try {
         assFilePath = generateAssSubtitleFile(aiDirectorRecipe.captions, aiDirectorRecipe.hookOverlay, maxSec, subtitlesStyle);
         if (assFilePath && fs.existsSync(assFilePath)) {
@@ -1161,13 +1193,32 @@ Respond ONLY with valid JSON:`;
       }
     }
 
-    // Feature #3: Background Music (BGM) Engine (Preset or Custom Uploaded Song)
-    const bgmTrack = req.body.bgmTrack || 'none';
+    // Feature #3: Background Music (BGM) Engine (Preset, Custom or Online Instagram Song)
+    const bgmTrack = isDirectUpload ? 'none' : (req.body.bgmTrack || 'none');
     const bgmVolume = Math.max(0.05, Math.min(1.0, parseFloat(req.body.bgmVolume) || 0.25));
+
+    // Handle online audio stream download if user picked an online song
+    if (req.body.onlineAudioUrl && !customAudioPath && !isDirectUpload) {
+      try {
+        console.log(`🎵 [Online Song] Downloading chosen song preview from: ${req.body.onlineAudioUrl}`);
+        const audioRes = await fetch(req.body.onlineAudioUrl);
+        if (audioRes.ok) {
+          const buffer = Buffer.from(await audioRes.arrayBuffer());
+          onlineAudioPath = path.join(UPLOADS_DIR, `online-bgm-${Date.now()}.mp3`);
+          fs.writeFileSync(onlineAudioPath, buffer);
+          console.log(`🎵 [Online Song] Saved audio to ${onlineAudioPath} (${(buffer.length / (1024*1024)).toFixed(2)} MB)`);
+        }
+      } catch (dlErr) {
+        console.warn('⚠️ Online audio download error:', dlErr.message);
+      }
+    }
+
     const bgmFilePath = (customAudioPath && fs.existsSync(customAudioPath))
       ? customAudioPath
+      : (onlineAudioPath && fs.existsSync(onlineAudioPath))
+      ? onlineAudioPath
       : (bgmTrack !== 'none' && bgmTrack !== 'custom' ? path.join(__dirname, 'public', 'audio', 'bgm', `${bgmTrack}.mp3`) : null);
-    const hasValidBgm = bgmFilePath && fs.existsSync(bgmFilePath);
+    const hasValidBgm = !isDirectUpload && bgmFilePath && fs.existsSync(bgmFilePath);
 
     let hasVideoAudio = false;
     try {
@@ -1326,7 +1377,7 @@ Respond ONLY with valid JSON:`;
       bgmEnabled: hasValidBgm,
       bgmTrack,
       fileName: outputFileName,
-      duration: `${maxSec} સેકન્ડ`,
+      duration: `${maxSec} Seconds`,
       aspectRatio: '9:16 (1080x1920) - Instagram Reels / YouTube Shorts',
       recipe: aiDirectorRecipe,
       isScheduled: !!scheduledItem,
@@ -1336,7 +1387,7 @@ Respond ONLY with valid JSON:`;
 
   } catch (err) {
     console.error('Video processing error:', err);
-    res.status(500).json({ error: `વિડીયો પ્રોસેસ કરવામાં ભૂલ આવી: ${err.message}` });
+    res.status(500).json({ error: `Video processing error: ${err.message}` });
   } finally {
     if (customAudioPath && fs.existsSync(customAudioPath)) {
       try { await fsp.unlink(customAudioPath); } catch (_) {}
@@ -1387,13 +1438,13 @@ app.post('/api/video/photos-to-reel', upload.fields([{ name: 'photoFiles', maxCo
     photoPaths = photoPaths.slice(0, 6);
 
     if (photoPaths.length === 0) {
-      return res.status(400).json({ error: 'કૃપા કરીને ઓછામાં ઓછો ૧ અથવા વધુ ફોટા પસંદ કરો.' });
+      return res.status(400).json({ error: 'Please select at least 1 photo.' });
     }
 
     const {
-      productTitle = 'રાજવી પટોળા સિલ્ક સાડી',
+      productTitle = 'Royal Patola Silk Saree',
       productPrice = '₹3,800',
-      badgeText = 'સ્પેશિયલ ઓફર 🔥',
+      badgeText = 'Special Offer 🔥',
       niche = 'Patola Sarees & Fashion',
       targetDuration = '30',
       videoStyle = 'auto',
@@ -1450,9 +1501,26 @@ Respond ONLY with JSON:
 
     const outputFileName = `reel-photos-${Date.now()}.mp4`;
     const outputPath = path.join(REELS_DIR, outputFileName);
+    let onlinePhotoAudioPath = null;
+    if (req.body.onlineAudioUrl && !customAudioPath) {
+      try {
+        console.log(`🎵 [Online Song] Downloading online audio for photos reel: ${req.body.onlineAudioUrl}`);
+        const aRes = await fetch(req.body.onlineAudioUrl);
+        if (aRes.ok) {
+          const buffer = Buffer.from(await aRes.arrayBuffer());
+          onlinePhotoAudioPath = path.join(UPLOADS_DIR, `online-photo-bgm-${Date.now()}.mp3`);
+          fs.writeFileSync(onlinePhotoAudioPath, buffer);
+        }
+      } catch (aErr) {
+        console.warn('⚠️ Online audio for photos download error:', aErr.message);
+      }
+    }
+
     const parsedVol = Math.max(0.05, Math.min(1.0, parseFloat(bgmVolume) || 0.35));
     const bgmFilePath = (customAudioPath && fs.existsSync(customAudioPath))
       ? customAudioPath
+      : (onlinePhotoAudioPath && fs.existsSync(onlinePhotoAudioPath))
+      ? onlinePhotoAudioPath
       : (bgmTrack !== 'none' && bgmTrack !== 'custom' ? path.join(__dirname, 'public', 'audio', 'bgm', `${bgmTrack}.mp3`) : null);
     const hasValidBgm = bgmFilePath && fs.existsSync(bgmFilePath);
 
@@ -1638,7 +1706,7 @@ Respond ONLY with JSON:
       videoUrl: `/rendered-reels/${outputFileName}`,
       coverUrl: `/rendered-reels/${thumbFileName}`,
       fileName: outputFileName,
-      duration: `${totalDuration} સેકન્ડ`,
+      duration: `${totalDuration} Seconds`,
       aspectRatio: '9:16 (1080x1920) - Instagram Reels / YouTube Shorts',
       isScheduled,
       scheduledItem,
@@ -1653,7 +1721,7 @@ Respond ONLY with JSON:
 
   } catch (err) {
     console.error('Photos-to-reel error:', err);
-    res.status(500).json({ error: `ફોટામાંથી રીલ બનાવવામાં ભૂલ આવી: ${err.message}` });
+    res.status(500).json({ error: `Photo reel generation error: ${err.message}` });
   } finally {
     if (customAudioPath && fs.existsSync(customAudioPath)) {
       try { await fsp.unlink(customAudioPath); } catch (_) {}
@@ -1666,7 +1734,7 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
   try {
     const { videoFileName, headlineText, hookBadge, bottomText, positionMode, fontStyle, colorStyle, timestamp } = req.body;
     if (!videoFileName) {
-      return res.status(400).json({ error: 'વિડીયો ફાઈલનું નામ જરૂરી છે.' });
+      return res.status(400).json({ error: 'Video file name is required.' });
     }
 
     const cleanBase = path.basename(videoFileName);
@@ -1675,7 +1743,7 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
       videoPath = path.join(UPLOADS_DIR, cleanBase);
     }
     if (!fs.existsSync(videoPath)) {
-      return res.status(404).json({ error: 'વિડીયો ફાઈલ મળી નથી.' });
+      return res.status(404).json({ error: 'Video file not found.' });
     }
 
     const thumbFileName = cleanBase.replace(/\.(mp4|mov|avi|webm)$/i, '') + '-cover.jpg';
@@ -1694,7 +1762,7 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
     });
 
     if (!result.success) {
-      return res.status(500).json({ error: result.error || 'થમ્બનેઈલ બનાવવામાં નિષ્ફળતા મળી.' });
+      return res.status(500).json({ error: result.error || 'Thumbnail creation failed.' });
     }
 
     return res.json({
@@ -1718,58 +1786,156 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
 // 🎬 Feature #5: AI Timeline Studio & Video FX Editor (Cut, Filters, Text, Effects)
 app.post('/api/video/edit-timeline', async (req, res) => {
   try {
-    const { videoFileName, trimStart, trimEnd, filter, textSize, textPosition, textColor, effects, customCaption } = req.body;
+    const { videoFileName, trimStart, trimEnd, speed, filter, textSize, textPosition, textColor, effects, customCaption, origVolume, rotate, flipH, flipV, adjust, voice, resolution, fps, aspect } = req.body;
     if (!videoFileName) {
-      return res.status(400).json({ error: 'વિડીયો ફાઈલનું નામ જરૂરી છે.' });
+      return res.status(400).json({ error: 'Video file name is required.' });
     }
 
     const cleanBase = path.basename(videoFileName);
     let videoPath = path.join(REELS_DIR, cleanBase);
     if (!fs.existsSync(videoPath)) videoPath = path.join(UPLOADS_DIR, cleanBase);
     if (!fs.existsSync(videoPath)) {
-      return res.status(404).json({ error: 'વિડીયો ફાઈલ સિસ્ટમમાં મળી નથી.' });
+      return res.status(404).json({ error: 'Video file not found in system.' });
     }
 
     const startSec = Math.max(0, parseFloat(trimStart) || 0);
     const endSec = Math.max(startSec + 2, parseFloat(trimEnd) || 30);
-    const clipDuration = Math.max(2, endSec - startSec);
+    const rawDuration = Math.max(2, endSec - startSec);
 
     const editedFileName = `edited-${Date.now()}-${cleanBase}`;
     const outputPath = path.join(REELS_DIR, editedFileName);
 
     const vFilters = [];
+    const aFilters = [];
 
-    // 1. Effects: Punch-in Zoom
+    // 1. CapCut Speed Control (0.1x to 10.0x)
+    const playbackSpeed = Math.min(10.0, Math.max(0.1, parseFloat(speed) || 1.0));
+    if (playbackSpeed !== 1.0) {
+      vFilters.push(`setpts=(1/${playbackSpeed})*PTS`);
+      // atempo supports 0.5 to 2.0 per filter instance
+      if (playbackSpeed >= 0.5 && playbackSpeed <= 2.0) {
+        aFilters.push(`atempo=${playbackSpeed}`);
+      } else if (playbackSpeed > 2.0) {
+        aFilters.push(`atempo=2.0,atempo=${(playbackSpeed / 2.0).toFixed(2)}`);
+      } else {
+        aFilters.push(`atempo=0.5,atempo=${(playbackSpeed / 0.5).toFixed(2)}`);
+      }
+    }
+
+    // 2. Transform: Rotate & Flip
+    if (rotate) {
+      const rot = parseInt(rotate, 10);
+      if (rot === 90) vFilters.push('transpose=1');
+      else if (rot === 180) vFilters.push('transpose=1,transpose=1');
+      else if (rot === 270) vFilters.push('transpose=2');
+    }
+    if (flipH) vFilters.push('hflip');
+    if (flipV) vFilters.push('vflip');
+
+    // 3. Effects: Punch-in Zoom
     const fxList = Array.isArray(effects) ? effects : (effects ? [effects] : []);
     const hasZoom = fxList.includes('zoom');
     if (hasZoom) {
       vFilters.push('crop=in_w*0.88:in_h*0.88:(in_w-out_w)/2:(in_h-out_h)/2');
     }
 
-    // 2. Scale & Pad to 9:16 Vertical
-    vFilters.push('scale=1080:1920:force_original_aspect_ratio=decrease');
-    vFilters.push('pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black');
-
-    // 3. Color Filters
-    const selectedFilter = filter || 'none';
-    if (selectedFilter === 'warm-gold') {
-      vFilters.push('eq=saturation=1.28:contrast=1.18:brightness=0.03');
-    } else if (selectedFilter === 'vibrant') {
-      vFilters.push('eq=saturation=1.45:contrast=1.22:brightness=0.02');
-    } else if (selectedFilter === 'noir') {
-      vFilters.push('hue=s=0,eq=contrast=1.35:brightness=0.01');
-    } else if (selectedFilter === 'teal-orange') {
-      vFilters.push('eq=saturation=1.22:contrast=1.15,colorbalance=rs=0.12:gs=-0.02:bs=-0.1');
-    } else if (selectedFilter === 'vintage') {
-      vFilters.push('eq=saturation=0.88:contrast=1.06:brightness=0.03');
+    // 4. Scale & Pad according to Canvas Aspect & Output Resolution
+    let outW = 1080;
+    let outH = 1920;
+    if (aspect === '16:9') {
+      outW = resolution === '4k' ? 3840 : (resolution === '720p' ? 1280 : 1920);
+      outH = resolution === '4k' ? 2160 : (resolution === '720p' ? 720 : 1080);
+    } else if (aspect === '1:1') {
+      outW = resolution === '4k' ? 2160 : (resolution === '720p' ? 720 : 1080);
+      outH = outW;
+    } else if (aspect === '4:5') {
+      outW = resolution === '4k' ? 2160 : (resolution === '720p' ? 720 : 1080);
+      outH = Math.round(outW * 1.25);
+    } else {
+      // 9:16 vertical
+      outW = resolution === '4k' ? 2160 : (resolution === '720p' ? 720 : 1080);
+      outH = resolution === '4k' ? 3840 : (resolution === '720p' ? 1280 : 1920);
     }
 
-    // 4. Vignette Effect
+    vFilters.push(`scale=${outW}:${outH}:force_original_aspect_ratio=decrease`);
+    vFilters.push(`pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2:black`);
+
+    // 5. White Flash Transition on Start
+    if (fxList.includes('flash')) {
+      vFilters.push('fade=t=in:st=0:d=0.35:color=white');
+    }
+
+    // 6. Pro Adjustments (Brightness, Exposure, Contrast, Saturation, Temp, Sharp)
+    if (adjust && typeof adjust === 'object') {
+      const b = (parseFloat(adjust.brightness) || 0) / 100;
+      const exp = (parseFloat(adjust.exposure) || 0) / 100;
+      const totalB = Math.max(-1, Math.min(1, b + exp));
+      const c = (parseFloat(adjust.contrast) || 100) / 100;
+      const s = (parseFloat(adjust.saturation) || 100) / 100;
+      const temp = parseFloat(adjust.temp) || 0;
+      const sharp = parseFloat(adjust.sharp) || 0;
+
+      if (totalB !== 0 || c !== 1 || s !== 1) {
+        vFilters.push(`eq=brightness=${totalB.toFixed(2)}:contrast=${c.toFixed(2)}:saturation=${s.toFixed(2)}`);
+      }
+      if (temp !== 0) {
+        const tempVal = (temp / 150).toFixed(2);
+        vFilters.push(`colorbalance=rs=${tempVal}:bs=${(-tempVal).toFixed(2)}`);
+      }
+      if (sharp > 0) {
+        const sharpAmount = (sharp / 60).toFixed(2);
+        vFilters.push(`unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=${sharpAmount}`);
+      }
+    }
+
+    // 7. CapCut Visual Filters & LUTs
+    const selectedFilter = filter || 'none';
+    if (selectedFilter === 'warm-gold') {
+      vFilters.push('eq=saturation=1.35:contrast=1.18,colorbalance=rs=0.15:gs=0.06:bs=-0.12');
+    } else if (selectedFilter === 'cinema') {
+      vFilters.push('eq=contrast=1.22:saturation=1.12,colorbalance=rs=0.08:gs=0.02:bs=-0.04');
+    } else if (selectedFilter === 'vibrant') {
+      vFilters.push('eq=saturation=1.45:contrast=1.25:brightness=0.03');
+    } else if (selectedFilter === 'noir') {
+      vFilters.push('hue=s=0,eq=contrast=1.35:brightness=-0.02');
+    } else if (selectedFilter === 'teal-orange') {
+      vFilters.push('eq=saturation=1.25:contrast=1.2,colorbalance=rs=0.12:gs=-0.02:bs=0.1');
+    } else if (selectedFilter === 'vintage') {
+      vFilters.push('eq=saturation=0.82:contrast=1.12:brightness=0.04,colorbalance=rs=0.12:gs=0.05:bs=-0.08');
+    } else if (selectedFilter === 'neon') {
+      vFilters.push('eq=saturation=1.55:contrast=1.28,colorbalance=rs=-0.08:gs=0.12:bs=0.25');
+    } else if (selectedFilter === 'hdr') {
+      vFilters.push('eq=contrast=1.35:saturation=1.38:brightness=0.02');
+    } else if (selectedFilter === 'fashion') {
+      vFilters.push('eq=contrast=1.18:saturation=1.28,colorbalance=rs=0.12:gs=0.04:bs=-0.05');
+    } else if (selectedFilter === 'cool') {
+      vFilters.push('eq=saturation=1.15,colorbalance=rs=-0.1:gs=0.02:bs=0.18');
+    } else if (selectedFilter === 'beauty') {
+      vFilters.push('eq=contrast=1.08:saturation=1.16:brightness=0.05');
+    } else if (selectedFilter === 'food') {
+      vFilters.push('eq=contrast=1.2:saturation=1.3,colorbalance=rs=0.14:gs=0.06:bs=-0.08');
+    }
+
+    // 8. Vignette Effect
     if (fxList.includes('vignette')) {
       vFilters.push('vignette=PI/4');
     }
 
-    // 5. Dynamic Subtitles / Text
+    // 9. Audio Volume & Voice Changer
+    if (origVolume !== undefined) {
+      const vol = Math.max(0, Math.min(2, parseFloat(origVolume)));
+      aFilters.push(`volume=${vol}`);
+    }
+
+    if (voice && voice !== 'normal') {
+      if (voice === 'deep') aFilters.push('asetrate=44100*0.82,aresample=44100');
+      else if (voice === 'chipmunk') aFilters.push('asetrate=44100*1.32,aresample=44100');
+      else if (voice === 'monster') aFilters.push('asetrate=44100*0.68,aresample=44100');
+      else if (voice === 'robot') aFilters.push('flanger=delay=10:depth=4:speed=0.5');
+      else if (voice === 'echo') aFilters.push('aecho=0.8:0.88:60:0.4');
+    }
+
+    // 8. Dynamic Subtitles / Text
     let assPath = null;
     if (customCaption && customCaption.trim()) {
       const fontSizeMap = { small: 56, medium: 72, large: 92, huge: 110 };
@@ -1792,7 +1958,7 @@ app.post('/api/video/edit-timeline', async (req, res) => {
       assPath = path.join(os.tmpdir(), `editor-sub-${Date.now()}.ass`);
       const lines = customCaption.split('\n').filter(l => l.trim());
       let assEvents = '';
-      const step = clipDuration / Math.max(1, lines.length);
+      const step = rawDuration / Math.max(1, lines.length);
 
       lines.forEach((line, idx) => {
         const sTime = formatAssTime(idx * step);
@@ -1820,14 +1986,20 @@ ${assEvents}`;
       vFilters.push(`subtitles='${escapedAss}'`);
     }
 
-    console.log(`🎬 [Timeline Studio] Rendering edited reel: Start ${startSec}s, Duration ${clipDuration}s, Filter: ${selectedFilter}, FX: ${fxList.join(',')}`);
+    const finalClipDuration = rawDuration / playbackSpeed;
+    console.log(`🎬 [CapCut Studio] Rendering edited reel: Start ${startSec}s, Raw ${rawDuration}s -> Final ${finalClipDuration.toFixed(1)}s, Speed ${playbackSpeed}x, Filter: ${selectedFilter}, FX: ${fxList.join(',')}`);
 
     await new Promise((resolve, reject) => {
-      ffmpeg(videoPath)
+      let ff = ffmpeg(videoPath)
         .setStartTime(startSec)
-        .setDuration(clipDuration)
-        .videoFilters(vFilters)
-        .outputOptions([
+        .setDuration(rawDuration)
+        .videoFilters(vFilters);
+
+      if (aFilters.length > 0) {
+        ff = ff.audioFilters(aFilters);
+      }
+
+      ff.outputOptions([
           '-c:v libx264',
           '-preset fast',
           '-crf 22',
@@ -1845,12 +2017,14 @@ ${assEvents}`;
       try { await fsp.unlink(assPath); } catch (_) {}
     }
 
+    const finalDuration = Math.max(1, Math.round(rawDuration / (playbackSpeed || 1.0)));
+
     return res.json({
       success: true,
       videoUrl: `/rendered-reels/${editedFileName}`,
       downloadUrl: `/rendered-reels/${editedFileName}`,
       fileName: editedFileName,
-      duration: `${Math.round(clipDuration)}s`,
+      duration: `${finalDuration}s`,
       appliedSettings: {
         trimStart: startSec,
         trimEnd: endSec,
@@ -1863,7 +2037,7 @@ ${assEvents}`;
 
   } catch (err) {
     console.error('Timeline Studio edit error:', err);
-    res.status(500).json({ error: `વિડીયો એડિટ કરવામાં ભૂલ આવી: ${err.message}` });
+    res.status(500).json({ error: `Video editing error: ${err.message}` });
   }
 });
 
@@ -1871,15 +2045,15 @@ ${assEvents}`;
 app.post('/api/social/publish-youtube', async (req, res) => {
   try {
     const { videoFileName, title, description, accessToken } = req.body;
-    if (!videoFileName) return res.status(400).json({ error: 'વિડીયો ફાઈલ પસંદ કરો.' });
+    if (!videoFileName) return res.status(400).json({ error: 'Please select a video file.' });
 
     const videoPath = path.join(REELS_DIR, path.basename(videoFileName));
-    if (!fs.existsSync(videoPath)) return res.status(404).json({ error: 'વિડીયો ફાઈલ મળી નથી.' });
+    if (!fs.existsSync(videoPath)) return res.status(404).json({ error: 'Video file not found.' });
 
     return res.json({
       success: true,
       directUploadUrl: 'https://studio.youtube.com/channel/upload',
-      message: 'YouTube Studio તૈયાર છે! તમે સીધો વિડીયો અપલોડ કરી શકો છો.',
+      message: 'YouTube Studio is ready! You can upload the video directly.',
       preparedData: {
         title: title || 'Viral Patola Saree #Shorts',
         description: description || 'Handloom pure silk patola saree.',
@@ -1894,15 +2068,15 @@ app.post('/api/social/publish-youtube', async (req, res) => {
 app.post('/api/social/publish-instagram', async (req, res) => {
   try {
     const { videoFileName, caption } = req.body;
-    if (!videoFileName) return res.status(400).json({ error: 'વિડીયો ફાઈલ પસંદ કરો.' });
+    if (!videoFileName) return res.status(400).json({ error: 'Please select a video file.' });
 
     const videoPath = path.join(REELS_DIR, path.basename(videoFileName));
-    if (!fs.existsSync(videoPath)) return res.status(404).json({ error: 'વિડીયો ફાઈલ મળી નથી.' });
+    if (!fs.existsSync(videoPath)) return res.status(404).json({ error: 'Video file not found.' });
 
     return res.json({
       success: true,
       directUploadUrl: 'https://www.instagram.com/create/style/',
-      message: 'Instagram Web / App તૈયાર છે! કેપ્શન અને હેશટેગ્સ કોપી કરીને અપલોડ કરો.',
+      message: 'Instagram Web / App is ready! Copy caption and hashtags to upload.',
       preparedCaption: caption || 'Royal Heritage Patola Saree ✨'
     });
   } catch (err) {
@@ -1931,7 +2105,7 @@ app.post('/api/social/publish-instagram-direct', async (req, res) => {
     }
 
     if (!videoPath || !fs.existsSync(videoPath)) {
-      return res.status(404).json({ error: 'પબ્લિશ કરવા માટે વિડીયો ફાઈલ મળી નથી.' });
+      return res.status(404).json({ error: 'Video file not found for publishing.' });
     }
 
     const result = await publishReelDirectToInstagram(videoPath, caption, accessToken, igUserId);
@@ -1980,8 +2154,8 @@ async function getOrRefreshYouTubeToken(customToken) {
 // YouTube Data API v3 100% Direct Publishing Engine
 async function publishShortDirectToYouTube(videoPath, title, description, tags, customToken) {
   const token = await getOrRefreshYouTubeToken(customToken);
-  if (!token) throw new Error('YouTube Access Token ઉપલબ્ધ નથી. કૃપા કરીને સેટિંગ્સમાં ટોકન ઉમેરો.');
-  if (!fs.existsSync(videoPath)) throw new Error('વિડીયો ફાઈલ મળી નથી.');
+  if (!token) throw new Error('YouTube Access Token is missing. Please add token in Settings.');
+  if (!fs.existsSync(videoPath)) throw new Error('Video file not found.');
 
   const fileStat = await fsp.stat(videoPath);
   const videoBuffer = await fsp.readFile(videoPath);
@@ -2015,12 +2189,12 @@ async function publishShortDirectToYouTube(videoPath, title, description, tags, 
   if (!initRes.ok) {
     const errData = await initRes.json().catch(() => ({}));
     console.error('YouTube Init Failed:', errData);
-    throw new Error(errData.error?.message || 'YouTube સત્ર શરૂ કરવામાં ભૂલ આવી. ટોકન એક્સપાયર થઈ ગઈ હોઈ શકે છે.');
+    throw new Error(errData.error?.message || 'Failed to start YouTube upload session. Token may have expired.');
   }
 
   const uploadUrl = initRes.headers.get('location');
   if (!uploadUrl) {
-    throw new Error('YouTube Upload URL પ્રાપ્ત થયો નથી.');
+    throw new Error('YouTube Upload URL not received.');
   }
 
   // Step 2: Upload Video Binary Bytes
@@ -2036,7 +2210,7 @@ async function publishShortDirectToYouTube(videoPath, title, description, tags, 
   const uploadData = await uploadRes.json();
   if (!uploadRes.ok || !uploadData.id) {
     console.error('YouTube Upload Failed:', uploadData);
-    throw new Error(uploadData.error?.message || 'વિડીયો બાઈટ્સ અપલોડ કરવામાં ભૂલ આવી.');
+    throw new Error(uploadData.error?.message || 'Error uploading video bytes to YouTube.');
   }
 
   const videoId = uploadData.id;
@@ -2047,7 +2221,7 @@ async function publishShortDirectToYouTube(videoPath, title, description, tags, 
     success: true,
     videoId,
     postUrl,
-    message: '🎉 YouTube Short સીધું તમારી ચેનલ પર પબ્લિશ થઈ ગયું છે!'
+    message: '🎉 YouTube Short published directly to your channel!'
   };
 }
 
@@ -2069,7 +2243,7 @@ app.post('/api/social/publish-youtube-direct', async (req, res) => {
       }
     }
     if (!videoPath || !fs.existsSync(videoPath)) {
-      return res.status(404).json({ error: 'YouTube માટે વિડીયો ફાઈલ મળી નથી.' });
+      return res.status(404).json({ error: 'Video file not found for YouTube.' });
     }
 
     const result = await publishShortDirectToYouTube(videoPath, title, description, tags, accessToken);
@@ -2104,7 +2278,7 @@ app.post('/api/social/publish-both-direct', async (req, res) => {
       }
     }
     if (!videoPath || !fs.existsSync(videoPath)) {
-      return res.status(404).json({ error: 'વિડીયો ફાઈલ મળી નથી.' });
+      return res.status(404).json({ error: 'Video file not found.' });
     }
 
     const fullCaption = `${caption || ''}\n\n${hashtags || ''}`.trim();
@@ -2138,7 +2312,7 @@ app.post('/api/social/publish-both-direct', async (req, res) => {
     }
 
     if (!hasIg && !hasYt) {
-      return res.status(400).json({ error: 'Instagram અથવા YouTube એકાઉન્ટ કનેક્ટ કરેલ નથી.' });
+      return res.status(400).json({ error: 'Neither Instagram nor YouTube account is connected.' });
     }
 
     if (!results.instagram && !results.youtube) {
@@ -2168,7 +2342,7 @@ app.post('/api/social/publish-both-direct', async (req, res) => {
       instagram: results.instagram,
       youtube: results.youtube,
       errors: errors.length ? errors : undefined,
-      message: 'પબ્લિશિંગ પ્રક્રિયા સફળતાપૂર્વક પૂર્ણ થઈ ગઈ! 🎉'
+      message: 'Publishing completed successfully! 🎉'
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2212,7 +2386,7 @@ app.post('/api/social/test-youtube', async (req, res) => {
 
       return res.status(400).json({
         success: false,
-        error: 'ટોકન અમાન્ય અથવા એક્સપાયર થઈ ગઈ છે. કૃપા કરીને નવી ટોકન સેટ કરો.'
+        error: 'Token is invalid or expired. Please set a fresh token in Settings.'
       });
     }
     const info = {
@@ -2242,11 +2416,42 @@ app.get('/api/video/scheduled-queue', (req, res) => {
 
 app.post('/api/video/scheduled-queue/cancel', (req, res) => {
   try {
-    const { id } = req.body;
+    const { id, deleteFile } = req.body;
     let queue = getScheduledQueue();
+    const item = queue.find(i => i.id === id);
+    if (item && item.fileName && deleteFile !== false) {
+      const vidPath = path.join(REELS_DIR, item.fileName);
+      if (fs.existsSync(vidPath)) {
+        try { fs.unlinkSync(vidPath); } catch (_) {}
+      }
+      const coverPath = path.join(REELS_DIR, `${path.parse(item.fileName).name}-cover.jpg`);
+      if (fs.existsSync(coverPath)) {
+        try { fs.unlinkSync(coverPath); } catch (_) {}
+      }
+    }
     queue = queue.filter(item => item.id !== id);
     saveScheduledQueue(queue);
-    res.json({ success: true, queue, message: 'શેડ્યૂલ કેન્સલ થઈ ગયું છે.' });
+    res.json({ success: true, queue, message: 'Reel deleted successfully from queue.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clear all published/completed history from queue
+app.post('/api/video/scheduled-queue/clear-published', (req, res) => {
+  try {
+    let queue = getScheduledQueue();
+    const beforeCount = queue.length;
+    // Keep only active upcoming scheduled reels
+    queue = queue.filter(item => {
+      const hasIg = !!item.lastPostUrl;
+      const hasYt = !!item.youtubePostUrl;
+      const isPosted = item.status?.includes('Posted') || hasIg || hasYt;
+      return !isPosted;
+    });
+    saveScheduledQueue(queue);
+    const removedCount = beforeCount - queue.length;
+    res.json({ success: true, queue, removedCount, message: `${removedCount} જૂની લાઈવ થયેલી રીલ્સ લિસ્ટમાંથી સાફ થઈ ગઈ છે.` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2346,7 +2551,7 @@ app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
       item,
       postUrl: item.lastPostUrl || item.youtubePostUrl,
       youtubePostUrl: item.youtubePostUrl,
-      message: 'રીલ સફળતાપૂર્વક પબ્લિશ થઈ ગઈ છે! 🎉'
+      message: 'Reel published successfully! 🎉'
     });
   } catch (err) {
     console.error('Run-now error:', err);
@@ -2482,7 +2687,7 @@ app.post('/api/whatsapp/test', async (req, res) => {
     const key = apiKey || process.env.WHATSAPP_APIKEY;
 
     if (!targetPhone || !key) {
-      return res.status(400).json({ success: false, error: 'WhatsApp Phone Number અને CallMeBot API Key બંને જરૂરી છે.' });
+      return res.status(400).json({ success: false, error: 'Both WhatsApp Phone Number and CallMeBot API Key are required.' });
     }
 
     const cleanPhone = targetPhone.replace(/[^0-9]/g, '');
@@ -2495,7 +2700,7 @@ app.post('/api/whatsapp/test', async (req, res) => {
     if (cbRes.ok || cbText.includes('queued') || cbText.includes('Success')) {
       res.json({ success: true, message: 'WhatsApp પર ટેસ્ટ મેસેજ મોકલાઈ ગયો છે! તમારા WhatsApp માં ચેક કરો. 📲' });
     } else {
-      res.status(400).json({ success: false, error: cbText || 'WhatsApp મેસેજ મોકલવામાં ભૂલ આવી.' });
+      res.status(400).json({ success: false, error: cbText || 'Failed to send WhatsApp message.' });
     }
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -2510,7 +2715,7 @@ app.post('/api/telegram/test', async (req, res) => {
     const chat = chatId || process.env.TELEGRAM_CHAT_ID;
 
     if (!token || !chat) {
-      return res.status(400).json({ success: false, error: 'Telegram Bot Token અને Chat ID બંને જરૂરી છે.' });
+      return res.status(400).json({ success: false, error: 'Both Telegram Bot Token and Chat ID are required.' });
     }
 
     const testMsg = `🚀 <b>ForgeAI Studio Alert Test</b>\n\n✅ તમારું Telegram Bot સફળતાપૂર્વક કનેક્ટ થઈ ગયું છે!\nહવે જ્યારે પણ કોઈ નવી Reel કે Short પોસ્ટ થશે ત્યારે તમને તરત જ લાઈવ લિંક સાથે અહીં મેસેજ આવી જશે. 🎉`;
@@ -2530,7 +2735,7 @@ app.post('/api/telegram/test', async (req, res) => {
     if (data.ok) {
       res.json({ success: true, message: 'Telegram પર ટેસ્ટ મેસેજ મોકલાઈ ગયો છે! તમારા મોબાઇલમાં ચેક કરો. 📲' });
     } else {
-      res.status(400).json({ success: false, error: data.description || 'Telegram પર મેસેજ મોકલવામાં ભૂલ આવી.' });
+      res.status(400).json({ success: false, error: data.description || 'Failed to send Telegram message.' });
     }
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -2560,13 +2765,16 @@ cron.schedule('0 3 * * *', async () => {
 function getSchedulerState() {
   try {
     if (fs.existsSync(SCHEDULER_FILE)) {
-      return JSON.parse(fs.readFileSync(SCHEDULER_FILE, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(SCHEDULER_FILE, 'utf8'));
+      if (!Array.isArray(parsed.masterVideosQueue)) parsed.masterVideosQueue = [];
+      return parsed;
     }
   } catch (_) {}
   return {
     isActive: false,
     scheduledTime: "08:30",
     masterVideo: null,
+    masterVideosQueue: [],
     currentPart: 1,
     lastPostedSeconds: 0,
     history: []
@@ -2574,6 +2782,7 @@ function getSchedulerState() {
 }
 
 function saveSchedulerState(state) {
+  if (!Array.isArray(state.masterVideosQueue)) state.masterVideosQueue = [];
   fs.writeFileSync(SCHEDULER_FILE, JSON.stringify(state, null, 2), 'utf8');
 }
 
@@ -2604,16 +2813,38 @@ function setupDailyCron(timeStr) {
 
 // Core Engine: Cut Next 30s Segment from Master Video with Zero Duplication
 async function processNextReelFromMasterVideo() {
-  const state = getSchedulerState();
+  let state = getSchedulerState();
   if (!state.masterVideo || !state.masterVideo.path || !fs.existsSync(state.masterVideo.path)) {
-    throw new Error('માસ્ટર લોંગ વિડીયો ફાઈલ ઉપલબ્ધ નથી.');
+    // If masterVideo missing but queue has items, promote first item
+    if (state.masterVideosQueue && state.masterVideosQueue.length > 0) {
+      const nextVid = state.masterVideosQueue.shift();
+      state.masterVideo = nextVid;
+      state.currentPart = 1;
+      state.lastPostedSeconds = 0;
+      saveSchedulerState(state);
+      console.log(`🎬 [Auto-Pilot Queue] Activated next master video: "${nextVid.originalName}"`);
+    } else {
+      throw new Error('Master long video file is not available.');
+    }
   }
 
-  const totalDur = state.masterVideo.totalDurationSeconds || 60;
-  const startSec = state.lastPostedSeconds || 0;
+  let totalDur = state.masterVideo.totalDurationSeconds || 60;
+  let startSec = state.lastPostedSeconds || 0;
 
+  // If this video has exhausted all its 30s parts, automatically check if next video exists in queue!
   if (startSec >= totalDur) {
-    throw new Error('આ લોંગ વિડીયોના બધા ૩૦ સેકન્ડના ભાગો પૂરા થઈ ગયા છે!');
+    if (state.masterVideosQueue && state.masterVideosQueue.length > 0) {
+      const nextVid = state.masterVideosQueue.shift();
+      console.log(`🎬 [Auto-Pilot Queue] Finished master video "${state.masterVideo.originalName}". Automatically promoting next video in queue: "${nextVid.originalName}"`);
+      state.masterVideo = nextVid;
+      state.currentPart = 1;
+      state.lastPostedSeconds = 0;
+      saveSchedulerState(state);
+      totalDur = nextVid.totalDurationSeconds || 60;
+      startSec = 0;
+    } else {
+      throw new Error('All 30-second reel parts from this master video and queue are complete!');
+    }
   }
 
   const partNum = state.currentPart || 1;
@@ -2851,40 +3082,65 @@ Respond ONLY with valid JSON.`
 }
 
 // 7. Scheduler API Endpoints
-app.post('/api/scheduler/setup', upload.single('masterVideo'), async (req, res) => {
+app.post('/api/scheduler/setup', upload.fields([{ name: 'masterVideo', maxCount: 1 }, { name: 'masterVideos', maxCount: 20 }]), async (req, res) => {
   try {
-    const { scheduledTime = '08:30' } = req.body;
+    const { scheduledTime = '08:30', appendQueue = 'false', replaceMode = 'false' } = req.body;
     let state = getSchedulerState();
 
-    if (req.file) {
-      const filePath = req.file.path;
-      // Get duration with ffprobe
-      const durationSeconds = await new Promise((resolve) => {
-        ffmpeg.ffprobe(filePath, (err, metadata) => {
-          if (err || !metadata?.format?.duration) resolve(300);
-          else resolve(Math.round(metadata.format.duration));
+    let uploadedFiles = [];
+    if (req.files) {
+      if (req.files.masterVideos && req.files.masterVideos.length > 0) {
+        uploadedFiles = req.files.masterVideos;
+      } else if (req.files.masterVideo && req.files.masterVideo.length > 0) {
+        uploadedFiles = req.files.masterVideo;
+      }
+    } else if (req.file) {
+      uploadedFiles = [req.file];
+    }
+
+    if (uploadedFiles.length > 0) {
+      const videoItems = [];
+      for (const file of uploadedFiles) {
+        const filePath = file.path;
+        const durationSeconds = await new Promise((resolve) => {
+          ffmpeg.ffprobe(filePath, (err, metadata) => {
+            if (err || !metadata?.format?.duration) resolve(300);
+            else resolve(Math.round(metadata.format.duration));
+          });
         });
-      });
 
-      const totalParts = Math.ceil(durationSeconds / 30);
-
-      state = {
-        isActive: true,
-        scheduledTime,
-        masterVideo: {
-          originalName: req.file.originalname,
+        const totalParts = Math.ceil(durationSeconds / 30);
+        videoItems.push({
+          id: `mv-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+          originalName: file.originalname,
           fileName: path.basename(filePath),
           path: filePath,
           totalDurationSeconds: durationSeconds,
-          totalDurationFormatted: `${Math.floor(durationSeconds / 60)} મિનિટ ${durationSeconds % 60} સેકન્ડ`,
-          totalParts
-        },
-        currentPart: 1,
-        lastPostedSeconds: 0,
-        history: []
-      };
+          totalDurationFormatted: `${Math.floor(durationSeconds / 60)} min ${durationSeconds % 60} sec`,
+          totalParts,
+          addedAt: new Date().toISOString()
+        });
+      }
+
+      state.scheduledTime = scheduledTime;
+      state.isActive = true;
+
+      if (!state.masterVideo || replaceMode === 'true') {
+        state.masterVideo = videoItems[0];
+        state.currentPart = 1;
+        state.lastPostedSeconds = 0;
+        if (replaceMode === 'true') {
+          state.masterVideosQueue = videoItems.slice(1);
+        } else {
+          state.masterVideosQueue = [...(state.masterVideosQueue || []), ...videoItems.slice(1)];
+        }
+      } else {
+        // Master video already active: append all new videos to queue!
+        state.masterVideosQueue = [...(state.masterVideosQueue || []), ...videoItems];
+      }
+
       saveSchedulerState(state);
-      console.log(`🎬 New Master Video Loaded: "${req.file.originalname}" (${durationSeconds}s, ${totalParts} total 30s parts)`);
+      console.log(`🎬 Auto-Pilot: Processed ${videoItems.length} video(s). Active: "${state.masterVideo.originalName}", Queue count: ${state.masterVideosQueue.length}`);
     } else {
       state.scheduledTime = scheduledTime;
       saveSchedulerState(state);
@@ -2894,10 +3150,153 @@ app.post('/api/scheduler/setup', upload.single('masterVideo'), async (req, res) 
       setupDailyCron(state.scheduledTime);
     }
 
-    res.json({ success: true, state, message: `શેડ્યૂલર દરરોજ સવારે ${state.scheduledTime} વાગ્યે સેટ થઈ ગયું છે!` });
+    const totalVideosCount = (state.masterVideo ? 1 : 0) + (state.masterVideosQueue ? state.masterVideosQueue.length : 0);
+    res.json({
+      success: true,
+      state,
+      message: `શેડ્યૂલર દરરોજ ${state.scheduledTime} વાગ્યે સેટ થઈ ગયું છે! કુલ ${totalVideosCount} વિડિયો ઉપલબ્ધ છે.`
+    });
   } catch (err) {
     console.error('Scheduler setup error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Remove video from Auto-Pilot queue
+app.post('/api/scheduler/queue/remove', (req, res) => {
+  try {
+    const { id } = req.body;
+    let state = getSchedulerState();
+    state.masterVideosQueue = (state.masterVideosQueue || []).filter(item => item.id !== id);
+    saveSchedulerState(state);
+    res.json({ success: true, state, message: 'Video removed from queue.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Promote queued video to active master video
+app.post('/api/scheduler/queue/promote', (req, res) => {
+  try {
+    const { id } = req.body;
+    let state = getSchedulerState();
+    const idx = (state.masterVideosQueue || []).findIndex(item => item.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Video not found in queue' });
+
+    const chosen = state.masterVideosQueue.splice(idx, 1)[0];
+    if (state.masterVideo) {
+      state.masterVideosQueue.unshift(state.masterVideo);
+    }
+    state.masterVideo = chosen;
+    state.currentPart = 1;
+    state.lastPostedSeconds = 0;
+    saveSchedulerState(state);
+    res.json({ success: true, state, message: `"${chosen.originalName}" is now the active master video.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Batch Reels Scheduling Endpoint (Multiple Short Videos at once)
+app.post('/api/video/batch-schedule', upload.array('reelFiles', 20), async (req, res) => {
+  try {
+    const files = req.files || [];
+    if (files.length === 0) {
+      return res.status(400).json({ error: 'કૃપા કરીને ઓછામાં ઓછો ૧ વિડિયો અપલોડ કરો.' });
+    }
+
+    const {
+      intervalHours = '24',
+      firstScheduleTime = new Date(Date.now() + 60*60*1000).toISOString(),
+      niche = 'Auto-Detect',
+      targetDuration = '30'
+    } = req.body;
+
+    const intervalMs = (parseFloat(intervalHours) || 24) * 60 * 60 * 1000;
+    const baseDate = new Date(firstScheduleTime);
+    const startTimestamp = isNaN(baseDate.getTime()) ? (Date.now() + 60*60*1000) : baseDate.getTime();
+
+    const queue = getScheduledQueue();
+    const results = [];
+
+    console.log(`🚀 [Batch Reel Scheduler] Processing ${files.length} reel files with interval ${intervalHours}h...`);
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const scheduledTimeDate = new Date(startTimestamp + (i * intervalMs));
+      const scheduledTimeStr = scheduledTimeDate.toISOString();
+
+      const outputFileName = `batch-reel-${Date.now()}-${i+1}-${Math.floor(Math.random()*1000)}.mp4`;
+      const outputPath = path.join(REELS_DIR, outputFileName);
+      const thumbFileName = outputFileName.replace('.mp4', '-cover.jpg');
+      const thumbOutputPath = path.join(REELS_DIR, thumbFileName);
+
+      // FFmpeg convert to 1080x1920 9:16 vertical
+      await new Promise((resolve, reject) => {
+        ffmpeg(file.path)
+          .duration(parseInt(targetDuration, 10) || 30)
+          .videoFilters([
+            'scale=1080:1920:force_original_aspect_ratio=decrease',
+            'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
+            'eq=saturation=1.2:contrast=1.12:brightness=0.02'
+          ])
+          .outputOptions(['-c:v libx264', '-preset fast', '-crf 22', '-pix_fmt yuv420p', '-c:a aac', '-b:a 192k', '-movflags +faststart'])
+          .save(outputPath)
+          .on('end', () => resolve())
+          .on('error', (err) => reject(err));
+      });
+
+      // Generate cover thumbnail
+      try {
+        await generateViralThumbnail({
+          videoPath: outputPath,
+          outputPath: thumbOutputPath,
+          headlineText: `REEL ${i+1}: MUST WATCH`,
+          hookBadge: `PART ${i+1}`,
+          positionMode: 'both',
+          colorStyle: 'gold',
+          timestamp: 1.0
+        });
+      } catch (_) {}
+
+      const cleanName = path.parse(file.originalname).name;
+      const scheduledItem = {
+        id: `batch-${Date.now()}-${i+1}`,
+        reelUrl: `/rendered-reels/${outputFileName}`,
+        downloadUrl: `/rendered-reels/${outputFileName}`,
+        fileName: outputFileName,
+        originalName: file.originalname,
+        scheduledTime: scheduledTimeStr,
+        scheduledTimeFormatted: scheduledTimeDate.toLocaleString('gu-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+        recurringDaily: false,
+        duration: `${targetDuration}s`,
+        thumbnailUrl: `/rendered-reels/${thumbFileName}`,
+        niche,
+        viralTitle: `${cleanName} • Reel ${i+1}`,
+        viralCaption: `🔥 Viral Reel: ${cleanName}! Follow @moving.151120 for daily reels!`,
+        viralHashtags: '#Reels #Viral #Trending #ForgeAI #Shorts',
+        detectedTopic: niche,
+        status: 'Scheduled',
+        createdAt: new Date().toISOString()
+      };
+
+      queue.unshift(scheduledItem);
+      results.push(scheduledItem);
+    }
+
+    saveScheduledQueue(queue);
+    console.log(`✅ [Batch Reel Scheduler] Successfully scheduled ${results.length} reels into queue!`);
+
+    res.json({
+      success: true,
+      count: results.length,
+      scheduledReels: results,
+      queue: getScheduledQueue(),
+      message: `${results.length} રીલ્સ સફળતાપૂર્વક શેડ્યૂલ થઈ ગઈ છે!`
+    });
+  } catch (err) {
+    console.error('Batch schedule error:', err);
+    res.status(500).json({ error: `બેચ શેડ્યૂલ કરવામાં ભૂલ: ${err.message}` });
   }
 });
 
@@ -3008,7 +3407,31 @@ app.get('/api/social/status', async (req, res) => {
 });
 
 // 📊 8. LIVE SOCIAL ANALYTICS & ENGAGEMENT TRACKER
+const ANALYTICS_CACHE_FILE = path.join(__dirname, 'data', 'analytics_cache.json');
+let cachedAnalyticsPayload = null;
+let cachedAnalyticsTime = 0;
+const ANALYTICS_CACHE_TTL = 15 * 60 * 1000; // 15 minutes cache (instant response, prevents Graph API slow hangs)
+
+// Load persistent cache from disk on startup
+try {
+  if (fs.existsSync(ANALYTICS_CACHE_FILE)) {
+    const raw = fs.readFileSync(ANALYTICS_CACHE_FILE, 'utf8');
+    cachedAnalyticsPayload = JSON.parse(raw);
+    cachedAnalyticsTime = Date.now();
+  }
+} catch (e) {
+  console.warn('⚠️ Could not load analytics cache from disk:', e.message);
+}
+
 app.get('/api/social/analytics', async (req, res) => {
+  const forceRefresh = req.query.refresh === 'true' || req.query.force === 'true';
+  const now = Date.now();
+
+  // Return cached payload instantly if fresh (prevents redundant slow network calls)
+  if (!forceRefresh && cachedAnalyticsPayload && (now - cachedAnalyticsTime < ANALYTICS_CACHE_TTL)) {
+    return res.json(cachedAnalyticsPayload);
+  }
+
   try {
     const queue = getScheduledQueue();
     const hasIg = !!(process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID);
@@ -3030,8 +3453,19 @@ app.get('/api/social/analytics', async (req, res) => {
         const token = process.env.META_INSTAGRAM_TOKEN;
         const userId = process.env.META_INSTAGRAM_USER_ID;
 
-        // Fetch IG profile details
-        const profRes = await fetch(`https://graph.facebook.com/v20.0/${userId}?fields=id,username,name,followers_count,media_count,profile_picture_url&access_token=${token}`).then(r => r.json());
+        // Fetch IG profile & media in parallel with a strict 4.5s timeout (never hangs)
+        const [profSettled, mediaSettled] = await Promise.allSettled([
+          fetch(`https://graph.facebook.com/v20.0/${userId}?fields=id,username,name,followers_count,media_count,profile_picture_url&access_token=${token}`, {
+            signal: AbortSignal.timeout(4500)
+          }).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`https://graph.facebook.com/v20.0/${userId}/media?fields=id,caption,media_type,media_product_type,like_count,comments_count,permalink,timestamp&limit=25&access_token=${token}`, {
+            signal: AbortSignal.timeout(4500)
+          }).then(r => r.ok ? r.json() : null).catch(() => null)
+        ]);
+
+        const profRes = profSettled.status === 'fulfilled' ? profSettled.value : null;
+        const mediaRes = mediaSettled.status === 'fulfilled' ? mediaSettled.value : null;
+
         if (profRes && profRes.username) {
           igProfile.username = profRes.username;
           cachedIgUsername = profRes.username;
@@ -3041,8 +3475,6 @@ app.get('/api/social/analytics', async (req, res) => {
           igProfile.profilePic = profRes.profile_picture_url || null;
         }
 
-        // Fetch recent reels/media
-        const mediaRes = await fetch(`https://graph.facebook.com/v20.0/${userId}/media?fields=id,caption,media_type,media_product_type,like_count,comments_count,permalink,timestamp&limit=25&access_token=${token}`).then(r => r.json());
         if (mediaRes && Array.isArray(mediaRes.data)) {
           igMediaList = mediaRes.data;
         }
@@ -3164,7 +3596,7 @@ app.get('/api/social/analytics', async (req, res) => {
         }, publishedReels[0])
       : null;
 
-    res.json({
+    const resultPayload = {
       success: true,
       instagram: igProfile,
       youtube: {
@@ -3198,622 +3630,213 @@ app.get('/api/social/analytics', async (req, res) => {
         totalMB: (storageTotalBytes / (1024 * 1024)).toFixed(1),
         reelsDir: 'public/rendered-reels'
       }
-    });
+    };
+
+    cachedAnalyticsPayload = resultPayload;
+    cachedAnalyticsTime = Date.now();
+    try {
+      if (!fs.existsSync(path.join(__dirname, 'data'))) {
+        fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
+      }
+      fs.writeFileSync(ANALYTICS_CACHE_FILE, JSON.stringify(resultPayload, null, 2), 'utf8');
+    } catch (_) {}
+
+    res.json(resultPayload);
   } catch (err) {
     console.error('Analytics overview error:', err);
-    res.status(500).json({ error: err.message });
+    if (cachedAnalyticsPayload) {
+      return res.json(cachedAnalyticsPayload);
+    }
+    res.json({
+      success: true,
+      instagram: {
+        username: cachedIgUsername || 'moving.151120',
+        name: 'Reel Creator',
+        followers: 2,
+        mediaCount: 0,
+        profilePic: null,
+        connected: false
+      },
+      youtube: { connected: false, channelTitle: 'YouTube Shorts' },
+      summary: {
+        totalReels: 0,
+        totalLikes: 0,
+        totalComments: 0,
+        totalFollowers: 2,
+        breakdown: {
+          instagram: { likes: 0, comments: 0, reels: 0, followers: 2 },
+          youtube: { likes: 0, comments: 0, shorts: 0, views: 0 }
+        },
+        topReel: null
+      },
+      reels: [],
+      storage: { totalFiles: 0, totalMB: '0.0', reelsDir: 'public/rendered-reels' },
+      warning: err.message
+    });
   }
 });
 
 // 🧹 9. 1-CLICK STORAGE AUTO-CLEANER ENDPOINT
 app.post('/api/storage/clean', async (req, res) => {
   try {
-    const daysOld = parseInt(req.body.daysOld) || 7;
+    const mode = req.body.mode || 'smart'; // 'smart' (keep latest N), 'days', or 'all'
+    const keepCount = parseInt(req.body.keepCount) || 5;
+    const daysOld = parseFloat(req.body.daysOld) || 1; // Default to 1 day if days mode
+    const cleanFrames = req.body.cleanFrames !== false;
     const now = Date.now();
     const thresholdMs = daysOld * 24 * 60 * 60 * 1000;
+
     let deletedCount = 0;
     let freedBytes = 0;
 
-    if (fs.existsSync(REELS_DIR)) {
-      const files = fs.readdirSync(REELS_DIR);
-      // Keep at least the 5 newest reels
-      const mp4Files = files.filter(f => f.endsWith('.mp4')).map(f => {
-        const fullPath = path.join(REELS_DIR, f);
-        const st = fs.statSync(fullPath);
-        return { file: f, path: fullPath, mtimeMs: st.mtimeMs, size: st.size };
-      }).sort((a, b) => b.mtimeMs - a.mtimeMs);
+    // 1. Gather active scheduled queue files so they are NEVER accidentally deleted
+    const protectedFileNames = new Set();
+    try {
+      const q = getScheduledQueue();
+      q.forEach(item => {
+        if (item.fileName) protectedFileNames.add(item.fileName);
+      });
+    } catch (_) {}
 
-      const filesToConsider = mp4Files.slice(5); // Protect latest 5 reels
-      for (const item of filesToConsider) {
-        if (now - item.mtimeMs > thresholdMs) {
+    if (fs.existsSync(REELS_DIR)) {
+      const allFiles = fs.readdirSync(REELS_DIR);
+
+      // Sort all MP4s by newest first
+      const mp4Files = allFiles
+        .filter(f => f.endsWith('.mp4'))
+        .map(f => {
+          const fullPath = path.join(REELS_DIR, f);
+          let mtimeMs = 0;
+          let size = 0;
+          try {
+            const st = fs.statSync(fullPath);
+            mtimeMs = st.mtimeMs;
+            size = st.size;
+          } catch (_) {}
+          return { file: f, path: fullPath, mtimeMs, size };
+        })
+        .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+      // Protect the latest N reels and any pending scheduled reels
+      const protectedMp4s = new Set(
+        mp4Files.slice(0, keepCount).map(m => m.file)
+      );
+
+      // Determine files to delete
+      for (const item of mp4Files) {
+        // Skip if protected in top N or in scheduled queue
+        if (protectedMp4s.has(item.file) || protectedFileNames.has(item.file)) {
+          continue;
+        }
+
+        let shouldDelete = false;
+        if (mode === 'smart' || mode === 'all') {
+          // In smart mode, any reel beyond the newest keepCount is cleaned
+          shouldDelete = true;
+        } else if (mode === 'days') {
+          shouldDelete = (now - item.mtimeMs) > thresholdMs;
+        }
+
+        if (shouldDelete) {
           try {
             fs.unlinkSync(item.path);
             deletedCount++;
             freedBytes += item.size;
+
+            // Also remove matching cover image if exists
+            const baseName = path.parse(item.file).name;
+            const coverPath = path.join(REELS_DIR, `${baseName}-cover.jpg`);
+            if (fs.existsSync(coverPath)) {
+              try {
+                const cst = fs.statSync(coverPath);
+                freedBytes += cst.size;
+                fs.unlinkSync(coverPath);
+                deletedCount++;
+              } catch (_) {}
+            }
           } catch (_) {}
         }
       }
+
+      // 2. Clean temporary frame extractions (frame-*.jpg)
+      if (cleanFrames) {
+        for (const f of allFiles) {
+          if (f.startsWith('frame-') && f.endsWith('.jpg')) {
+            const fPath = path.join(REELS_DIR, f);
+            try {
+              const st = fs.statSync(fPath);
+              freedBytes += st.size;
+              fs.unlinkSync(fPath);
+              deletedCount++;
+            } catch (_) {}
+          }
+        }
+      }
+    }
+
+    // 3. Clean temporary uploads directory (older than 2 hours)
+    try {
+      const uploadsDir = path.join(__dirname, 'uploads');
+      if (fs.existsSync(uploadsDir)) {
+        const uFiles = fs.readdirSync(uploadsDir);
+        for (const uf of uFiles) {
+          const uPath = path.join(uploadsDir, uf);
+          try {
+            const ust = fs.statSync(uPath);
+            if (now - ust.mtimeMs > 2 * 60 * 60 * 1000) {
+              freedBytes += ust.size;
+              fs.unlinkSync(uPath);
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+
+    // 4. Recalculate storage stats immediately
+    let storageTotalFiles = 0;
+    let storageTotalBytes = 0;
+    if (fs.existsSync(REELS_DIR)) {
+      const remaining = fs.readdirSync(REELS_DIR);
+      storageTotalFiles = remaining.length;
+      remaining.forEach(f => {
+        try {
+          const st = fs.statSync(path.join(REELS_DIR, f));
+          storageTotalBytes += st.size;
+        } catch (_) {}
+      });
+    }
+
+    const remainingMB = (storageTotalBytes / (1024 * 1024)).toFixed(1);
+    const freedMB = (freedBytes / (1024 * 1024)).toFixed(1);
+
+    // 5. Instantly update memory & disk analytics cache with new storage numbers
+    if (cachedAnalyticsPayload) {
+      cachedAnalyticsPayload.storage = {
+        totalFiles: storageTotalFiles,
+        totalMB: remainingMB,
+        reelsDir: 'public/rendered-reels'
+      };
+      cachedAnalyticsTime = Date.now();
+      try {
+        fs.writeFileSync(ANALYTICS_CACHE_FILE, JSON.stringify(cachedAnalyticsPayload, null, 2), 'utf8');
+      } catch (_) {}
     }
 
     res.json({
       success: true,
       deletedCount,
-      freedMB: (freedBytes / (1024 * 1024)).toFixed(1),
-      message: `${deletedCount} જૂની વિડીયો ફાઈલો સાફ થઈ (${(freedBytes / (1024 * 1024)).toFixed(1)} MB મેમરી મુક્ત થઈ).`
+      freedMB,
+      remainingFiles: storageTotalFiles,
+      remainingMB,
+      message: `${deletedCount} જૂની વિડીયો અને ટેમ્પ ફાઈલો સાફ થઈ (${freedMB} MB જગ્યા મુક્ત થઈ). તાજેતરની ${keepCount} રીલ્સ સુરક્ષિત છે.`
     });
   } catch (err) {
+    console.error('Storage cleaner error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
-
-app.post('/api/social/publish-instagram-direct', async (req, res) => {
-  try {
-    const { videoFileName, caption } = req.body;
-    const token = req.body.accessToken || process.env.META_INSTAGRAM_TOKEN;
-    let userId = req.body.igUserId || process.env.META_INSTAGRAM_USER_ID;
-
-    if (!token) {
-      return res.status(400).json({ error: 'Meta Instagram Access Token ઉપલબ્ધ નથી.' });
-    }
-
-    // Auto-discover Instagram Business Account ID if not provided
-    if (!userId) {
-      const meAccounts = await fetch(`https://graph.facebook.com/v20.0/me/accounts?fields=instagram_business_account{id,username}&access_token=${token}`).then(r => r.json());
-      const igAcc = meAccounts.data?.find(a => a.instagram_business_account)?.instagram_business_account;
-      if (igAcc && igAcc.id) {
-        userId = igAcc.id;
-      } else {
-        return res.status(400).json({ error: 'Instagram Business Account ID મળ્યો નથી.' });
-      }
-    }
-
-    // Find video file
-    let videoPath = null;
-    if (videoFileName) {
-      const p1 = path.join(REELS_DIR, videoFileName);
-      const p2 = path.join(UPLOADS_DIR, videoFileName);
-      if (fs.existsSync(p1)) videoPath = p1;
-      else if (fs.existsSync(p2)) videoPath = p2;
-    }
-
-    if (!videoPath) {
-      // Find latest rendered reel
-      const files = fs.readdirSync(REELS_DIR).filter(f => f.endsWith('.mp4'));
-      if (files.length > 0) {
-        files.sort((a, b) => fs.statSync(path.join(REELS_DIR, b)).mtimeMs - fs.statSync(path.join(REELS_DIR, a)).mtimeMs);
-        videoPath = path.join(REELS_DIR, files[0]);
-      }
-    }
-
-    if (!videoPath || !fs.existsSync(videoPath)) {
-      return res.status(404).json({ error: 'પબ્લિશ કરવા માટે વિડીયો ફાઈલ મળી નથી.' });
-    }
-
-    const videoBuffer = await fsp.readFile(videoPath);
-    console.log(`🚀 [Instagram Direct] Uploading "${path.basename(videoPath)}" (${(videoBuffer.length / (1024*1024)).toFixed(2)} MB) to IG Account ${userId}...`);
-
-    // Step 1: Initialize Resumable Reels Upload Session
-    const initUrl = `https://graph.facebook.com/v20.0/${userId}/media`;
-    const initRes = await fetch(initUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        media_type: 'REELS',
-        upload_type: 'resumable',
-        caption: caption || '✨ Created with AI Reel Studio #reels',
-        access_token: token
-      })
-    }).then(r => r.json());
-
-    if (initRes.error) {
-      console.error('Meta Media Init Error:', initRes.error);
-      return res.status(400).json({ error: initRes.error.message || 'Meta Media Init Failed' });
-    }
-
-    const containerId = initRes.id;
-    const uploadUri = initRes.uri;
-    console.log(`📦 [Instagram Direct] Container created: ${containerId}, uploading bytes...`);
-
-    // Step 2: Upload Binary Video Data to rupload endpoint
-    const uploadRes = await fetch(uploadUri, {
-      method: 'POST',
-      headers: {
-        'Authorization': `OAuth ${token}`,
-        'offset': '0',
-        'file_size': videoBuffer.length.toString()
-      },
-      body: videoBuffer
-    }).then(r => r.json());
-
-    if (uploadRes.error) {
-      console.error('Meta Video Binary Upload Error:', uploadRes.error);
-      return res.status(400).json({ error: uploadRes.error.message || 'Video binary upload failed' });
-    }
-
-    console.log(`⏳ [Instagram Direct] Binary uploaded. Waiting for Meta to transcode Reel container ${containerId}...`);
-
-    // Step 3: Poll Container Status until FINISHED
-    let isReady = false;
-    for (let attempt = 1; attempt <= 30; attempt++) {
-      await new Promise(r => setTimeout(r, 3000));
-      const statusRes = await fetch(`https://graph.facebook.com/v20.0/${containerId}?fields=status_code,status&access_token=${token}`).then(r => r.json());
-      console.log(`🔄 [Instagram Direct] Poll attempt ${attempt}/30: status_code=${statusRes.status_code}`);
-
-      if (statusRes.status_code === 'FINISHED') {
-        isReady = true;
-        break;
-      }
-      if (statusRes.status_code === 'ERROR') {
-        return res.status(400).json({ error: 'Meta Reels પ્રોસેસિંગમાં ભૂલ આવી.' });
-      }
-    }
-
-    if (!isReady) {
-      return res.status(408).json({ error: 'Meta Video પ્રોસેસિંગમાં વધુ સમય લાગી રહ્યો છે. કૃપા કરીને ૧ મિનિટ પછી ફરી પ્રયાસ કરો.' });
-    }
-
-    // Step 4: Publish Reel
-    console.log(`🚀 [Instagram Direct] Publishing container ${containerId}...`);
-    const publishRes = await fetch(`https://graph.facebook.com/v20.0/${userId}/media_publish`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        creation_id: containerId,
-        access_token: token
-      })
-    }).then(r => r.json());
-
-    if (publishRes.error) {
-      console.error('Meta Media Publish Error:', publishRes.error);
-      return res.status(400).json({ error: publishRes.error.message || 'Media publish failed' });
-    }
-
-    const postId = publishRes.id;
-    console.log(`🎉 [Instagram Direct] Reel Published Successfully! Post ID: ${postId}`);
-
-    res.json({
-      success: true,
-      postId,
-      postUrl: `https://www.instagram.com/p/${postId}/`,
-      message: 'રીલ ૧૦૦% હેન્ડ્સ-ફ્રી સીધી જ તમારા Instagram એકાઉન્ટ પર પબ્લિશ થઈ ગઈ છે! 🎉'
-    });
-  } catch (err) {
-    console.error('Instagram direct publish error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Endpoint to fetch current settings and social connectivity status
-app.get('/api/settings/get', async (req, res) => {
-  try {
-    const hasIg = !!(process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID);
-    const hasYt = !!process.env.YOUTUBE_ACCESS_TOKEN;
-    const hasGemini = !!process.env.GEMINI_API_KEY;
-
-    res.json({
-      success: true,
-      geminiConfigured: hasGemini,
-      meta: {
-        configured: hasIg,
-        username: cachedIgUsername || process.env.META_INSTAGRAM_USERNAME || null,
-        userId: process.env.META_INSTAGRAM_USER_ID || null
-      },
-      youtube: {
-        configured: hasYt,
-        channelTitle: cachedYtTitle || process.env.YOUTUBE_CHANNEL_TITLE || null
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ========================================================
-// 📦 9. ALL-SELLER STOCK INVENTORY, BILLING & CUSTOM UPI QR
-// ========================================================
-
-// Shop Settings & Custom UPI QR
-app.get('/api/shop/settings', (req, res) => {
-  res.json({ success: true, settings: getShopSettings() });
-});
-
-app.post('/api/shop/settings', (req, res) => {
-  try {
-    const current = getShopSettings();
-    const updated = { ...current, ...req.body };
-    saveShopSettings(updated);
-    res.json({ success: true, settings: updated, message: 'દુકાનની વિગતો સફળતાપૂર્વક સેવ થઈ ગઈ!' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/shop/onboarding-setup', (req, res) => {
-  try {
-    const {
-      shopName,
-      businessType,
-      ownerName,
-      phone,
-      address,
-      upiId,
-      upiQrImage,
-      gstNumber,
-      gstEnabled,
-      defaultGstRate,
-      invoicePrefix,
-      billTerms,
-      initialProducts
-    } = req.body;
-
-    const currentSettings = getShopSettings();
-    const updatedSettings = {
-      ...currentSettings,
-      shopName: shopName ? shopName.trim() : (currentSettings.shopName || 'Retail & Fashion Store'),
-      businessType: businessType ? businessType.trim() : (currentSettings.businessType || 'General Retail'),
-      ownerName: ownerName ? ownerName.trim() : (currentSettings.ownerName || 'Shop Owner'),
-      phone: phone ? phone.trim() : (currentSettings.phone || ''),
-      address: address ? address.trim() : (currentSettings.address || ''),
-      upiId: upiId ? upiId.trim() : (currentSettings.upiId || ''),
-      upiQrImage: upiQrImage !== undefined ? upiQrImage : (currentSettings.upiQrImage || ''),
-      gstNumber: gstNumber ? gstNumber.trim() : '',
-      gstEnabled: gstEnabled !== undefined ? Boolean(gstEnabled) : !!currentSettings.gstEnabled,
-      defaultGstRate: defaultGstRate !== undefined ? Number(defaultGstRate) : (currentSettings.defaultGstRate || 5),
-      invoicePrefix: invoicePrefix ? invoicePrefix.trim() : (currentSettings.invoicePrefix || 'INV'),
-      billTerms: billTerms ? billTerms.trim() : (currentSettings.billTerms || 'માલ પાછો લેવામાં આવશે નહીં. મુલાકાત બદલ આભાર! 🙏'),
-      isConfigured: true,
-      lastSetupAt: new Date().toISOString()
-    };
-    saveShopSettings(updatedSettings);
-
-    let products = getProducts();
-    let addedCount = 0;
-
-    if (Array.isArray(initialProducts) && initialProducts.length > 0) {
-      initialProducts.forEach(ip => {
-        if (ip && ip.name && ip.name.trim()) {
-          const newProd = {
-            id: `prod-${Date.now()}-${Math.round(Math.random() * 1000)}`,
-            name: ip.name.trim(),
-            sku: ip.sku ? ip.sku.trim() : `SKU-${Math.floor(100 + Math.random() * 900)}`,
-            category: ip.category ? ip.category.trim() : (updatedSettings.businessType || 'General Product'),
-            unit: ip.unit ? ip.unit.trim() : 'Pcs (નંગ)',
-            price: Number(ip.price) || 0,
-            cost: Number(ip.cost) || 0,
-            stock: Number(ip.stock) || 10,
-            minStockAlert: 3,
-            gstRate: ip.gstRate !== undefined ? Number(ip.gstRate) : (updatedSettings.defaultGstRate || 5),
-            description: ip.description || '',
-            videoFileName: '',
-            createdAt: new Date().toISOString()
-          };
-          products.unshift(newProd);
-          addedCount++;
-        }
-      });
-      saveProducts(products);
-    }
-
-    res.json({
-      success: true,
-      settings: updatedSettings,
-      products,
-      addedProductsCount: addedCount,
-      message: `વેલકમ "${updatedSettings.shopName}"! તમારી દુકાનનું સેટઅપ સફળતાપૂર્વક થઈ ગયું છે. 🎉`
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/shop/upload-qr', qrUpload.single('qrImage'), (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'QR Code ઈમેજ ફાઈલ પસંદ કરો.' });
-    const qrRelativeUrl = `/uploads/qr/${req.file.filename}`;
-    const settings = getShopSettings();
-    settings.upiQrImage = qrRelativeUrl;
-    saveShopSettings(settings);
-    res.json({ success: true, qrUrl: qrRelativeUrl, message: 'તમારો UPI QR Code સફળતાપૂર્વક અપલોડ થઈ ગયો! 🎉' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Products & Inventory CRUD
-app.get('/api/products', (req, res) => {
-  res.json({ success: true, products: getProducts() });
-});
-
-app.post('/api/products', (req, res) => {
-  try {
-    const { id, name, sku, category, unit, price, cost, stock, minStockAlert, gstRate, description, videoFileName } = req.body;
-    if (!name || price === undefined) {
-      return res.status(400).json({ error: 'પ્રોડક્ટનું નામ અને કિંમત જરૂરી છે.' });
-    }
-
-    let products = getProducts();
-    let product;
-
-    if (id) {
-      // Update existing
-      const idx = products.findIndex(p => p.id === id);
-      if (idx !== -1) {
-        products[idx] = {
-          ...products[idx],
-          name: name.trim(),
-          sku: sku || products[idx].sku,
-          category: category || products[idx].category,
-          unit: unit || products[idx].unit || 'Pcs (નંગ)',
-          price: Number(price),
-          cost: Number(cost) || 0,
-          stock: Number(stock) || 0,
-          minStockAlert: Number(minStockAlert) || 3,
-          gstRate: gstRate !== undefined ? Number(gstRate) : (products[idx].gstRate || 0),
-          description: description || '',
-          videoFileName: videoFileName !== undefined ? videoFileName : products[idx].videoFileName,
-          updatedAt: new Date().toISOString()
-        };
-        product = products[idx];
-      }
-    }
-
-    if (!product) {
-      // Create new
-      product = {
-        id: `prod-${Date.now()}-${Math.round(Math.random() * 1000)}`,
-        name: name.trim(),
-        sku: sku || `SKU-${Math.floor(100 + Math.random() * 900)}`,
-        category: category || 'General Product',
-        unit: unit || 'Pcs (નંગ)',
-        price: Number(price),
-        cost: Number(cost) || 0,
-        stock: Number(stock) || 0,
-        minStockAlert: Number(minStockAlert) || 3,
-        gstRate: Number(gstRate) || 0,
-        description: description || '',
-        videoFileName: videoFileName || '',
-        createdAt: new Date().toISOString()
-      };
-      products.unshift(product);
-    }
-
-    saveProducts(products);
-    res.json({ success: true, product, products, message: 'પ્રોડક્ટ સ્ટોકમાં સફળતાપૂર્વક સેવ થઈ ગઈ! ✓' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.delete('/api/products/:id', (req, res) => {
-  try {
-    let products = getProducts();
-    products = products.filter(p => p.id !== req.params.id);
-    saveProducts(products);
-    res.json({ success: true, products, message: 'પ્રોડક્ટ ડિલીટ થઈ ગઈ.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Invoicing & Billing (with Auto-Stock Deduction)
-app.get('/api/invoices', (req, res) => {
-  res.json({ success: true, invoices: getInvoices() });
-});
-
-app.post('/api/invoices', (req, res) => {
-  try {
-    const { customerName, customerPhone, customerAddress, items, discount = 0, paymentMethod = 'UPI QR', notes } = req.body;
-    if (!items || !items.length) {
-      return res.status(400).json({ error: 'બિલ બનાવવા માટે ઓછામાં ઓછી ૧ આઇટમ ઉમેરો.' });
-    }
-
-    let products = getProducts();
-    const shopSettings = getShopSettings();
-    let subtotal = 0;
-    let totalTax = 0;
-
-    // Validate items and deduct stock
-    const billedItems = items.map((it, idx) => {
-      const prod = it.productId ? products.find(p => p.id === it.productId) : null;
-      const qty = Number(it.qty || it.quantity) || 1;
-      const unitPrice = Number(it.price) || (prod ? prod.price : 0);
-      const rowTaxRate = Number(it.gstRate !== undefined ? it.gstRate : (prod ? prod.gstRate : (shopSettings.gstEnabled ? shopSettings.defaultGstRate : 0))) || 0;
-      
-      const itemSubtotal = unitPrice * qty;
-      const rowTax = shopSettings.gstEnabled ? (itemSubtotal * (rowTaxRate / 100)) : 0;
-      const total = itemSubtotal + rowTax;
-      
-      subtotal += itemSubtotal;
-      totalTax += rowTax;
-
-      // Auto-deduct stock if catalog product exists
-      if (prod) {
-        prod.stock = Math.max(0, (Number(prod.stock) || 0) - qty);
-      }
-
-      return {
-        srNo: idx + 1,
-        productId: it.productId || '',
-        name: it.name || (prod ? prod.name : 'Custom Item'),
-        sku: prod ? prod.sku : (it.sku || ''),
-        unit: it.unit || (prod ? prod.unit : 'Pcs'),
-        price: unitPrice,
-        qty: qty,
-        gstRate: rowTaxRate,
-        taxAmount: Math.round(rowTax * 100) / 100,
-        total: Math.round((itemSubtotal) * 100) / 100
-      };
-    });
-
-    const disc = Number(discount) || 0;
-    const cgst = shopSettings.gstEnabled ? Math.round((totalTax / 2) * 100) / 100 : 0;
-    const sgst = shopSettings.gstEnabled ? Math.round((totalTax / 2) * 100) / 100 : 0;
-    const grandTotal = Math.round(Math.max(0, subtotal + (shopSettings.gstEnabled ? totalTax : 0) - disc));
-
-    const invoices = getInvoices();
-    const prefix = shopSettings.invoicePrefix || 'INV';
-    const invoiceNo = `${prefix}-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(3, '0')}`;
-
-    const newInvoice = {
-      id: `inv-${Date.now()}`,
-      invoiceNo,
-      invoiceNumber: invoiceNo,
-      customerName: customerName ? customerName.trim() : 'Walk-in Customer',
-      customerPhone: customerPhone ? customerPhone.trim() : '',
-      customerAddress: customerAddress ? customerAddress.trim() : '',
-      items: billedItems,
-      subtotal: Math.round(subtotal * 100) / 100,
-      discount: disc,
-      gstEnabled: !!shopSettings.gstEnabled,
-      gstNumber: shopSettings.gstNumber || '',
-      cgst,
-      sgst,
-      taxAmount: Math.round(totalTax * 100) / 100,
-      grandTotal,
-      paymentMethod,
-      paymentStatus: 'Paid',
-      notes: notes || shopSettings.billTerms || 'Thank you for your business! 🙏',
-      shopDetails: { ...shopSettings },
-      createdAt: new Date().toISOString()
-    };
-
-    invoices.unshift(newInvoice);
-    saveInvoices(invoices);
-    saveProducts(products); // Persist updated stock
-
-    res.json({
-      success: true,
-      invoice: newInvoice,
-      invoices,
-      products,
-      shopSettings,
-      message: `બિલ #${invoiceNo} સફળતાપૂર્વક બની ગયું અને સ્ટોક આપોઆપ માઈનસ થઈ ગયો! 🎉`
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ========================================================
-// 🤖 10. AI STORE COPILOT (SELLER CONVERSATIONAL MANAGER)
-// ========================================================
-
-function generateAlgorithmicCopilotResponse(message, data) {
-  const q = (message || '').toLowerCase();
-  const { products, totalItems, lowStockProducts, todaysRevenue, topSellingProducts, shopSettings } = data;
-
-  if (q.includes('ઓછો') || q.includes('ખલાસ') || q.includes('low') || q.includes('alert') || q.includes('પતી ગય')) {
-    if (lowStockProducts.length > 0) {
-      const items = lowStockProducts.map(p => `• **${p.name}**: ફક્ત **${p.stock} નંગ** બાકી! (મિનિમમ એલર્ટ: ${p.minStockAlert || 3})`).join('\n');
-      return `⚠️ **સ્ટોક એલર્ટ (ઓછો સ્ટોક):**\n\nનીચેની આઇટમ્સ ખલાસ થવાની તૈયારીમાં છે, નવો માલ મંગાવી લેવો જોઈએ:\n\n${items}`;
-    }
-    return `✅ **ખુશખબર:** તમારી દુકાનમાં કોઈપણ આઇટમનો સ્ટોક ઓછો નથી, બધી આઇટમ્સ પૂરતા પ્રમાણમાં છે!`;
-  }
-
-  if (q.includes('વેચાણ') || q.includes('સૌથી') || q.includes('selling') || q.includes('best') || q.includes('વેચાણું') || q.includes('વેચાણી') || q.includes('top')) {
-    if (topSellingProducts.length > 0) {
-      return `🔥 **સૌથી વધુ વેચાતી પ્રોડક્ટ્સ:**\n\n1. **${topSellingProducts[0]}** સૌથી ટોપ પર છે!\n${topSellingProducts.slice(1, 4).map((p, i) => `${i + 2}. ${p}`).join('\n')}\n\n💡 આ આઇટમની વધુ રીલ્સ બનાવીને ઇન્સ્ટાગ્રામ પર મૂકવાથી ઓર્ડર્સ હજુ વધશે!`;
-    }
-    return `🔥 અત્યાર સુધીના ડેટા મુજબ તમારી પ્રોડક્ટ્સ લિસ્ટમાં છે. જેમ જેમ નવા બિલ બનશે તેમ ટોપ-સેલિંગ પ્રોડક્ટ્સ અહીં લાઈવ દેખાશે!`;
-  }
-
-  if (q.includes('સ્ટોક') || q.includes('stock') || q.includes('કેટલો') || q.includes('item') || q.includes('માલ')) {
-    const list = products.slice(0, 4).map(p => `• **${p.name}**: ${p.stock} નંગ (₹${p.price})`).join('\n');
-    return `📦 **તમારી દુકાનનો સ્ટોક રિપોર્ટ (${shopSettings.shopName}):**\n\nતમારી પાસે અત્યારે કુલ **${totalItems} આઇટમ્સ** સ્ટોકમાં ઉપલબ્ધ છે (${products.length} અલગ અલગ પ્રોડક્ટ્સ).\n\n${list}\n\n${lowStockProducts.length > 0 ? `⚠️ **ધ્યાન આપો:** ${lowStockProducts.length} આઇટમ્સનો સ્ટોક ઓછો છે!` : '✅ બધી આઇટમ્સનો પૂરતો સ્ટોક છે.'}`;
-  }
-
-  if (q.includes('આજ') || q.includes('કમાણી') || q.includes('નફો') || q.includes('revenue') || q.includes('sale') || q.includes('રૂપિયા')) {
-    return `💰 **આજનું વેચાણ રિપોર્ટ:**\n\n• આજની કુલ કમાણી: **₹${todaysRevenue.toLocaleString('en-IN')}**\n• દુકાન: **${shopSettings.shopName}**\n\nનવું બિલ બનાવવા માટે બિલિંગ ટેબનો ઉપયોગ કરી શકો છો!`;
-  }
-
-  return `નમસ્તે! હું તમારો **AI Store Copilot** છું. 🤖\n\nતમે મને તમારી દુકાન વિશે કંઈપણ પૂછી શકો છો:\n• *"આજે કેટલો સ્ટોક છે?"*\n• *"સૌથી વધુ કઈ આઇટમ વેચાઈ?"*\n• *"કયો સ્ટોક ઓછો થઈ ગયો છે?"*\n• *"આજનું કુલ વેચાણ કેટલું થયું?"*`;
-}
-
-app.post('/api/ai-copilot/chat', async (req, res) => {
-  try {
-    const message = req.body.message || req.body.query;
-    if (!message) return res.status(400).json({ error: 'Message is required' });
-
-    const products = getProducts();
-    const invoices = getInvoices();
-    const shopSettings = getShopSettings();
-
-    const totalItems = products.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
-    const lowStockProducts = products.filter(p => Number(p.stock) <= (Number(p.minStockAlert) || 3));
-    
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todaysInvoices = invoices.filter(inv => inv.createdAt && inv.createdAt.startsWith(todayStr));
-    const todaysRevenue = todaysInvoices.reduce((sum, inv) => sum + (Number(inv.grandTotal) || 0), 0);
-
-    const productSalesMap = {};
-    invoices.forEach(inv => {
-      (inv.items || []).forEach(it => {
-        productSalesMap[it.name] = (productSalesMap[it.name] || 0) + (Number(it.qty || it.quantity) || 1);
-      });
-    });
-
-    const topSellingProducts = Object.entries(productSalesMap)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, qty]) => `${name} (${qty} નંગ વેચાયા)`);
-
-    const fallbackData = { products, totalItems, lowStockProducts, todaysRevenue, topSellingProducts, shopSettings };
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      const algorithmicReply = generateAlgorithmicCopilotResponse(message, fallbackData);
-      return res.json({ success: true, reply: algorithmicReply, answer: algorithmicReply });
-    }
-
-    const systemPrompt = `You are "Store Copilot", a friendly, ultra-smart AI Business & Inventory Manager for shopkeepers and online sellers across all industries (Sarees, Fashion, Jewelry, Electronics, Retail, etc.).
-Your job is to answer the seller's questions in clear, conversational Gujarati (with helpful English terms and emojis) based on their real-time live business data below:
-
-🏪 Shop Name: "${shopSettings.shopName}" (${shopSettings.businessType || 'Retail'})
-📦 Total Unique Products: ${products.length}
-📦 Total Physical Stock Units: ${totalItems}
-⚠️ Low Stock Items (<3 units): ${lowStockProducts.map(p => `${p.name} (Stock: ${p.stock})`).join(', ') || 'None (All well-stocked)'}
-💰 Today's Invoices: ${todaysInvoices.length} orders
-💰 Today's Revenue: ₹${todaysRevenue.toLocaleString('en-IN')}
-🔥 Top Selling Items: ${topSellingProducts.slice(0, 5).join(', ') || 'No sales recorded yet'}
-
-Full Current Inventory List:
-${JSON.stringify(products.map(p => ({ name: p.name, sku: p.sku, category: p.category, price: p.price, stock: p.stock })), null, 2)}
-
-Instructions:
-1. Always respond warmly in natural Gujarati (e.g., "હા ભાઈ...", "તમારા સ્ટોકમાં અત્યારે...").
-2. Use bullet points and emojis (📦, 💰, 🔥, ⚠️) so it is super easy to read on mobile.
-3. If they ask about total stock, give the total units and highlight key categories.
-4. If they ask what sold the most today or overall, give exact numbers from the data.
-5. If they ask what is low, warn them clearly.
-6. Keep answers concise, direct, helpful, and empowering for the seller!`;
-
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    const aiRes = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: `${systemPrompt}\n\nSeller's Question: "${message}"` }] }
-        ],
-        generationConfig: { temperature: 0.3 }
-      })
-    });
-
-    if (aiRes.ok) {
-      const data = await aiRes.json();
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (reply) return res.json({ success: true, reply: reply.trim(), answer: reply.trim() });
-    }
-
-    const fallbackReply = generateAlgorithmicCopilotResponse(message, fallbackData);
-    res.json({ success: true, reply: fallbackReply, answer: fallbackReply });
-  } catch (err) {
-    console.error('AI Copilot error:', err);
-    const safeReply = generateAlgorithmicCopilotResponse(req.body.message || req.body.query, { products: getProducts(), totalItems: 0, lowStockProducts: [], todaysRevenue: 0, topSellingProducts: [], shopSettings: getShopSettings() });
-    res.json({ success: true, reply: safeReply, answer: safeReply });
-  }
-});
 
 app.listen(PORT, () => {
   console.log(`🚀 ForgeAI Reel Studio & Video Automation running at http://localhost:${PORT}`);

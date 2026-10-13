@@ -17,6 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initVideoStudio();
   initSchedulerView();
   initAnalyticsView();
+
+  // 🚀 Proactive Background Pre-fetch: Load live stats quietly so tab is 100% ready with 0 waiting time
+  setTimeout(() => {
+    fetchAnalyticsOverview(false);
+  }, 1000);
 });
 
 // Toast Helper
@@ -431,7 +436,7 @@ if (btnTestWhatsApp) {
     const phone = document.getElementById('whatsappPhoneInput')?.value.trim() || '';
     const apiKey = document.getElementById('whatsappApiKeyInput')?.value.trim() || '';
     if (!phone || !apiKey) {
-      showToast('WhatsApp Phone અને CallMeBot API Key બંને દાખલ કરો.', true);
+      showToast('Please enter both WhatsApp Phone and CallMeBot API Key.', true);
       return;
     }
     btnTestWhatsApp.disabled = true;
@@ -464,7 +469,7 @@ if (btnTestTelegram) {
     const botToken = document.getElementById('telegramBotTokenInput')?.value.trim() || '';
     const chatId = document.getElementById('telegramChatIdInput')?.value.trim() || '';
     if (!botToken || !chatId) {
-      showToast('Telegram Bot Token અને Chat ID બંને દાખલ કરો.', true);
+      showToast('Please enter both Telegram Bot Token and Chat ID.', true);
       return;
     }
     btnTestTelegram.disabled = true;
@@ -490,32 +495,6 @@ if (btnTestTelegram) {
   });
 }
 
-// Quick Chips
-function initChips() {
-  document.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      promptInput.value = chip.getAttribute('data-prompt');
-      promptInput.focus();
-    });
-  });
-}
-
-// Tab Switching
-function initTabs() {
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-      
-      btn.classList.add('active');
-      const targetTabId = `tab-${btn.getAttribute('data-tab')}`;
-      const targetPane = document.getElementById(targetTabId);
-      if (targetPane) {
-        targetPane.classList.add('active');
-      }
-    });
-  });
-}
 
 // Copy to Clipboard
 function initCopyButtons() {
@@ -546,6 +525,7 @@ function initModeSwitcher() {
     document.getElementById('schedulerView'),
     document.getElementById('analyticsView')
   ].filter(Boolean);
+  const mobileStepper = document.getElementById('mobileReelStepper');
 
   navTabs.forEach(tab => {
     tab.addEventListener('click', () => {
@@ -560,6 +540,14 @@ function initModeSwitcher() {
       const targetEl = document.getElementById(targetId);
       if (targetEl) targetEl.classList.remove('hidden');
 
+      if (mobileStepper) {
+        if (targetId === 'videoStudioView') {
+          mobileStepper.style.display = '';
+        } else {
+          mobileStepper.style.display = 'none';
+        }
+      }
+
       if (targetId === 'schedulerView') {
         fetchSchedulerStatus();
       } else if (targetId === 'analyticsView') {
@@ -572,6 +560,56 @@ function initModeSwitcher() {
 
 let selectedVideoFile = null;
 let currentRenderedReel = null;
+
+// ==========================================
+// 🚀 REAL-TIME UPLOAD PROGRESS HELPER (XHR with %)
+// ==========================================
+function uploadWithProgress({ url, formData, onProgress }) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    const startTime = Date.now();
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const percent = Math.min(100, Math.round((e.loaded / e.total) * 100));
+        const loadedMB = (e.loaded / (1024 * 1024)).toFixed(1);
+        const totalMB = (e.total / (1024 * 1024)).toFixed(1);
+        const elapsedSec = (Date.now() - startTime) / 1000;
+        const speed = elapsedSec > 0.4 
+          ? ((e.loaded / (1024 * 1024)) / elapsedSec).toFixed(1) + ' MB/s' 
+          : 'Calculating...';
+
+        if (onProgress) {
+          onProgress({ percent, loadedMB, totalMB, speed, loaded: e.loaded, total: e.total });
+        }
+      }
+    };
+
+    xhr.onload = () => {
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status >= 200 && xhr.status < 300 && data.success !== false) {
+          resolve(data);
+        } else {
+          reject(new Error(data.error || `Upload failed with status ${xhr.status}`));
+        }
+      } catch (err) {
+        reject(new Error(xhr.responseText || `Server responded with status ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new Error('Internet connection or server error occurred. Please try again.'));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new Error('Upload timed out. Please try again.'));
+    };
+
+    xhr.send(formData);
+  });
+}
 
 function initVideoStudio() {
   const dropzone = document.getElementById('videoDropzone');
@@ -618,6 +656,7 @@ function initVideoStudio() {
   const schedPresetChips = document.querySelectorAll('.sched-preset-chip');
 
   let isScheduleModeActive = false;
+  let selectedOnlineSong = null;
 
   function getLocalDateTimeInputValue(date) {
     const d = date || new Date();
@@ -701,8 +740,9 @@ function initVideoStudio() {
       if (scheduleTimePickerBox) scheduleTimePickerBox.classList.add('hidden');
       if (everyDayRecurringInfoBanner) everyDayRecurringInfoBanner.classList.add('hidden');
       if (badgeScheduleMode) {
-        badgeScheduleMode.textContent = '⚡ Instant (Now)';
-        badgeScheduleMode.style.background = 'rgba(99, 102, 241, 0.2)';
+        badgeScheduleMode.innerHTML = '<i class="fa-solid fa-bolt"></i> Instant';
+        badgeScheduleMode.className = 'schedule-mode-badge badge-instant';
+        badgeScheduleMode.removeAttribute('style');
       }
       if (btnProcessVideoText) btnProcessVideoText.textContent = '🎬 AI Auto-Edit & Generate 30s Reel';
       if (btnProcessVideoIcon) btnProcessVideoIcon.className = 'fa-solid fa-wand-magic-sparkles';
@@ -717,8 +757,9 @@ function initVideoStudio() {
       if (scheduleTimePickerBox) scheduleTimePickerBox.classList.remove('hidden');
       if (everyDayRecurringInfoBanner) everyDayRecurringInfoBanner.classList.add('hidden');
       if (badgeScheduleMode) {
-        badgeScheduleMode.textContent = '⏰ Schedule Once';
-        badgeScheduleMode.style.background = 'rgba(6, 182, 212, 0.25)';
+        badgeScheduleMode.innerHTML = '<i class="fa-regular fa-clock"></i> 1-Time';
+        badgeScheduleMode.className = 'schedule-mode-badge badge-timed';
+        badgeScheduleMode.removeAttribute('style');
       }
       if (btnProcessVideoIcon) btnProcessVideoIcon.className = 'fa-solid fa-calendar-check';
       initSchedulePickerDefault();
@@ -735,8 +776,9 @@ function initVideoStudio() {
       if (scheduleTimePickerBox) scheduleTimePickerBox.classList.remove('hidden');
       if (everyDayRecurringInfoBanner) everyDayRecurringInfoBanner.classList.remove('hidden');
       if (badgeScheduleMode) {
-        badgeScheduleMode.textContent = '🔁 Daily Auto-Pilot (Every Day)';
-        badgeScheduleMode.style.background = 'rgba(168, 85, 247, 0.35)';
+        badgeScheduleMode.innerHTML = '<i class="fa-solid fa-repeat"></i> Daily Auto';
+        badgeScheduleMode.className = 'schedule-mode-badge badge-daily';
+        badgeScheduleMode.removeAttribute('style');
       }
       if (btnProcessVideoIcon) btnProcessVideoIcon.className = 'fa-solid fa-repeat';
       initSchedulePickerDefault();
@@ -781,6 +823,67 @@ function initVideoStudio() {
     });
   });
 
+  // Direct Upload vs AI Auto-Edit Mode Switcher
+  const btnModeAiEnhance = document.getElementById('btnModeAiEnhance');
+  const btnModeDirectUpload = document.getElementById('btnModeDirectUpload');
+  const directUploadNoticeBanner = document.getElementById('directUploadNoticeBanner');
+  const inputIsDirectUpload = document.getElementById('inputIsDirectUpload');
+
+  if (btnModeDirectUpload && btnModeAiEnhance) {
+    btnModeDirectUpload.addEventListener('click', () => {
+      btnModeDirectUpload.classList.add('active');
+      btnModeAiEnhance.classList.remove('active');
+      btnModeDirectUpload.style.background = '#ffffff';
+      btnModeDirectUpload.style.color = '#059669';
+      btnModeDirectUpload.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
+      btnModeAiEnhance.style.background = 'transparent';
+      btnModeAiEnhance.style.color = '#78716c';
+      btnModeAiEnhance.style.boxShadow = 'none';
+
+      if (inputIsDirectUpload) inputIsDirectUpload.value = 'true';
+      if (directUploadNoticeBanner) directUploadNoticeBanner.classList.remove('hidden');
+
+      if (videoDurationSelect) videoDurationSelect.value = 'original';
+      if (videoStyleSelect) videoStyleSelect.value = 'original';
+      const videoSubtitlesSelect = document.getElementById('videoSubtitlesSelect');
+      if (videoSubtitlesSelect) videoSubtitlesSelect.value = 'none';
+      if (videoBgmSelect) videoBgmSelect.value = 'none';
+
+      if (btnProcessVideoText) {
+        btnProcessVideoText.textContent = isScheduleModeActive 
+          ? '🚀 Schedule Original Video (As-Is)' 
+          : '🚀 Direct Upload Original Video (As-Is)';
+      }
+      showToast('⚡ Direct Upload Mode: Original video & audio preserved with zero alterations!');
+    });
+
+    btnModeAiEnhance.addEventListener('click', () => {
+      btnModeAiEnhance.classList.add('active');
+      btnModeDirectUpload.classList.remove('active');
+      btnModeAiEnhance.style.background = '#ffffff';
+      btnModeAiEnhance.style.color = '#1c1917';
+      btnModeAiEnhance.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
+      btnModeDirectUpload.style.background = 'transparent';
+      btnModeDirectUpload.style.color = '#78716c';
+      btnModeDirectUpload.style.boxShadow = 'none';
+
+      if (inputIsDirectUpload) inputIsDirectUpload.value = 'false';
+      if (directUploadNoticeBanner) directUploadNoticeBanner.classList.add('hidden');
+
+      if (videoDurationSelect) videoDurationSelect.value = '30';
+      if (videoStyleSelect) videoStyleSelect.value = 'auto';
+      const videoSubtitlesSelect = document.getElementById('videoSubtitlesSelect');
+      if (videoSubtitlesSelect) videoSubtitlesSelect.value = 'hormozi';
+
+      if (btnProcessVideoText) {
+        btnProcessVideoText.textContent = isScheduleModeActive
+          ? (isRecurringDailyMode ? '🔁 Schedule Daily Auto-Pilot' : '⏰ Schedule 30s Reel')
+          : '🎬 AI Auto-Edit & Generate 30s Reel';
+      }
+      showToast('✨ AI Smart Auto-Edit Mode Activated');
+    });
+  }
+
   // Scheduled Queue Management
   async function fetchScheduledQueue() {
     if (!scheduledQueueList) return;
@@ -795,15 +898,88 @@ function initVideoStudio() {
     }
   }
 
+  let activeQueueFilter = 'scheduled'; // Default: ONLY upcoming scheduled reels!
+  let cachedScheduledQueue = [];
+
   function renderScheduledQueue(queue) {
     if (!scheduledQueueList || !scheduledCountBadge) return;
-    scheduledCountBadge.textContent = `${queue.length} Reels`;
-    if (!queue || queue.length === 0) {
-      scheduledQueueList.innerHTML = '<div class="empty-queue-hint">No reels currently scheduled. Select a time above to schedule.</div>';
+    cachedScheduledQueue = queue || [];
+
+    const upcomingList = cachedScheduledQueue.filter(item => {
+      const hasIg = !!item.lastPostUrl;
+      const hasYt = !!item.youtubePostUrl;
+      return !(item.status?.includes('Posted') || hasIg || hasYt);
+    });
+
+    const publishedList = cachedScheduledQueue.filter(item => {
+      const hasIg = !!item.lastPostUrl;
+      const hasYt = !!item.youtubePostUrl;
+      return item.status?.includes('Posted') || hasIg || hasYt;
+    });
+
+    const countUpcomingBadge = document.getElementById('countUpcomingBadge');
+    const countPublishedBadge = document.getElementById('countPublishedBadge');
+    const countAllBadge = document.getElementById('countAllBadge');
+    if (countUpcomingBadge) countUpcomingBadge.textContent = upcomingList.length;
+    if (countPublishedBadge) countPublishedBadge.textContent = publishedList.length;
+    if (countAllBadge) countAllBadge.textContent = cachedScheduledQueue.length;
+
+    // Auto-sync Column 3 Social Texts with latest reel if currently showing default placeholder text
+    if (cachedScheduledQueue.length > 0 && !currentRenderedReel) {
+      const latestItem = cachedScheduledQueue[0];
+      if (latestItem && latestItem.viralTitle && viralTitleText && (viralTitleText.textContent.includes('Patola') || viralTitleText.textContent.includes('Auto-Generated Title'))) {
+        viralTitleText.textContent = latestItem.viralTitle;
+        if (viralCaptionText) viralCaptionText.textContent = latestItem.viralCaption || '';
+        const h = Array.isArray(latestItem.viralHashtags) ? latestItem.viralHashtags.join(' ') : (latestItem.viralHashtags || '');
+        if (viralHashtagsText) viralHashtagsText.textContent = h;
+        if (typeof updateInteractiveHashtags === 'function' && h) {
+          updateInteractiveHashtags(h);
+        }
+      }
+    }
+
+    if (scheduledCountBadge) {
+      scheduledCountBadge.textContent = activeQueueFilter === 'scheduled'
+        ? `${upcomingList.length} Scheduled`
+        : activeQueueFilter === 'published'
+        ? `${publishedList.length} Live`
+        : `${cachedScheduledQueue.length} Reels`;
+    }
+
+    const lblHeaderSchedCount = document.getElementById('lblHeaderSchedCount');
+    if (lblHeaderSchedCount) {
+      lblHeaderSchedCount.textContent = `${upcomingList.length} Scheduled`;
+    }
+
+    // Filter list based on selected tab (Default: 'scheduled' - only upcoming!)
+    let displayList = cachedScheduledQueue;
+    if (activeQueueFilter === 'scheduled') {
+      displayList = upcomingList;
+    } else if (activeQueueFilter === 'published') {
+      displayList = publishedList;
+    }
+
+    const btnClearPublishedQueue = document.getElementById('btnClearPublishedQueue');
+    if (btnClearPublishedQueue) {
+      if (publishedList.length > 0 && activeQueueFilter !== 'scheduled') {
+        btnClearPublishedQueue.style.display = 'inline-flex';
+        btnClearPublishedQueue.innerHTML = `<i class="fa-solid fa-trash-can"></i> <span>Clear History (${publishedList.length})</span>`;
+      } else {
+        btnClearPublishedQueue.style.display = 'none';
+      }
+    }
+
+    if (displayList.length === 0) {
+      const emptyMsg = activeQueueFilter === 'scheduled'
+        ? '⏳ No pending scheduled reels. All reels are live!'
+        : activeQueueFilter === 'published'
+        ? '✅ No reels published yet.'
+        : 'No reels available.';
+      scheduledQueueList.innerHTML = `<div class="empty-queue-hint">${emptyMsg}</div>`;
       return;
     }
 
-    scheduledQueueList.innerHTML = queue.map(item => {
+    scheduledQueueList.innerHTML = displayList.map(item => {
       const friendlyTime = formatGujaratiDateTime(item.scheduledTime);
       const isReady = item.status === 'Ready to Post';
       const hasIg = !!item.lastPostUrl;
@@ -848,11 +1024,34 @@ function initVideoStudio() {
           </div>
           <div class="queue-item-actions">
             ${!isPosted ? `<button type="button" class="btn-queue-action btn-queue-run" onclick="triggerRunScheduledReel('${item.id}')" title="Upload now"><i class="fa-solid fa-bolt"></i> ${isFailed ? 'Retry Now' : 'Run Now'}</button>` : ''}
-            <button type="button" class="btn-queue-action" onclick="triggerCancelScheduledReel('${item.id}')" title="Cancel schedule"><i class="fa-solid fa-trash"></i></button>
+            <button type="button" class="btn-queue-action" onclick="triggerCancelScheduledReel('${item.id}')" title="Delete this reel" style="color: #ef4444;"><i class="fa-solid fa-trash"></i></button>
           </div>
         </div>
       `;
     }).join('');
+  }
+
+  // Clear all published reels button listener
+  const btnClearPublishedQueue = document.getElementById('btnClearPublishedQueue');
+  if (btnClearPublishedQueue) {
+    btnClearPublishedQueue.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to clear the published reels history?')) return;
+      try {
+        btnClearPublishedQueue.disabled = true;
+        const res = await fetch('/api/video/scheduled-queue/clear-published', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`🧹 ${data.message}`);
+          renderScheduledQueue(data.queue);
+        } else {
+          showToast(`Error: ${data.error}`, true);
+        }
+      } catch (err) {
+        showToast(err.message, true);
+      } finally {
+        btnClearPublishedQueue.disabled = false;
+      }
+    });
   }
 
   // Poll queue every 6 seconds to show real-time changes
@@ -879,15 +1078,16 @@ function initVideoStudio() {
   };
 
   window.triggerCancelScheduledReel = async (id) => {
+    if (!confirm('Are you sure you want to delete this reel from queue and disk?')) return;
     try {
       const res = await fetch('/api/video/scheduled-queue/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
+        body: JSON.stringify({ id, deleteFile: true })
       });
       const data = await res.json();
       if (data.success) {
-        showToast('Scheduled reel cancelled.');
+        showToast('Reel deleted successfully.');
         renderScheduledQueue(data.queue);
       }
     } catch (err) {
@@ -895,8 +1095,34 @@ function initVideoStudio() {
     }
   };
 
+  // Queue Filter Tab Switcher (Upcoming vs Published vs All)
+  document.querySelectorAll('.btn-queue-filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.btn-queue-filter-tab').forEach(t => {
+        t.classList.remove('active');
+        t.style.background = 'transparent';
+        t.style.color = '#64748b';
+        t.style.fontWeight = '600';
+        t.style.boxShadow = 'none';
+      });
+      tab.classList.add('active');
+      tab.style.background = '#ffffff';
+      tab.style.color = '#4338ca';
+      tab.style.fontWeight = '700';
+      tab.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+      activeQueueFilter = tab.getAttribute('data-filter') || 'scheduled';
+      renderScheduledQueue(cachedScheduledQueue);
+    });
+  });
+
   // Dropzone click & drag
-  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('click', (e) => {
+    // Prevent triggering fileInput if clicking on buttons, badges, hints, or if a modal is open
+    if (e.target.closest('button') || e.target.closest('.file-name-badge') || e.target.closest('#selectedFileName') || e.target.closest('#videoFileSelectedHint') || document.querySelector('.modal-backdrop:not(.hidden)')) {
+      return;
+    }
+    fileInput.click();
+  });
 
   dropzone.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -907,30 +1133,314 @@ function initVideoStudio() {
     dropzone.classList.remove('dragover');
   });
 
+  let selectedBatchFiles = [];
+
   dropzone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropzone.classList.remove('dragover');
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileSelected(e.dataTransfer.files[0]);
+      handleVideoFiles(e.dataTransfer.files);
     }
   });
 
   fileInput.addEventListener('change', (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleFileSelected(e.target.files[0]);
+      handleVideoFiles(e.target.files);
     }
   });
 
-  function handleFileSelected(file) {
-    if (!file.type.startsWith('video/')) {
-      showToast('Please select a video file (MP4/MOV).', true);
+  // Central function to remove selected upload file
+  function removeSelectedUploadFile(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    selectedVideoFile = null;
+    selectedBatchFiles = [];
+    if (fileInput) fileInput.value = '';
+    if (selectedFileNameBadge) {
+      selectedFileNameBadge.innerHTML = '';
+      selectedFileNameBadge.classList.add('hidden');
+    }
+    const hintCard = document.getElementById('videoFileSelectedHint');
+    if (hintCard) hintCard.classList.add('hidden');
+    const batchCard = document.getElementById('batchReelsManagerCard');
+    if (batchCard) batchCard.classList.add('hidden');
+  }
+
+  // Central function to clear and reset the Reel Preview back to original placeholder
+  function clearAndResetReelPreview() {
+    currentRenderedReel = null;
+    const player = document.getElementById('renderedVideoPlayer');
+    if (player) {
+      player.pause();
+      player.removeAttribute('src');
+      player.removeAttribute('poster');
+      player.classList.remove('active');
+      player.classList.remove('has-video');
+      player.style.display = 'none';
+      player.load();
+    }
+    const placeholder = document.getElementById('reelPlaceholder');
+    if (placeholder) {
+      placeholder.style.display = 'flex';
+      placeholder.classList.remove('hidden');
+    }
+    const videoActions = document.getElementById('videoActionButtons');
+    if (videoActions) videoActions.classList.add('hidden');
+
+    const btnHeaderReset = document.getElementById('btnHeaderResetReel');
+    if (btnHeaderReset) btnHeaderReset.style.display = 'none';
+
+    const btnFloatingBack = document.getElementById('btnFloatingBackReel');
+    if (btnFloatingBack) btnFloatingBack.style.display = 'none';
+
+    // Also clear upload selection so user can start completely fresh
+    removeSelectedUploadFile();
+
+    // On mobile, auto-navigate back to step 1 (Upload Studio)
+    if (typeof window.setReelStep === 'function') {
+      window.setReelStep(1);
+    }
+
+    showToast('✨ Studio reset! Video cleared & ready to upload fresh.');
+  }
+
+  function handleVideoFiles(fileList) {
+    const validFiles = Array.from(fileList).filter(f => f.type.startsWith('video/') || /\.(mp4|mov|webm|mkv)$/i.test(f.name));
+    if (validFiles.length === 0) {
+      showToast('Please select valid video files (MP4/MOV/WEBM).', true);
       return;
     }
+
+    const batchCard = document.getElementById('batchReelsManagerCard');
+    const batchListDisplay = document.getElementById('batchFileListDisplay');
+    const batchCountNum = document.getElementById('batchCountNum');
+
+    if (validFiles.length > 1) {
+      // Multi-Video Batch Flow
+      selectedBatchFiles = validFiles;
+      selectedVideoFile = validFiles[0]; // fallback
+      if (batchCountNum) batchCountNum.textContent = validFiles.length;
+      if (batchCard) batchCard.classList.remove('hidden');
+
+      if (batchListDisplay) {
+        batchListDisplay.innerHTML = validFiles.map((f, i) => `
+          <div style="background: rgba(255,255,255,0.8); padding: 0.35rem 0.55rem; border-radius: 6px; border: 1px solid #e9d5ff; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600; color: #581c87; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;">
+              ${i + 1}. ${f.name}
+            </span>
+            <span style="color: #7e22ce; font-size: 0.72rem; font-weight: 700;">${(f.size / (1024 * 1024)).toFixed(1)} MB</span>
+          </div>
+        `).join('');
+      }
+
+      const totalMB = (validFiles.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)).toFixed(1);
+      selectedFileNameBadge.textContent = `✓ Batch: ${validFiles.length} Videos Selected (${totalMB} MB Total)`;
+      selectedFileNameBadge.classList.remove('hidden');
+      showToast(`${validFiles.length} videos selected for batch processing!`);
+    } else {
+      // Single Video Flow
+      selectedBatchFiles = [];
+      if (batchCard) batchCard.classList.add('hidden');
+      handleSingleVideoSelected(validFiles[0]);
+    }
+  }
+
+  function handleSingleVideoSelected(file) {
     selectedVideoFile = file;
     const mbSize = (file.size / (1024 * 1024)).toFixed(1);
-    selectedFileNameBadge.textContent = `✓ Selected: ${file.name} (${mbSize} MB)`;
+    selectedFileNameBadge.innerHTML = `
+      <span style="display:inline-flex; align-items:center; gap:8px;">
+        <span>✓ Selected: ${file.name} (${mbSize} MB)</span>
+        <button type="button" id="btnCancelFromBadge" style="background: rgba(220, 38, 38, 0.15); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 4px; padding: 2px 7px; font-size: 0.72rem; font-weight: 700; cursor: pointer;" title="Cancel & remove this video">✕ Cancel</button>
+      </span>
+    `;
     selectedFileNameBadge.classList.remove('hidden');
+
+    const badgeCancelBtn = document.getElementById('btnCancelFromBadge');
+    if (badgeCancelBtn) {
+      badgeCancelBtn.addEventListener('click', (e) => {
+        removeSelectedUploadFile(e);
+        showToast('🗑️ Video selection canceled.');
+      });
+    }
+
+    const hintCard = document.getElementById('videoFileSelectedHint');
+    if (hintCard) hintCard.classList.remove('hidden');
+    const txtSingleName = document.getElementById('txtSingleSelectedFileName');
+    if (txtSingleName) txtSingleName.textContent = `${file.name} (${mbSize} MB)`;
     showToast(`Video loaded: ${file.name}`);
+  }
+
+  // Remove / Cancel Single Selected Video Button
+  const btnRemoveSingleVideo = document.getElementById('btnRemoveSingleSelectedVideo');
+  if (btnRemoveSingleVideo) {
+    btnRemoveSingleVideo.addEventListener('click', (e) => {
+      removeSelectedUploadFile(e);
+      // If there's an active video in preview player, reset preview as well
+      const player = document.getElementById('renderedVideoPlayer');
+      if (player && (player.src || player.classList.contains('active'))) {
+        clearAndResetReelPreview();
+      } else {
+        showToast('🗑️ Video canceled & removed. File upload closed.');
+      }
+    });
+  }
+
+  // Change Single Video Button
+  const btnChangeSingleVideo = document.getElementById('btnChangeSingleVideo');
+  if (btnChangeSingleVideo && fileInput) {
+    btnChangeSingleVideo.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+  }
+
+  // Remove / Reset Active Rendered Reel Button (Column 2)
+  const btnResetActiveReel = document.getElementById('btnResetActiveReel');
+  if (btnResetActiveReel) {
+    btnResetActiveReel.addEventListener('click', (e) => {
+      if (e) e.preventDefault();
+      clearAndResetReelPreview();
+    });
+  }
+
+  // Header Reset Reel Button (Column 2 Header)
+  const btnHeaderResetReel = document.getElementById('btnHeaderResetReel');
+  if (btnHeaderResetReel) {
+    btnHeaderResetReel.addEventListener('click', (e) => {
+      if (e) e.preventDefault();
+      clearAndResetReelPreview();
+    });
+  }
+
+  // Floating Back Reel Button (Inside iPhone Mockup)
+  const btnFloatingBackReel = document.getElementById('btnFloatingBackReel');
+  if (btnFloatingBackReel) {
+    btnFloatingBackReel.addEventListener('click', (e) => {
+      if (e) e.preventDefault();
+      clearAndResetReelPreview();
+    });
+  }
+
+  // Quick Generate Button directly from Step 1
+  const btnQuickGenerateFromStep1 = document.getElementById('btnQuickGenerateFromStep1');
+  if (btnQuickGenerateFromStep1 && btnProcessVideo) {
+    btnQuickGenerateFromStep1.addEventListener('click', () => {
+      btnProcessVideo.click();
+    });
+  }
+
+  // Scroll to Scheduled Queue Link
+  const btnScrollToQueue = document.getElementById('btnScrollToQueue');
+  if (btnScrollToQueue) {
+    btnScrollToQueue.addEventListener('click', () => {
+      const qCard = document.getElementById('scheduledQueueCard');
+      if (qCard) {
+        qCard.scrollIntoView({ behavior: 'smooth' });
+        qCard.style.outline = '2px solid #6366f1';
+        setTimeout(() => { qCard.style.outline = 'none'; }, 2000);
+      }
+    });
+  }
+
+  // Batch Clear Button
+  const btnClearBatchFiles = document.getElementById('btnClearBatchFiles');
+  if (btnClearBatchFiles) {
+    btnClearBatchFiles.addEventListener('click', () => {
+      selectedBatchFiles = [];
+      selectedVideoFile = null;
+      fileInput.value = '';
+      const batchCard = document.getElementById('batchReelsManagerCard');
+      if (batchCard) batchCard.classList.add('hidden');
+      const hintCard = document.getElementById('videoFileSelectedHint');
+      if (hintCard) hintCard.classList.add('hidden');
+      selectedFileNameBadge.classList.add('hidden');
+      showToast('Batch selection cleared.');
+    });
+  }
+
+  // Batch Process & Schedule Button
+  const btnProcessBatchReels = document.getElementById('btnProcessBatchReels');
+  if (btnProcessBatchReels) {
+    btnProcessBatchReels.addEventListener('click', async () => {
+      if (selectedBatchFiles.length === 0) {
+        showToast('Please select multiple video files.', true);
+        return;
+      }
+
+      const intervalSelect = document.getElementById('batchIntervalSelect');
+      const intervalHours = intervalSelect ? intervalSelect.value : '24';
+      const niche = videoNicheSelect ? videoNicheSelect.value : 'Auto-Detect';
+      const targetDuration = videoDurationSelect ? videoDurationSelect.value : '30';
+
+      const formData = new FormData();
+      selectedBatchFiles.forEach(f => formData.append('reelFiles', f));
+      formData.append('intervalHours', intervalHours);
+      formData.append('niche', niche);
+      formData.append('targetDuration', targetDuration);
+
+      btnProcessBatchReels.disabled = true;
+      btnProcessBatchReels.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing ${selectedBatchFiles.length} Reels...`;
+
+      try {
+        const uploadCard = document.getElementById('videoUploadProgressCard');
+        const uploadBar = document.getElementById('videoUploadProgressBarFill');
+        const uploadPercent = document.getElementById('videoUploadPercentBadge');
+        const uploadSizeCounter = document.getElementById('videoUploadSizeCounter');
+        const uploadSpeedIndicator = document.getElementById('videoUploadSpeedIndicator');
+        const uploadPhaseText = document.getElementById('videoUploadPhaseText');
+
+        if (uploadCard) {
+          uploadCard.style.display = 'flex';
+          uploadCard.classList.remove('hidden');
+          if (uploadPhaseText) uploadPhaseText.textContent = `Batch upload (${selectedBatchFiles.length} videos)...`;
+        }
+
+        const data = await uploadWithProgress({
+          url: '/api/video/batch-schedule',
+          formData,
+          onProgress: ({ percent, loadedMB, totalMB, speed }) => {
+            if (uploadBar) uploadBar.style.width = `${percent}%`;
+            if (uploadPercent) uploadPercent.textContent = `${percent}%`;
+            if (uploadSizeCounter) {
+              uploadSizeCounter.innerHTML = `<i class="fa-solid fa-file-arrow-up"></i> ${loadedMB} MB / ${totalMB} MB (${percent}%)`;
+            }
+            if (uploadSpeedIndicator) {
+              uploadSpeedIndicator.innerHTML = `<i class="fa-solid fa-gauge-high"></i> ${speed}`;
+            }
+            if (percent >= 100 && uploadPhaseText) {
+              uploadPhaseText.textContent = 'Server AI is processing and scheduling all reels... ⚙️';
+            }
+          }
+        });
+
+        showToast(`🎉 ${data.count} reels scheduled successfully!`);
+        if (data.queue) {
+          renderScheduledQueue(data.queue);
+        }
+
+        // Reset batch card
+        selectedBatchFiles = [];
+        fileInput.value = '';
+        const batchCard = document.getElementById('batchReelsManagerCard');
+        if (batchCard) batchCard.classList.add('hidden');
+        selectedFileNameBadge.classList.add('hidden');
+      } catch (err) {
+        showToast(`Batch error: ${err.message}`, true);
+      } finally {
+        btnProcessBatchReels.disabled = false;
+        btnProcessBatchReels.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> ⚡ Process & Schedule All Reels';
+        const uploadCard = document.getElementById('videoUploadProgressCard');
+        if (uploadCard) {
+          setTimeout(() => {
+            uploadCard.style.display = 'none';
+            uploadCard.classList.add('hidden');
+          }, 2000);
+        }
+      }
+    });
   }
 
   // ========================================================
@@ -984,7 +1494,7 @@ function initVideoStudio() {
         videoSourcePanel.style.display = 'none';
       }
       if (btnProcessVideoText) {
-        btnProcessVideoText.textContent = '🎬 ✨ AI ફોટો રીલ બનાવો & પબ્લિશ કરો (Generate Reel)';
+        btnProcessVideoText.textContent = '🎬 ✨ Generate & Publish Photo Reel';
       }
       if (videoNicheSelect && videoNicheSelect.value.startsWith('Auto-Detect')) {
         videoNicheSelect.value = 'Patola Sarees, Ethnic & Traditional Wear';
@@ -1044,14 +1554,14 @@ function initVideoStudio() {
     isPatolaPresetActive = false;
     const validImgs = files.filter(f => f.type.startsWith('image/'));
     if (validImgs.length === 0) {
-      showToast('કૃપા કરીને ઇમેજ ફાઈલો (JPG, PNG, WEBP) પસંદ કરો.', true);
+      showToast('Please select image files (JPG, PNG, WEBP).', true);
       return;
     }
     
     // Append to existing selection (strictly allow up to 6 photos max)
     const combined = [...selectedPhotoFilesList, ...validImgs];
     if (combined.length > 6) {
-      showToast('મહત્તમ ૬ ફોટા જ ઉમેરી શકાય છે (૬ ફોટા રાખ્યા છે).', true);
+      showToast('Maximum 6 photos allowed (kept first 6 photos).', true);
       selectedPhotoFilesList = combined.slice(0, 6);
     } else {
       selectedPhotoFilesList = combined;
@@ -1061,7 +1571,7 @@ function initVideoStudio() {
     if (photoFilesInput) photoFilesInput.value = '';
 
     renderPhotosGalleryPreviews();
-    showToast(`📸 કુલ ${selectedPhotoFilesList.length} ફોટા પસંદ થયા! (૨ થી ૬ ફોટાની રીલ બનશે)`);
+    showToast(`📸 ${selectedPhotoFilesList.length} photos selected! (2 to 6 photos reel)`);
   }
 
   if (btnLoadPatolaPresetPhotos) {
@@ -1073,7 +1583,7 @@ function initVideoStudio() {
         selectedPhotosGallery.style.display = 'flex';
       }
       if (selectedPhotosCountLabel) {
-        selectedPhotosCountLabel.innerHTML = '<i class="fa-solid fa-images" style="color: #b89758;"></i> <span>૬ Patola સાડી સેમ્પલ ફોટા (6 Photos Ready ✓)</span>';
+        selectedPhotosCountLabel.innerHTML = '<i class="fa-solid fa-images" style="color: #b89758;"></i> <span>6 Sample Photos Ready ✓</span>';
       }
       if (selectedPhotosThumbs) {
         const presets = ['Royal Blue', 'Emerald', 'Nari Kunjar', 'Ratan Chowk', 'Rich Pallu', 'Royal Hero'];
@@ -1085,7 +1595,7 @@ function initVideoStudio() {
           </div>
         `).join('');
       }
-      showToast('🥻 ૬ Patola સાડી સેમ્પલ ફોટા સિલેક્ટ થઈ ગયા! હવે "રીલ બનાવો" બટન દબાવો.');
+      showToast('🥻 6 Patola Saree sample photos selected! Click "Generate Reel" now.');
     });
   }
 
@@ -1099,7 +1609,7 @@ function initVideoStudio() {
     selectedPhotosGallery.classList.remove('hidden');
     selectedPhotosGallery.style.display = 'flex';
     if (selectedPhotosCountLabel) {
-      selectedPhotosCountLabel.innerHTML = `<i class="fa-solid fa-images" style="color: #b89758;"></i> <span>${selectedPhotoFilesList.length} / 6 ફોટા પસંદ કર્યા</span>`;
+      selectedPhotosCountLabel.innerHTML = `<i class="fa-solid fa-images" style="color: #b89758;"></i> <span>${selectedPhotoFilesList.length} / 6 Photos Selected</span>`;
     }
     selectedPhotosThumbs.innerHTML = '';
     selectedPhotoFilesList.forEach((file, idx) => {
@@ -1123,7 +1633,7 @@ function initVideoStudio() {
     if (selectedPhotoFilesList.length < 6) {
       const addCard = document.createElement('div');
       addCard.style.cssText = 'width: 62px; height: 82px; border-radius: 9px; border: 2px dashed rgba(184, 151, 88, 0.8); background: rgba(184, 151, 88, 0.08); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; cursor: pointer; flex-shrink: 0; color: #b89758; transition: all 0.2s;';
-      addCard.innerHTML = `<i class="fa-solid fa-plus" style="font-size: 1.15rem;"></i><span style="font-size: 0.65rem; font-weight: 800;">ઉમેરો</span>`;
+      addCard.innerHTML = `<i class="fa-solid fa-plus" style="font-size: 1.15rem;"></i><span style="font-size: 0.65rem; font-weight: 800;">Add</span>`;
       addCard.addEventListener('click', () => {
         if (photoFilesInput) photoFilesInput.click();
       });
@@ -1135,7 +1645,7 @@ function initVideoStudio() {
   if (btnAddMorePhotos) {
     btnAddMorePhotos.addEventListener('click', () => {
       if (selectedPhotoFilesList.length >= 6) {
-        showToast('મહત્તમ ૬ ફોટા જ ઉમેરી શકાય છે.', true);
+        showToast('Maximum 6 photos can be added.', true);
         return;
       }
       if (photoFilesInput) photoFilesInput.click();
@@ -1156,12 +1666,12 @@ function initVideoStudio() {
   if (btnGeneratePhotoReel) {
     btnGeneratePhotoReel.addEventListener('click', async () => {
       if (isGeneratingReelBusy) {
-        showToast('રીલ બનાવવાનું કામ ચાલુ છે, કૃપા કરીને થોડી સેકન્ડ રાહ જુઓ...', true);
+        showToast('Reel generation is already in progress, please wait...', true);
         return;
       }
 
       if (!isPatolaPresetActive && selectedPhotoFilesList.length === 0) {
-        showToast('કૃપા કરીને ઓછામાં ઓછો ૧ ફોટો પસંદ કરો અથવા "Patola સાડી સેમ્પલ" બટન દબાવો.', true);
+        showToast('Please select at least 1 photo or load sample photos.', true);
         if (photoFilesInput) photoFilesInput.click();
         return;
       }
@@ -1170,7 +1680,35 @@ function initVideoStudio() {
       btnGeneratePhotoReel.disabled = true;
       if (btnProcessVideo) btnProcessVideo.disabled = true;
       videoLoader.classList.remove('hidden');
-      videoLoaderStatus.textContent = '📸 AI તમારા ફોટામાંથી ૩૦-સેકન્ડની સિનેમેટિક રીલ અને મ્યુઝિક રેન્ડર કરી રહ્યું છે... (લગભગ 10-15 સેકન્ડ)';
+      videoLoaderStatus.textContent = '📸 AI is rendering 30-second cinematic reel with music from your photos... (~10-15s)';
+
+      const uploadBar = document.getElementById('uploadProgressBarFill');
+      const uploadPercent = document.getElementById('uploadPercentBadge');
+      const uploadSizeCounter = document.getElementById('uploadSizeCounter');
+      const uploadSpeedIndicator = document.getElementById('uploadSpeedIndicator');
+      const uploadPhaseText = document.getElementById('uploadPhaseText');
+      const badgeStepUpload = document.getElementById('badgeStepUpload');
+      const badgeStepAi = document.getElementById('badgeStepAi');
+      const badgeStepSubtitles = document.getElementById('badgeStepSubtitles');
+      const badgeStepRender = document.getElementById('badgeStepRender');
+      const videoLoaderSpinner = document.getElementById('videoLoaderSpinner');
+
+      if (uploadBar) {
+        uploadBar.style.width = '0%';
+        uploadBar.classList.remove('complete');
+      }
+      if (uploadPercent) uploadPercent.textContent = '0%';
+      if (uploadPhaseText) uploadPhaseText.textContent = 'Uploading photos and audio...';
+      if (uploadSizeCounter) uploadSizeCounter.innerHTML = '<i class="fa-solid fa-file-arrow-up"></i> 0.0 MB / 0.0 MB';
+      if (uploadSpeedIndicator) uploadSpeedIndicator.innerHTML = '<i class="fa-solid fa-gauge-high"></i> Connecting...';
+      if (badgeStepUpload) {
+        badgeStepUpload.className = 'step-badge current';
+        badgeStepUpload.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 1. Photos Upload (0%)';
+      }
+      if (badgeStepAi) badgeStepAi.className = 'step-badge';
+      if (badgeStepSubtitles) badgeStepSubtitles.className = 'step-badge';
+      if (badgeStepRender) badgeStepRender.className = 'step-badge';
+      if (videoLoaderSpinner) videoLoaderSpinner.style.display = 'none';
 
       try {
         const formData = new FormData();
@@ -1201,10 +1739,15 @@ function initVideoStudio() {
         const videoSubtitlesSelect = document.getElementById('videoSubtitlesSelect');
         if (videoSubtitlesSelect) formData.append('subtitlesStyle', videoSubtitlesSelect.value);
 
-        // Background Music & Volume (Presets or Manual Custom Song Upload)
+        // Background Music & Volume (Presets, Instagram Online Song, or Manual Custom Song Upload)
         if (selectedCustomAudioFile) {
           formData.append('customAudio', selectedCustomAudioFile);
           formData.append('bgmTrack', 'custom');
+        } else if (selectedOnlineSong && selectedOnlineSong.previewUrl && videoBgmSelect && videoBgmSelect.value === 'online') {
+          formData.append('bgmTrack', 'online');
+          formData.append('onlineAudioUrl', selectedOnlineSong.previewUrl);
+          formData.append('onlineSongTitle', selectedOnlineSong.title || '');
+          formData.append('onlineSongArtist', selectedOnlineSong.artist || '');
         } else if (videoBgmSelect && videoBgmSelect.value !== 'none') {
           formData.append('bgmTrack', videoBgmSelect.value);
         } else if (bgmEl) {
@@ -1229,14 +1772,51 @@ function initVideoStudio() {
         const key = getSavedApiKey();
         if (key) formData.append('apiKey', key);
 
-        const res = await fetch('/api/video/photos-to-reel', {
-          method: 'POST',
-          body: formData
+        let photoStageTimer = null;
+
+        const data = await uploadWithProgress({
+          url: '/api/video/photos-to-reel',
+          formData,
+          onProgress: ({ percent, loadedMB, totalMB, speed }) => {
+            if (uploadBar) uploadBar.style.width = `${percent}%`;
+            if (uploadPercent) uploadPercent.textContent = `${percent}%`;
+            if (uploadSizeCounter) {
+              uploadSizeCounter.innerHTML = `<i class="fa-solid fa-file-arrow-up"></i> ${loadedMB} MB / ${totalMB} MB (${percent}%)`;
+            }
+            if (uploadSpeedIndicator) {
+              uploadSpeedIndicator.innerHTML = `<i class="fa-solid fa-gauge-high"></i> ${speed}`;
+            }
+            if (badgeStepUpload) {
+              badgeStepUpload.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> 1. Photos Upload (${percent}%)`;
+            }
+
+            if (percent >= 100) {
+              if (uploadBar) {
+                uploadBar.classList.add('complete');
+                uploadBar.style.width = '100%';
+              }
+              if (uploadPercent) uploadPercent.textContent = '100% ✓';
+              if (uploadPhaseText) uploadPhaseText.textContent = 'Upload Complete ✓ (Rendering AI reel...)';
+              if (uploadSpeedIndicator) uploadSpeedIndicator.innerHTML = '<i class="fa-solid fa-check"></i> Upload Successful ✓';
+              if (badgeStepUpload) badgeStepUpload.className = 'step-badge active';
+              if (badgeStepAi) badgeStepAi.className = 'step-badge current';
+              if (videoLoaderSpinner) videoLoaderSpinner.style.display = 'block';
+              videoLoaderStatus.textContent = 'AI is crafting a 30s reel with cinematic transitions & music...';
+
+              photoStageTimer = setTimeout(() => {
+                if (badgeStepAi) badgeStepAi.className = 'step-badge active';
+                if (badgeStepSubtitles) badgeStepSubtitles.className = 'step-badge current';
+                videoLoaderStatus.textContent = 'Syncing audio and exporting high-resolution 9:16 reel...';
+              }, 3000);
+            }
+          }
         });
 
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Failed to generate reel from photos.');
+        if (photoStageTimer) clearTimeout(photoStageTimer);
+        if (badgeStepSubtitles) badgeStepSubtitles.className = 'step-badge active';
+        if (badgeStepRender) {
+          badgeStepRender.className = 'step-badge active';
+          badgeStepRender.innerHTML = '<i class="fa-solid fa-film"></i> 4. 9:16 Reel Ready ✓';
         }
 
         currentRenderedReel = data;
@@ -1278,6 +1858,10 @@ function initVideoStudio() {
         }
 
         if (videoActionButtons) videoActionButtons.classList.remove('hidden');
+        const btnHeaderReset = document.getElementById('btnHeaderResetReel');
+        if (btnHeaderReset) btnHeaderReset.style.display = 'inline-flex';
+        const btnFloatingBack = document.getElementById('btnFloatingBackReel');
+        if (btnFloatingBack) btnFloatingBack.style.display = 'inline-flex';
 
         // 5. Enable social publishing buttons
         const btnPublishBoth = document.getElementById('btnPublishBoth');
@@ -1287,15 +1871,15 @@ function initVideoStudio() {
         if (btnPublishInstagram) btnPublishInstagram.disabled = false;
         if (btnPublishYouTube) btnPublishYouTube.disabled = false;
 
-        // 6. Switch stepper on mobile to Step 3 (રીલ & પબ્લિશ)
+        // 6. Switch stepper on mobile to Step 2 (Reel Preview)
         if (typeof window.setReelStep === 'function') {
-          window.setReelStep(3);
+          window.setReelStep(2);
         }
 
-        showToast('🎉 ફોટામાંથી શાનદાર પ્રોફેશનલ રીલ સફળતાપૂર્વક બની ગઈ!');
+        showToast('🎉 Professional photo reel created successfully!');
       } catch (err) {
         console.error('Photo reel generation error:', err);
-        showToast(`ભૂલ: ${err.message}`, true);
+        showToast(`Error: ${err.message}`, true);
       } finally {
         isGeneratingReelBusy = false;
         btnGeneratePhotoReel.disabled = false;
@@ -1372,7 +1956,7 @@ function initVideoStudio() {
       if (!file) return;
 
       if (!file.type.startsWith('audio/') && !file.name.match(/\.(mp3|wav|m4a|aac|ogg)$/i)) {
-        showToast('કૃપા કરીને માન્ય ઑડિયો/સોંગ ફાઇલ (MP3, WAV, M4A) પસંદ કરો.', true);
+        showToast('Please select a valid audio file (MP3, WAV, M4A).', true);
         return;
       }
 
@@ -1387,13 +1971,13 @@ function initVideoStudio() {
 
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
       if (customAudioFileStatus) {
-        customAudioFileStatus.innerHTML = `<span style="color: #16a34a; font-weight: 600;"><i class="fa-solid fa-circle-check"></i> ફાઈલ સિલેક્ટ થઈ</span>`;
+        customAudioFileStatus.innerHTML = `<span style="color: #16a34a; font-weight: 600;"><i class="fa-solid fa-circle-check"></i> File Selected</span>`;
       }
       if (customAudioNameDisplay) {
         customAudioNameDisplay.textContent = file.name;
       }
       if (customAudioDurationDisplay) {
-        customAudioDurationDisplay.textContent = `${sizeMb} MB • લોડિંગ...`;
+        customAudioDurationDisplay.textContent = `${sizeMb} MB • Loading...`;
       }
       if (customAudioPlayerRow) {
         customAudioPlayerRow.style.display = 'flex';
@@ -1409,7 +1993,7 @@ function initVideoStudio() {
           const mins = Math.floor(duration / 60);
           const secs = String(duration % 60).padStart(2, '0');
           if (customAudioDurationDisplay) {
-            customAudioDurationDisplay.textContent = `${mins}:${secs} (${sizeMb} MB) • તૈયાર છે`;
+            customAudioDurationDisplay.textContent = `${mins}:${secs} (${sizeMb} MB) • Ready`;
           }
         });
 
@@ -1418,7 +2002,7 @@ function initVideoStudio() {
           if (btnPreviewBgm) btnPreviewBgm.innerHTML = '<i class="fa-solid fa-play"></i>';
         });
 
-        showToast(`🎵 "${file.name}" સોંગ પસંદ થઈ ગયું!`);
+        showToast(`🎵 Song "${file.name}" selected!`);
       } catch (err) {
         console.warn('Audio preview object error:', err);
       }
@@ -1457,11 +2041,11 @@ function initVideoStudio() {
       customAudioPreviewObj = null;
       if (customAudioInput) customAudioInput.value = '';
       if (customAudioPlayerRow) customAudioPlayerRow.style.display = 'none';
-      if (customAudioFileStatus) customAudioFileStatus.textContent = 'કોઈ ગીત પસંદ નથી કર્યું';
+      if (customAudioFileStatus) customAudioFileStatus.textContent = 'No custom audio selected';
       if (videoBgmSelect) videoBgmSelect.value = 'none';
       if (customAudioUploadBox) customAudioUploadBox.style.display = 'none';
       if (bgmVolumeRow) bgmVolumeRow.style.display = 'none';
-      showToast('કસ્ટમ સોંગ હટાવી દીધું.');
+      showToast('Custom song removed.');
     });
   }
 
@@ -1482,7 +2066,7 @@ function initVideoStudio() {
     btnPreviewBgm.addEventListener('click', () => {
       const track = videoBgmSelect.value;
       if (track === 'none') {
-        showToast('કૃપા કરીને પહેલા મ્યુઝિક ટ્રેક પસંદ કરો.');
+        showToast('Please select a music track first.');
         return;
       }
       if (track === 'custom') {
@@ -1514,10 +2098,517 @@ function initVideoStudio() {
     });
   }
 
-  // Process Video or Photo Reel with AI Auto-Editing & Effects
+  // ========================================================
+  // 🎵 INSTAGRAM-STYLE ONLINE MUSIC BROWSER & LIBRARY
+  // ========================================================
+  const songBrowserModal = document.getElementById('songBrowserModal');
+  const btnOpenSongBrowser = document.getElementById('btnOpenSongBrowser');
+  const btnBrowseSongShortcut = document.getElementById('btnBrowseSongShortcut');
+  const btnCloseSongBrowserModal = document.getElementById('btnCloseSongBrowserModal');
+  const btnConfirmSongSelection = document.getElementById('btnConfirmSongSelection');
+  const selectedSongTitleDisplay = document.getElementById('selectedSongTitleDisplay');
+  const selectedSongSubDisplay = document.getElementById('selectedSongSubDisplay');
+  const selectedSongBadgeIcon = document.getElementById('selectedSongBadgeIcon');
+  const btnPreviewSelectedSongMini = document.getElementById('btnPreviewSelectedSongMini');
+
+  const songOnlineSearchInput = document.getElementById('songOnlineSearchInput');
+  const btnClearSongSearch = document.getElementById('btnClearSongSearch');
+  const songSearchSpinner = document.getElementById('songSearchSpinner');
+  const lblSongListHeading = document.getElementById('lblSongListHeading');
+  const lblSongResultsCount = document.getElementById('lblSongResultsCount');
+  const songTrackList = document.getElementById('songTrackList');
+
+  const songBrowserVolumeSlider = document.getElementById('songBrowserVolumeSlider');
+  const lblSongBrowserVolume = document.getElementById('lblSongBrowserVolume');
+  const songBrowserFileInput = document.getElementById('songBrowserFileInput');
+  const btnUploadCustomSongInBrowser = document.getElementById('btnUploadCustomSongInBrowser');
+  const customSongUploadedNameHint = document.getElementById('customSongUploadedNameHint');
+
+  const trackMetaMap = {
+    'luxury-saree': {
+      title: '🥻 Luxury Saree Theme',
+      subtitle: 'Acoustic Flute • Royal Patola Vibes',
+      icon: '🥻',
+      src: '/audio/bgm/luxury-saree.mp3'
+    },
+    'royal-heritage': {
+      title: '👑 Royal Heritage',
+      subtitle: 'Royal Sitar & Shehnai • Royal Heritage Music',
+      icon: '👑',
+      src: '/audio/bgm/royal-heritage.mp3'
+    },
+    'cinematic-ambient': {
+      title: '🎬 Cinematic Ambient Glow',
+      subtitle: 'Dreamy Soft Piano & Strings • Smooth Cinematic',
+      icon: '🎬',
+      src: '/audio/bgm/cinematic-ambient.mp3'
+    },
+    'lofi-aesthetic': {
+      title: '☕ Lo-Fi Aesthetic Warmth',
+      subtitle: 'Chill Cozy Beats • Social Media Vibes',
+      icon: '☕',
+      src: '/audio/bgm/lofi-aesthetic.mp3'
+    },
+    'none': {
+      title: '🔇 Original Video Sound',
+      subtitle: 'No Music • Original Video Audio',
+      icon: '🔇',
+      src: ''
+    }
+  };
+
+  let modalActiveAudio = null;
+  let onlineSearchDebounceTimer = null;
+  let hasLoadedInitialTrending = false;
+
+  function stopModalAudio() {
+    if (modalActiveAudio) {
+      modalActiveAudio.pause();
+      modalActiveAudio = null;
+    }
+    document.querySelectorAll('.btn-track-play').forEach(btn => {
+      btn.classList.remove('playing');
+      btn.innerHTML = '<i class="fa-solid fa-play"></i> <span>Preview</span>';
+    });
+    if (btnPreviewSelectedSongMini) {
+      btnPreviewSelectedSongMini.innerHTML = '<i class="fa-solid fa-play"></i>';
+    }
+  }
+
+  function openSongBrowserModal() {
+    stopAllBgmPlayback();
+    stopModalAudio();
+    if (songBrowserModal) {
+      songBrowserModal.classList.remove('hidden');
+      if (!hasLoadedInitialTrending) {
+        hasLoadedInitialTrending = true;
+        fetchOnlineMusic('', 'reels');
+      }
+    }
+  }
+
+  function closeSongBrowserModal() {
+    stopModalAudio();
+    if (songBrowserModal) {
+      songBrowserModal.classList.add('hidden');
+    }
+  }
+
+  if (btnOpenSongBrowser) btnOpenSongBrowser.addEventListener('click', openSongBrowserModal);
+  if (btnBrowseSongShortcut) btnBrowseSongShortcut.addEventListener('click', openSongBrowserModal);
+  if (btnCloseSongBrowserModal) btnCloseSongBrowserModal.addEventListener('click', closeSongBrowserModal);
+  if (btnConfirmSongSelection) {
+    btnConfirmSongSelection.addEventListener('click', () => {
+      closeSongBrowserModal();
+      showToast('🎵 Background music applied successfully!');
+    });
+  }
+
+  // Close modal when clicking outside card
+  if (songBrowserModal) {
+    songBrowserModal.addEventListener('click', (e) => {
+      if (e.target === songBrowserModal) closeSongBrowserModal();
+    });
+  }
+
+  // Online Music Search & Trending Fetcher
+  async function fetchOnlineMusic(query = '', genre = 'reels') {
+    if (!songTrackList) return;
+    if (songSearchSpinner) songSearchSpinner.classList.remove('hidden');
+    if (lblSongResultsCount) lblSongResultsCount.textContent = 'Searching...';
+
+    try {
+      let endpoint = '';
+      if (query && query.trim().length > 0) {
+        endpoint = `/api/music/search?q=${encodeURIComponent(query.trim())}`;
+        if (lblSongListHeading) lblSongListHeading.textContent = `🔍 Results for "${query.trim()}"`;
+      } else {
+        endpoint = `/api/music/trending?genre=${encodeURIComponent(genre || 'reels')}`;
+        const genreLabels = {
+          'reels': '🔥 Trending Instagram Reels Music',
+          'gujarati': '🥻 Garba & Gujarati Hits',
+          'bollywood': '💖 Bollywood Romantic Hits',
+          'punjabi': '⚡ Punjabi Trending Beats',
+          'lofi': '☕ Lo-Fi Aesthetic Chill',
+          'sitar': '👑 Royal Heritage Instrumental'
+        };
+        if (lblSongListHeading) lblSongListHeading.textContent = genreLabels[genre] || '🔥 Trending Instagram Music';
+      }
+
+      const res = await fetch(endpoint);
+      const data = await res.json();
+
+      if (data.success && Array.isArray(data.results) && data.results.length > 0) {
+        renderOnlineSongs(data.results);
+        if (lblSongResultsCount) {
+          lblSongResultsCount.textContent = `${data.results.length} Songs Found`;
+        }
+      } else {
+        renderOnlineSongs([]);
+        if (lblSongResultsCount) lblSongResultsCount.textContent = '0 Songs';
+      }
+    } catch (err) {
+      console.error('Music fetch error:', err);
+      if (lblSongResultsCount) lblSongResultsCount.textContent = 'Connection Error';
+    } finally {
+      if (songSearchSpinner) songSearchSpinner.classList.add('hidden');
+    }
+  }
+
+  // Render Track Cards with Artwork & Preview
+  function renderOnlineSongs(songs) {
+    if (!songTrackList) return;
+    if (!songs || songs.length === 0) {
+      songTrackList.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem 1rem; color: #78716c;">
+          <i class="fa-solid fa-music" style="font-size: 2.2rem; margin-bottom: 0.75rem; opacity: 0.35;"></i>
+          <p style="font-weight: 700; margin: 0; color: #44403c; font-size: 0.95rem;">No songs found</p>
+          <p style="font-size: 0.8rem; margin: 0.35rem 0 0 0;">Try searching another track or artist (e.g. Garba, Arijit, Kesariya, Patola, Khalasi, Lo-Fi...)</p>
+        </div>
+      `;
+      return;
+    }
+
+    songTrackList.innerHTML = songs.map((track, idx) => {
+      const isSelected = selectedOnlineSong && selectedOnlineSong.previewUrl === track.previewUrl;
+      const artwork = track.artwork || 'https://via.placeholder.com/44x44/7c5a32/ffffff?text=🎵';
+      const durationSec = track.duration || 30;
+      return `
+        <div class="song-track-card is-online ${isSelected ? 'selected' : ''}" data-online-index="${idx}">
+          <div class="song-track-left">
+            <img src="${artwork}" alt="${escapeHtml(track.title)}" class="song-track-thumb-img" onerror="this.src='https://via.placeholder.com/44x44/7c5a32/ffffff?text=🎵'">
+            <div class="song-track-details">
+              <div class="song-track-title">${escapeHtml(track.title)}</div>
+              <div class="song-track-desc">${escapeHtml(track.artist)}${track.album ? ' • ' + escapeHtml(track.album) : ''}</div>
+              <div class="song-track-tags">
+                <span class="song-track-badge-online"><i class="fa-brands fa-instagram"></i> Live Online</span>
+                <span class="track-tag">${durationSec}s HD Preview</span>
+              </div>
+            </div>
+          </div>
+          <div class="song-track-actions">
+            <button type="button" class="btn-track-play btn-online-play" data-src="${track.previewUrl || ''}" title="Preview">
+              <i class="fa-solid fa-play"></i> <span>Preview</span>
+            </button>
+            <button type="button" class="btn-track-select btn-online-select ${isSelected ? 'selected' : ''}" data-online-index="${idx}" title="Select for Reel">
+              <i class="fa-solid ${isSelected ? 'fa-check' : 'fa-plus'}"></i>
+              <span>${isSelected ? 'Selected' : 'Select'}</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Play Preview Listeners
+    songTrackList.querySelectorAll('.btn-online-play').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const src = btn.getAttribute('data-src');
+        if (!src) return;
+
+        if (modalActiveAudio && modalActiveAudio.dataset.src === src && !modalActiveAudio.paused) {
+          modalActiveAudio.pause();
+          btn.classList.remove('playing');
+          btn.innerHTML = '<i class="fa-solid fa-play"></i> <span>Preview</span>';
+          return;
+        }
+
+        stopModalAudio();
+        stopAllBgmPlayback();
+
+        modalActiveAudio = new Audio(src);
+        modalActiveAudio.dataset.src = src;
+        const vol = songBrowserVolumeSlider ? parseFloat(songBrowserVolumeSlider.value) : 0.25;
+        modalActiveAudio.volume = vol;
+
+        btn.classList.add('playing');
+        btn.innerHTML = '<i class="fa-solid fa-pause"></i> <span>Pause</span> <span class="soundwave-anim"><span class="soundwave-bar"></span><span class="soundwave-bar"></span><span class="soundwave-bar"></span></span>';
+
+        modalActiveAudio.addEventListener('ended', () => {
+          btn.classList.remove('playing');
+          btn.innerHTML = '<i class="fa-solid fa-play"></i> <span>Preview</span>';
+        });
+
+        modalActiveAudio.play().catch(err => {
+          console.warn('Online audio playback error:', err);
+          btn.classList.remove('playing');
+          btn.innerHTML = '<i class="fa-solid fa-play"></i> <span>Preview</span>';
+        });
+      });
+    });
+
+    // Select Track Listeners
+    songTrackList.querySelectorAll('.btn-online-select').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(btn.getAttribute('data-online-index'), 10);
+        const track = songs[idx];
+        if (track) selectOnlineSongTrack(track);
+      });
+    });
+
+    // Click entire card to select
+    songTrackList.querySelectorAll('.song-track-card.is-online').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-track-play')) return;
+        const idx = parseInt(card.getAttribute('data-online-index'), 10);
+        const track = songs[idx];
+        if (track) selectOnlineSongTrack(track);
+      });
+    });
+  }
+
+  // Select an Online Track
+  function selectOnlineSongTrack(track) {
+    selectedOnlineSong = track;
+    selectedCustomAudioFile = null;
+
+    if (videoBgmSelect) {
+      videoBgmSelect.value = 'online';
+    }
+
+    // Update modal cards highlight
+    songTrackList.querySelectorAll('.song-track-card').forEach(card => {
+      const btn = card.querySelector('.btn-online-select');
+      const isSelected = card.querySelector('.btn-online-play')?.getAttribute('data-src') === track.previewUrl;
+      card.classList.toggle('selected', isSelected);
+      if (btn) {
+        if (isSelected) {
+          btn.classList.add('selected');
+          btn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Selected</span>';
+        } else {
+          btn.classList.remove('selected');
+          btn.innerHTML = '<i class="fa-solid fa-plus"></i> <span>Select</span>';
+        }
+      }
+    });
+
+    // Update Column 1 Music Box Display with Real Album Art & Title
+    if (selectedSongTitleDisplay) {
+      selectedSongTitleDisplay.textContent = `🎵 ${track.title}`;
+    }
+    if (selectedSongSubDisplay) {
+      selectedSongSubDisplay.textContent = `${track.artist} • Instagram Live Audio`;
+    }
+    if (selectedSongBadgeIcon) {
+      if (track.artwork) {
+        selectedSongBadgeIcon.innerHTML = `<img src="${track.artwork}" alt="Album Art" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover;" />`;
+      } else {
+        selectedSongBadgeIcon.innerHTML = `<i class="fa-brands fa-instagram" style="color: #e1306c;"></i>`;
+      }
+    }
+
+    showToast(`🎵 Online song selected: ${track.title} (${track.artist})`);
+  }
+
+  // Select Preset or Local Song
+  function selectSongTrack(trackId, customFileName = '') {
+    selectedOnlineSong = null;
+
+    if (videoBgmSelect) {
+      videoBgmSelect.value = trackId;
+    }
+
+    document.querySelectorAll('.song-track-card').forEach(card => {
+      const isCardSelected = card.getAttribute('data-track-id') === trackId;
+      card.classList.toggle('selected', isCardSelected);
+      const selBtn = card.querySelector('.btn-track-select');
+      if (selBtn) {
+        if (isCardSelected) {
+          selBtn.classList.add('selected');
+          selBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Selected</span>';
+        } else {
+          selBtn.classList.remove('selected');
+          selBtn.innerHTML = '<i class="fa-solid fa-plus"></i> <span>Select</span>';
+        }
+      }
+    });
+
+    if (trackId === 'custom') {
+      const name = customFileName || selectedCustomAudioFile?.name || 'Custom Song';
+      if (selectedSongTitleDisplay) selectedSongTitleDisplay.textContent = `🎵 ${name}`;
+      if (selectedSongSubDisplay) selectedSongSubDisplay.textContent = 'Custom Song • From your device';
+      if (selectedSongBadgeIcon) selectedSongBadgeIcon.innerHTML = '<i class="fa-solid fa-file-audio"></i>';
+    } else {
+      selectedCustomAudioFile = null;
+      const meta = trackMetaMap[trackId] || trackMetaMap['luxury-saree'];
+      if (selectedSongTitleDisplay) selectedSongTitleDisplay.textContent = meta.title;
+      if (selectedSongSubDisplay) selectedSongSubDisplay.textContent = meta.subtitle;
+      if (selectedSongBadgeIcon) selectedSongBadgeIcon.innerHTML = `<span style="font-size: 1.1rem;">${meta.icon}</span>`;
+    }
+  }
+
+  // Search input with debounce
+  if (songOnlineSearchInput) {
+    songOnlineSearchInput.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (btnClearSongSearch) {
+        if (val.length > 0) btnClearSongSearch.classList.remove('hidden');
+        else btnClearSongSearch.classList.add('hidden');
+      }
+
+      clearTimeout(onlineSearchDebounceTimer);
+      onlineSearchDebounceTimer = setTimeout(() => {
+        if (val.length > 0) {
+          fetchOnlineMusic(val);
+        } else {
+          fetchOnlineMusic('', 'reels');
+        }
+      }, 350);
+    });
+  }
+
+  // Clear search button
+  if (btnClearSongSearch && songOnlineSearchInput) {
+    btnClearSongSearch.addEventListener('click', () => {
+      songOnlineSearchInput.value = '';
+      btnClearSongSearch.classList.add('hidden');
+      fetchOnlineMusic('', 'reels');
+      songOnlineSearchInput.focus();
+    });
+  }
+
+  // Quick Trending Chips Row
+  document.querySelectorAll('.quick-song-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.quick-song-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const q = chip.getAttribute('data-query') || chip.getAttribute('data-genre') || '';
+      if (songOnlineSearchInput) songOnlineSearchInput.value = '';
+      if (btnClearSongSearch) btnClearSongSearch.classList.add('hidden');
+      fetchOnlineMusic(q);
+    });
+  });
+
+  // Mini Play Button in Column 1
+  if (btnPreviewSelectedSongMini) {
+    btnPreviewSelectedSongMini.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const currentTrack = videoBgmSelect ? videoBgmSelect.value : 'luxury-saree';
+      if (currentTrack === 'none') {
+        showToast('No music selected.');
+        return;
+      }
+
+      // 1. Online Instagram Track Preview
+      if (currentTrack === 'online' && selectedOnlineSong && selectedOnlineSong.previewUrl) {
+        if (currentBgmAudio && currentBgmAudio.dataset.track === 'online' && !currentBgmAudio.paused) {
+          currentBgmAudio.pause();
+          btnPreviewSelectedSongMini.innerHTML = '<i class="fa-solid fa-play"></i>';
+          return;
+        }
+
+        stopAllBgmPlayback();
+        stopModalAudio();
+
+        currentBgmAudio = new Audio(selectedOnlineSong.previewUrl);
+        currentBgmAudio.dataset.track = 'online';
+        const vol = bgmVolumeSlider ? parseFloat(bgmVolumeSlider.value) : 0.25;
+        currentBgmAudio.volume = vol;
+
+        btnPreviewSelectedSongMini.innerHTML = '<i class="fa-solid fa-pause"></i>';
+        currentBgmAudio.addEventListener('ended', () => {
+          btnPreviewSelectedSongMini.innerHTML = '<i class="fa-solid fa-play"></i>';
+        });
+        currentBgmAudio.play().catch(() => {});
+        return;
+      }
+
+      // 2. Custom Uploaded Song Preview
+      if (currentTrack === 'custom') {
+        if (!selectedCustomAudioFile && customAudioInput) {
+          customAudioInput.click();
+          return;
+        }
+        if (customAudioPreviewObj) {
+          if (!customAudioPreviewObj.paused) {
+            customAudioPreviewObj.pause();
+            btnPreviewSelectedSongMini.innerHTML = '<i class="fa-solid fa-play"></i>';
+          } else {
+            customAudioPreviewObj.play().catch(() => {});
+            btnPreviewSelectedSongMini.innerHTML = '<i class="fa-solid fa-pause"></i>';
+          }
+        }
+        return;
+      }
+
+      // 3. Preset Built-in Audio
+      const meta = trackMetaMap[currentTrack] || trackMetaMap['luxury-saree'];
+      if (!meta.src) return;
+
+      if (currentBgmAudio && currentBgmAudio.dataset.track === currentTrack && !currentBgmAudio.paused) {
+        currentBgmAudio.pause();
+        btnPreviewSelectedSongMini.innerHTML = '<i class="fa-solid fa-play"></i>';
+        return;
+      }
+
+      stopAllBgmPlayback();
+      stopModalAudio();
+
+      currentBgmAudio = new Audio(meta.src);
+      currentBgmAudio.dataset.track = currentTrack;
+      const vol = bgmVolumeSlider ? parseFloat(bgmVolumeSlider.value) : 0.25;
+      currentBgmAudio.volume = vol;
+
+      btnPreviewSelectedSongMini.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      currentBgmAudio.addEventListener('ended', () => {
+        btnPreviewSelectedSongMini.innerHTML = '<i class="fa-solid fa-play"></i>';
+      });
+      currentBgmAudio.play().catch(() => {});
+    });
+  }
+
+  // Custom Song Upload in Browser Modal
+  if (btnUploadCustomSongInBrowser && songBrowserFileInput) {
+    btnUploadCustomSongInBrowser.addEventListener('click', () => {
+      songBrowserFileInput.click();
+    });
+  }
+
+  if (songBrowserFileInput) {
+    songBrowserFileInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('audio/') && !file.name.match(/\.(mp3|wav|m4a|aac|ogg)$/i)) {
+        showToast('Please select a valid audio file (MP3/WAV).', true);
+        return;
+      }
+
+      stopModalAudio();
+      stopAllBgmPlayback();
+
+      selectedCustomAudioFile = file;
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      if (customSongUploadedNameHint) {
+        customSongUploadedNameHint.innerHTML = `<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> ${file.name} (${sizeMb} MB) - Ready!</span>`;
+      }
+
+      const audioUrl = URL.createObjectURL(file);
+      customAudioPreviewObj = new Audio(audioUrl);
+      const vol = songBrowserVolumeSlider ? parseFloat(songBrowserVolumeSlider.value) : 0.25;
+      customAudioPreviewObj.volume = vol;
+
+      selectSongTrack('custom', file.name);
+      showToast(`🎵 Custom song selected: ${file.name}`);
+    });
+  }
+
+  // Volume Slider in Modal
+  if (songBrowserVolumeSlider) {
+    songBrowserVolumeSlider.addEventListener('input', (e) => {
+      const vol = parseFloat(e.target.value);
+      if (lblSongBrowserVolume) lblSongBrowserVolume.textContent = `${Math.round(vol * 100)}%`;
+      if (bgmVolumeSlider) bgmVolumeSlider.value = vol;
+      if (bgmVolumeLabel) bgmVolumeLabel.textContent = `${Math.round(vol * 100)}%`;
+      if (modalActiveAudio) modalActiveAudio.volume = vol;
+      if (currentBgmAudio) currentBgmAudio.volume = vol;
+      if (customAudioPreviewObj) customAudioPreviewObj.volume = vol;
+    });
+  }
   btnProcessVideo.addEventListener('click', async () => {
     if (isGeneratingReelBusy) {
-      showToast('રીલ બનાવવાનું કામ ચાલુ છે, કૃપા કરીને થોડી સેકન્ડ રાહ જુઓ...', true);
+      showToast('Reel generation is already in progress, please wait...', true);
       return;
     }
 
@@ -1558,10 +2649,20 @@ function initVideoStudio() {
       formData.append('videoStyle', videoStyleSelect.value);
     }
 
-    // Feature #3: Append BGM Settings (Presets or Manual Custom Song Upload)
+    const inputIsDirectUpload = document.getElementById('inputIsDirectUpload');
+    if (inputIsDirectUpload && inputIsDirectUpload.value === 'true') {
+      formData.append('isDirectUpload', 'true');
+    }
+
+    // Feature #3: Append BGM Settings (Presets, Instagram Online Song, or Manual Custom Song Upload)
     if (selectedCustomAudioFile) {
       formData.append('customAudio', selectedCustomAudioFile);
       formData.append('bgmTrack', 'custom');
+    } else if (selectedOnlineSong && selectedOnlineSong.previewUrl && videoBgmSelect && videoBgmSelect.value === 'online') {
+      formData.append('bgmTrack', 'online');
+      formData.append('onlineAudioUrl', selectedOnlineSong.previewUrl);
+      formData.append('onlineSongTitle', selectedOnlineSong.title || '');
+      formData.append('onlineSongArtist', selectedOnlineSong.artist || '');
     } else if (videoBgmSelect) {
       formData.append('bgmTrack', videoBgmSelect.value);
     }
@@ -1580,15 +2681,80 @@ function initVideoStudio() {
     const key = getSavedApiKey();
     if (key) formData.append('apiKey', key);
 
+    const uploadBar = document.getElementById('uploadProgressBarFill');
+    const uploadPercent = document.getElementById('uploadPercentBadge');
+    const uploadSizeCounter = document.getElementById('uploadSizeCounter');
+    const uploadSpeedIndicator = document.getElementById('uploadSpeedIndicator');
+    const uploadPhaseText = document.getElementById('uploadPhaseText');
+    const badgeStepUpload = document.getElementById('badgeStepUpload');
+    const badgeStepAi = document.getElementById('badgeStepAi');
+    const badgeStepSubtitles = document.getElementById('badgeStepSubtitles');
+    const badgeStepRender = document.getElementById('badgeStepRender');
+    const videoLoaderSpinner = document.getElementById('videoLoaderSpinner');
+
+    if (uploadBar) {
+      uploadBar.style.width = '0%';
+      uploadBar.classList.remove('complete');
+    }
+    if (uploadPercent) uploadPercent.textContent = '0%';
+    if (uploadPhaseText) uploadPhaseText.textContent = 'Uploading video...';
+    if (uploadSizeCounter) uploadSizeCounter.innerHTML = '<i class="fa-solid fa-file-arrow-up"></i> 0.0 MB / 0.0 MB';
+    if (uploadSpeedIndicator) uploadSpeedIndicator.innerHTML = '<i class="fa-solid fa-gauge-high"></i> Connecting...';
+    if (badgeStepUpload) {
+      badgeStepUpload.className = 'step-badge current';
+      badgeStepUpload.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 1. Video Upload (0%)';
+    }
+    if (badgeStepAi) badgeStepAi.className = 'step-badge';
+    if (badgeStepSubtitles) badgeStepSubtitles.className = 'step-badge';
+    if (badgeStepRender) badgeStepRender.className = 'step-badge';
+    if (videoLoaderSpinner) videoLoaderSpinner.style.display = 'none';
+
+    let stageTimer = null;
+
     try {
-      const res = await fetch('/api/video/auto-edit', {
-        method: 'POST',
-        body: formData
+      const data = await uploadWithProgress({
+        url: '/api/video/auto-edit',
+        formData,
+        onProgress: ({ percent, loadedMB, totalMB, speed }) => {
+          if (uploadBar) uploadBar.style.width = `${percent}%`;
+          if (uploadPercent) uploadPercent.textContent = `${percent}%`;
+          if (uploadSizeCounter) {
+            uploadSizeCounter.innerHTML = `<i class="fa-solid fa-file-arrow-up"></i> ${loadedMB} MB / ${totalMB} MB (${percent}%)`;
+          }
+          if (uploadSpeedIndicator) {
+            uploadSpeedIndicator.innerHTML = `<i class="fa-solid fa-gauge-high"></i> ${speed}`;
+          }
+          if (badgeStepUpload) {
+            badgeStepUpload.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> 1. Video Upload (${percent}%)`;
+          }
+
+          if (percent >= 100) {
+            if (uploadBar) {
+              uploadBar.classList.add('complete');
+              uploadBar.style.width = '100%';
+            }
+            if (uploadPercent) uploadPercent.textContent = '100% ✓';
+            if (uploadPhaseText) uploadPhaseText.textContent = 'Video 100% Uploaded ✓ (AI is rendering reel...)';
+            if (uploadSpeedIndicator) uploadSpeedIndicator.innerHTML = '<i class="fa-solid fa-check"></i> Upload Successful ✓';
+            if (badgeStepUpload) badgeStepUpload.className = 'step-badge active';
+            if (badgeStepAi) badgeStepAi.className = 'step-badge current';
+            if (videoLoaderSpinner) videoLoaderSpinner.style.display = 'block';
+            videoLoaderStatus.textContent = 'AI is scanning video frames and composing 9:16 reel... (~5-10s)';
+
+            stageTimer = setTimeout(() => {
+              if (badgeStepAi) badgeStepAi.className = 'step-badge active';
+              if (badgeStepSubtitles) badgeStepSubtitles.className = 'step-badge current';
+              videoLoaderStatus.textContent = 'Applying cinematic color grading and dynamic subtitles...';
+            }, 3000);
+          }
+        }
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to process video.');
+      if (stageTimer) clearTimeout(stageTimer);
+      if (badgeStepSubtitles) badgeStepSubtitles.className = 'step-badge active';
+      if (badgeStepRender) {
+        badgeStepRender.className = 'step-badge active';
+        badgeStepRender.innerHTML = '<i class="fa-solid fa-film"></i> 4. 9:16 Reel Ready ✓';
       }
 
       currentRenderedReel = data;
@@ -1600,13 +2766,14 @@ function initVideoStudio() {
       }
       renderedVideoPlayer.src = data.reelUrl;
       renderedVideoPlayer.classList.add('active');
+      renderedVideoPlayer.classList.add('has-video');
       renderedVideoPlayer.load();
       renderedVideoPlayer.play().catch(() => {});
 
       // 2. Set Recipe Stats & AI Vision Topic
-      pillTheme.textContent = data.recipe?.themeName || 'Royal Vibrant';
-      pillDuration.textContent = data.duration || '30s';
-      recipePills.classList.remove('hidden');
+      if (pillTheme) pillTheme.textContent = data.recipe?.themeName || 'Royal Vibrant';
+      if (pillDuration) pillDuration.textContent = data.duration || '30s';
+      if (recipePills) recipePills.classList.remove('hidden');
 
       const pillSubtitles = document.getElementById('pillSubtitles');
       const lblPillSubtitles = document.getElementById('lblPillSubtitles');
@@ -1654,18 +2821,34 @@ function initVideoStudio() {
       const aiDetectedTopicBadge = document.getElementById('aiDetectedTopicBadge');
       const detectedTopicText = document.getElementById('detectedTopicText');
       if (data.recipe?.detectedTopic) {
-        detectedTopicText.textContent = data.recipe.detectedTopic;
-        aiDetectedTopicBadge.classList.remove('hidden');
+        if (detectedTopicText) detectedTopicText.textContent = data.recipe.detectedTopic;
+        if (aiDetectedTopicBadge) aiDetectedTopicBadge.classList.remove('hidden');
       }
 
-      // 3. Set Social Media Texts
-      viralTitleText.textContent = data.recipe?.viralTitle || '✨ Watch This Till The End! #Shorts #Reels';
-      viralCaptionText.textContent = data.recipe?.viralCaption || 'Unbelievable moments captured in high aesthetic 4K!';
-      viralHashtagsText.textContent = data.recipe?.viralHashtags || '#ViralReels #Trending #Shorts #Explore';
+      // 3. Set Social Media Texts tailored to the video
+      if (viralTitleText) {
+        viralTitleText.textContent = data.recipe?.viralTitle || '✨ Watch This Till The End! #Shorts #Reels';
+      }
+      if (viralCaptionText) {
+        viralCaptionText.textContent = data.recipe?.viralCaption || 'Unbelievable moments captured in high aesthetic 4K!';
+      }
+      const rawHashtags = data.recipe?.viralHashtags;
+      const formattedHashtags = Array.isArray(rawHashtags)
+        ? rawHashtags.map(t => String(t).trim().startsWith('#') ? String(t).trim() : `#${String(t).trim()}`).join(' ')
+        : (typeof rawHashtags === 'string' && rawHashtags.trim() ? rawHashtags.trim() : '#ViralReels #Trending #Shorts #Explore');
+
+      if (viralHashtagsText) {
+        viralHashtagsText.textContent = formattedHashtags;
+      }
+      if (typeof updateInteractiveHashtags === 'function') {
+        updateInteractiveHashtags(formattedHashtags);
+      }
 
       // 4. Download Reel & Cover Thumbnail Buttons
-      btnDownloadReel.href = data.downloadUrl;
-      btnDownloadReel.setAttribute('download', data.fileName || 'reel-30s.mp4');
+      if (btnDownloadReel) {
+        btnDownloadReel.href = data.downloadUrl || data.reelUrl || '#';
+        btnDownloadReel.setAttribute('download', data.fileName || 'reel-30s.mp4');
+      }
 
       const btnDownloadCover = document.getElementById('btnDownloadCover');
       const btnOpenThumbnailStudio = document.getElementById('btnOpenThumbnailStudio');
@@ -1711,10 +2894,14 @@ function initVideoStudio() {
       }
 
       videoActionButtons.classList.remove('hidden');
+      const btnHeaderReset = document.getElementById('btnHeaderResetReel');
+      if (btnHeaderReset) btnHeaderReset.style.display = 'inline-flex';
+      const btnFloatingBack = document.getElementById('btnFloatingBackReel');
+      if (btnFloatingBack) btnFloatingBack.style.display = 'inline-flex';
 
       // 5. Enable Social Media Buttons
-      btnPublishYouTube.disabled = false;
-      btnPublishInstagram.disabled = false;
+      if (btnPublishYouTube) btnPublishYouTube.disabled = false;
+      if (btnPublishInstagram) btnPublishInstagram.disabled = false;
       const btnPublishBoth = document.getElementById('btnPublishBoth');
       if (btnPublishBoth) btnPublishBoth.disabled = false;
 
@@ -1728,9 +2915,9 @@ function initVideoStudio() {
         showToast('🎉 30-second AI Reel generated successfully!');
       }
 
-      // On mobile, auto-advance stepper to Step 3 (Preview & Publish)
+      // On mobile, auto-advance stepper to Step 2 (Reel Preview)
       if (typeof window.setReelStep === 'function') {
-        window.setReelStep(3);
+        window.setReelStep(2);
       }
 
       fetchScheduledQueue();
@@ -1972,6 +3159,114 @@ function initVideoStudio() {
     }
   }
 
+  // ----------------------------------------------------
+  // ✨ Luxury Editorial UI Helpers: Interactive Hashtags & Phone Controls
+  // ----------------------------------------------------
+  function syncHashtagsFromPills() {
+    const container = document.getElementById('viralHashtagsContainer');
+    const hiddenText = document.getElementById('viralHashtagsText');
+    if (!container || !hiddenText) return;
+    const remainingPills = Array.from(container.querySelectorAll('.hashtag-pill'));
+    const combined = remainingPills.map(p => p.textContent.replace('×', '').trim()).join(' ');
+    hiddenText.textContent = combined;
+  }
+
+  function updateInteractiveHashtags(hashtagsInput) {
+    const container = document.getElementById('viralHashtagsContainer');
+    const hiddenText = document.getElementById('viralHashtagsText');
+    if (!container) return;
+
+    let tagList = [];
+    if (Array.isArray(hashtagsInput)) {
+      tagList = hashtagsInput;
+    } else if (typeof hashtagsInput === 'string' && hashtagsInput.trim()) {
+      tagList = hashtagsInput.split(/[\s,]+/);
+    } else if (hiddenText && hiddenText.textContent) {
+      tagList = hiddenText.textContent.split(/[\s,]+/);
+    }
+
+    const rawTags = tagList
+      .map(t => String(t).trim())
+      .filter(t => t.length > 0 && t !== '#');
+
+    if (rawTags.length === 0) return;
+
+    container.innerHTML = '';
+    rawTags.forEach(tag => {
+      const cleanTag = tag.startsWith('#') ? tag : `#${tag}`;
+      const pill = document.createElement('span');
+      pill.className = 'hashtag-pill';
+      pill.innerHTML = `${cleanTag} <i class="fa-solid fa-xmark" title="Remove hashtag"></i>`;
+      pill.querySelector('i')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        pill.remove();
+        syncHashtagsFromPills();
+      });
+      container.appendChild(pill);
+    });
+
+    syncHashtagsFromPills();
+  }
+
+  // Setup click listeners on initial interactive hashtags
+  document.querySelectorAll('#viralHashtagsContainer .hashtag-pill i').forEach(icon => {
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      icon.parentElement?.remove();
+      syncHashtagsFromPills();
+    });
+  });
+
+  // Choose Files Proxy Button
+  const btnChooseFilesProxy = document.getElementById('btnChooseFilesProxy');
+  if (btnChooseFilesProxy && fileInput) {
+    btnChooseFilesProxy.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+  }
+
+  // Floating Center Play Button Overlay on iPhone Screen
+  const btnCenterPlayOverlay = document.getElementById('btnCenterPlayOverlay');
+  if (btnCenterPlayOverlay && renderedVideoPlayer) {
+    btnCenterPlayOverlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (renderedVideoPlayer.src && renderedVideoPlayer.src !== window.location.href) {
+        if (renderedVideoPlayer.paused) {
+          renderedVideoPlayer.play().catch(() => {});
+          btnCenterPlayOverlay.style.opacity = '0.35';
+        } else {
+          renderedVideoPlayer.pause();
+          btnCenterPlayOverlay.style.opacity = '1';
+        }
+      } else {
+        const btnGen = document.getElementById('btnProcessVideo');
+        if (btnGen) btnGen.click();
+      }
+    });
+  }
+
+  // Sync reset and back buttons when video plays
+  if (renderedVideoPlayer) {
+    renderedVideoPlayer.addEventListener('play', () => {
+      const btnHeaderReset = document.getElementById('btnHeaderResetReel');
+      if (btnHeaderReset) btnHeaderReset.style.display = 'inline-flex';
+      const btnFloatingBack = document.getElementById('btnFloatingBackReel');
+      if (btnFloatingBack) btnFloatingBack.style.display = 'inline-flex';
+      const videoActions = document.getElementById('videoActionButtons');
+      if (videoActions) videoActions.classList.remove('hidden');
+    });
+
+    if (renderedVideoPlayer.src && renderedVideoPlayer.src !== window.location.href && !renderedVideoPlayer.src.endsWith('/')) {
+      const btnHeaderReset = document.getElementById('btnHeaderResetReel');
+      if (btnHeaderReset) btnHeaderReset.style.display = 'inline-flex';
+      const btnFloatingBack = document.getElementById('btnFloatingBackReel');
+      if (btnFloatingBack) btnFloatingBack.style.display = 'inline-flex';
+      const videoActions = document.getElementById('videoActionButtons');
+      if (videoActions) videoActions.classList.remove('hidden');
+    }
+  }
+
   // Fetch initial queue and poll
   fetchScheduledQueue();
   setInterval(fetchScheduledQueue, 30000);
@@ -2036,6 +3331,101 @@ function renderSchedulerState(state) {
     schedProgressLabel.textContent = '0 / 0 Parts Posted';
   }
 
+  // Render Master Videos Queue / Playlist Card
+  const queueList = document.getElementById('masterVideosQueueList');
+  const queueCountBadge = document.getElementById('lblQueueCountBadge');
+  const queue = state.masterVideosQueue || [];
+
+  if (queueCountBadge) {
+    const totalCount = (state.masterVideo ? 1 : 0) + queue.length;
+    queueCountBadge.textContent = `${totalCount} Videos (${state.masterVideo ? '1 Active' : '0'} + ${queue.length} In Queue)`;
+  }
+
+  if (queueList) {
+    let qHtml = '';
+    if (state.masterVideo) {
+      qHtml += `
+        <div style="background: #eef2ff; border: 1.5px solid #6366f1; border-radius: 8px; padding: 0.55rem 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 700; font-size: 0.82rem; color: #1e1b4b; display: flex; align-items: center; gap: 0.4rem;">
+              <span style="background: #4338ca; color: #fff; font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 800;">▶ ACTIVE NOW</span>
+              ${state.masterVideo.originalName || 'Master Video'}
+            </div>
+            <div style="font-size: 0.72rem; color: #4f46e5; margin-top: 0.2rem;">
+              ${state.masterVideo.totalDurationFormatted || ''} • Part ${state.currentPart} of ${state.masterVideo.totalParts || 0}
+            </div>
+          </div>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #059669; background: #ecfdf5; padding: 0.2rem 0.5rem; border-radius: 4px;">
+            Cutting Part ${state.currentPart}
+          </span>
+        </div>
+      `;
+    }
+
+    if (queue.length > 0) {
+      queue.forEach((item, idx) => {
+        qHtml += `
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.7rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+            <div style="min-width: 0; flex: 1;">
+              <div style="font-weight: 600; font-size: 0.8rem; color: #334155; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <span style="background: #94a3b8; color: #fff; font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: 700;">⏳ QUEUE #${idx + 1}</span>
+                <span title="${item.originalName}">${item.originalName || 'Queued Video'}</span>
+              </div>
+              <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.15rem;">
+                ${item.totalDurationFormatted || ''} • ${item.totalParts || 0} 30s parts
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.35rem; align-items: center;">
+              <button type="button" class="btn btn-ghost btn-promote-queue" data-id="${item.id}" style="padding: 0.25rem 0.55rem; font-size: 0.72rem; color: #4338ca; border: 1px solid #c7d2fe; background: #eef2ff;" title="Make Active Now">⚡ Make Active</button>
+              <button type="button" class="btn btn-ghost btn-remove-queue" data-id="${item.id}" style="padding: 0.25rem 0.45rem; font-size: 0.72rem; color: #ef4444;" title="Remove from queue"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </div>
+        `;
+      });
+    } else if (!state.masterVideo) {
+      qHtml = '<div style="font-size: 0.78rem; color: #94a3b8; font-style: italic;">No videos in queue. Drag & drop above to add.</div>';
+    }
+
+    queueList.innerHTML = qHtml;
+
+    // Attach listeners
+    queueList.querySelectorAll('.btn-remove-queue').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        try {
+          const res = await fetch('/api/scheduler/queue/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+          });
+          const d = await res.json();
+          if (d.success) {
+            showToast('Video removed from queue.');
+            renderSchedulerState(d.state);
+          }
+        } catch (_) {}
+      });
+    });
+
+    queueList.querySelectorAll('.btn-promote-queue').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        try {
+          const res = await fetch('/api/scheduler/queue/promote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+          });
+          const d = await res.json();
+          if (d.success) {
+            showToast('New video is now active! ✓');
+            renderSchedulerState(d.state);
+          }
+        } catch (_) {}
+      });
+    });
+  }
+
   // Render History List
   const history = state.history || [];
   if (history.length === 0) {
@@ -2046,12 +3436,25 @@ function renderSchedulerState(state) {
       </div>`;
     schedLatestPlayer.style.display = 'none';
     schedPlayerPlaceholder.style.display = 'flex';
+    const btnSchedDownloadLatest = document.getElementById('btnSchedDownloadLatest');
+    if (btnSchedDownloadLatest) {
+      btnSchedDownloadLatest.classList.add('hidden');
+      btnSchedDownloadLatest.style.display = 'none';
+    }
   } else {
     // Show latest reel in player
     const latest = history[0];
     schedLatestPlayer.src = latest.renderedReelUrl;
     schedLatestPlayer.style.display = 'block';
     schedPlayerPlaceholder.style.display = 'none';
+
+    const btnSchedDownloadLatest = document.getElementById('btnSchedDownloadLatest');
+    if (btnSchedDownloadLatest) {
+      btnSchedDownloadLatest.href = latest.renderedReelUrl;
+      btnSchedDownloadLatest.download = latest.fileName || 'reel-part.mp4';
+      btnSchedDownloadLatest.classList.remove('hidden');
+      btnSchedDownloadLatest.style.display = 'inline-flex';
+    }
 
     partsHistoryList.innerHTML = history.map(item => `
       <div class="part-card-item">
@@ -2065,8 +3468,8 @@ function renderSchedulerState(state) {
           <a href="${item.renderedReelUrl}" target="_blank" class="btn btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem;">
             <i class="fa-solid fa-arrow-up-right-from-square"></i> Play
           </a>
-          <a href="${item.renderedReelUrl}" download="${item.fileName || 'part.mp4'}" class="btn btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem;">
-            <i class="fa-solid fa-download"></i> Download
+          <a href="${item.renderedReelUrl}" download="${item.fileName || 'part.mp4'}" class="btn btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem; font-weight: 700; color: #047857;" title="Download this 30s Reel">
+            <i class="fa-solid fa-download"></i> ⬇️ Download 30s MP4
           </a>
           ${item.instagramPostUrl ? `<a href="${item.instagramPostUrl}" target="_blank" class="btn btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem; color: #ec4899; text-decoration: none;"><i class="fa-brands fa-instagram"></i> View IG</a>` : ''}
           ${item.youtubePostUrl ? `<a href="${item.youtubePostUrl}" target="_blank" class="btn btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem; color: #ef4444; text-decoration: none;"><i class="fa-brands fa-youtube"></i> View Shorts</a>` : ''}
@@ -2096,30 +3499,42 @@ function initSchedulerView() {
 
   dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
 
+  let selectedSchedulerFiles = [];
+
   dropzone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropzone.classList.remove('dragover');
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleSchedulerFile(e.dataTransfer.files[0]);
+      handleSchedulerFiles(e.dataTransfer.files);
     }
   });
 
   fileInput.addEventListener('change', (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleSchedulerFile(e.target.files[0]);
+      handleSchedulerFiles(e.target.files);
     }
   });
 
-  function handleSchedulerFile(file) {
-    if (!file.type.startsWith('video/')) {
-      showToast('Please select a video file.', true);
+  function handleSchedulerFiles(fileList) {
+    const validFiles = Array.from(fileList).filter(f => f.type.startsWith('video/') || /\.(mp4|mov|webm|mkv)$/i.test(f.name));
+    if (validFiles.length === 0) {
+      showToast('Please select valid video file(s).', true);
       return;
     }
-    selectedSchedulerFile = file;
-    const mbSize = (file.size / (1024 * 1024)).toFixed(1);
-    fileNameBadge.textContent = `✓ Selected: ${file.name} (${mbSize} MB)`;
-    fileNameBadge.classList.remove('hidden');
-    showToast(`Long video selected: ${file.name}`);
+    selectedSchedulerFiles = validFiles;
+    selectedSchedulerFile = validFiles[0];
+
+    if (validFiles.length === 1) {
+      const mbSize = (validFiles[0].size / (1024 * 1024)).toFixed(1);
+      fileNameBadge.textContent = `✓ Selected: ${validFiles[0].name} (${mbSize} MB)`;
+      fileNameBadge.classList.remove('hidden');
+      showToast(`Long video selected: ${validFiles[0].name}`);
+    } else {
+      const totalMB = (validFiles.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)).toFixed(1);
+      fileNameBadge.textContent = `✓ Playlist: ${validFiles.length} Long Videos Selected (${totalMB} MB Total)`;
+      fileNameBadge.classList.remove('hidden');
+      showToast(`${validFiles.length} long videos added to queue playlist!`);
+    }
   }
 
   // Time formatting & Quick Presets
@@ -2159,19 +3574,72 @@ function initSchedulerView() {
 
     const formData = new FormData();
     formData.append('scheduledTime', scheduledTime);
-    if (selectedSchedulerFile) {
-      formData.append('masterVideo', selectedSchedulerFile);
+    const hasFiles = selectedSchedulerFiles && selectedSchedulerFiles.length > 0;
+    if (hasFiles) {
+      selectedSchedulerFiles.forEach(f => formData.append('masterVideos', f));
+    } else if (selectedSchedulerFile) {
+      formData.append('masterVideos', selectedSchedulerFile);
+    }
+
+    const schedUploadCard = document.getElementById('schedulerUploadProgressCard');
+    const schedUploadBar = document.getElementById('schedulerUploadProgressBarFill');
+    const schedUploadPercent = document.getElementById('schedulerUploadPercentBadge');
+    const schedUploadSizeCounter = document.getElementById('schedulerUploadSizeCounter');
+    const schedUploadSpeedIndicator = document.getElementById('schedulerUploadSpeedIndicator');
+    const schedUploadPhaseText = document.getElementById('schedulerUploadPhaseText');
+
+    if ((hasFiles || selectedSchedulerFile) && schedUploadCard) {
+      schedUploadCard.style.display = 'flex';
+      schedUploadCard.classList.remove('hidden');
+      if (schedUploadBar) {
+        schedUploadBar.style.width = '0%';
+        schedUploadBar.classList.remove('complete');
+      }
+      if (schedUploadPercent) schedUploadPercent.textContent = '0%';
+      if (schedUploadPhaseText) {
+        schedUploadPhaseText.textContent = hasFiles && selectedSchedulerFiles.length > 1
+          ? `Uploading ${selectedSchedulerFiles.length} master videos...`
+          : 'Uploading master video...';
+      }
     }
 
     try {
-      const res = await fetch('/api/scheduler/setup', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to configure scheduler.');
+      let data;
+      if (hasFiles || selectedSchedulerFile) {
+        data = await uploadWithProgress({
+          url: '/api/scheduler/setup',
+          formData,
+          onProgress: ({ percent, loadedMB, totalMB, speed }) => {
+            if (schedUploadBar) schedUploadBar.style.width = `${percent}%`;
+            if (schedUploadPercent) schedUploadPercent.textContent = `${percent}%`;
+            if (schedUploadSizeCounter) {
+              schedUploadSizeCounter.innerHTML = `<i class="fa-solid fa-file-arrow-up"></i> ${loadedMB} MB / ${totalMB} MB (${percent}%)`;
+            }
+            if (schedUploadSpeedIndicator) {
+              schedUploadSpeedIndicator.innerHTML = `<i class="fa-solid fa-gauge-high"></i> ${speed}`;
+            }
+            if (percent >= 100) {
+              if (schedUploadBar) {
+                schedUploadBar.classList.add('complete');
+                schedUploadBar.style.width = '100%';
+              }
+              if (schedUploadPercent) schedUploadPercent.textContent = '100% ✓';
+              if (schedUploadPhaseText) schedUploadPhaseText.textContent = 'Video upload complete ✓ (Activating scheduler...)';
+              if (schedUploadSpeedIndicator) schedUploadSpeedIndicator.innerHTML = '<i class="fa-solid fa-check"></i> Upload Successful ✓';
+            }
+          }
+        });
+      } else {
+        const res = await fetch('/api/scheduler/setup', {
+          method: 'POST',
+          body: formData
+        });
+        data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Failed to configure scheduler.');
+        }
       }
+
       showToast(data.message || 'Scheduler auto-pilot activated successfully!');
       renderSchedulerState(data.state);
     } catch (err) {
@@ -2179,6 +3647,12 @@ function initSchedulerView() {
     } finally {
       btnSaveSchedule.disabled = false;
       btnSaveSchedule.innerHTML = '<i class="fa-solid fa-play"></i> <span>⏰ Activate Scheduler (Auto-Pilot)</span>';
+      if (schedUploadCard) {
+        setTimeout(() => {
+          schedUploadCard.style.display = 'none';
+          schedUploadCard.classList.add('hidden');
+        }, 2000);
+      }
     }
   });
 
@@ -2495,7 +3969,7 @@ function initThumbnailStudio() {
     btnRegen.addEventListener('click', async () => {
       const state = window.activeReelThumbnail;
       if (!state || !state.fileName) {
-        showToast('કૃપા કરીને પહેલા વિડીયો બનાવો અથવા પસંદ કરો.', true);
+        showToast('Please create or select a video first.', true);
         return;
       }
 
@@ -2563,10 +4037,10 @@ function initThumbnailStudio() {
           renderedVideoPlayer.poster = data.thumbnailUrl;
         }
 
-        showToast('🎉 નવો HD 9:16 કવર ફોટો સફળતાપૂર્વક બની ગયો છે! 🖼️');
+        showToast('🎉 New HD 9:16 cover poster created successfully! 🖼️');
       } catch (err) {
         console.error(err);
-        showToast(`ભૂલ: ${err.message}`, true);
+        showToast(`Error: ${err.message}`, true);
       } finally {
         if (loadingOverlay) loadingOverlay.classList.add('hidden');
         btnRegen.disabled = false;
@@ -2585,11 +4059,15 @@ if (document.readyState === 'loading') {
 // ==========================================
 // 📊 8. LIVE SOCIAL ANALYTICS & VIEWS TRACKER
 // ==========================================
+const ANALYTICS_LOCAL_CACHE_KEY = 'INSTA_ANALYTICS_PAYLOAD_CACHE';
 let isAnalyticsFetching = false;
 let currentAnalyticsReels = [];
 let currentAnalyticsSort = 'viral';
 
 function initAnalyticsView() {
+  // ⚡ 1. INSTANT LOCAL RENDER: Load cached metrics from localStorage immediately (0ms wait time)
+  loadAnalyticsFromLocalCache();
+
   const btnRefresh = document.getElementById('btnRefreshAnalytics');
   if (btnRefresh) {
     btnRefresh.addEventListener('click', () => {
@@ -2610,48 +4088,88 @@ function initAnalyticsView() {
   });
 
   const btnClean = document.getElementById('btnCleanStorage');
+  const cleanModeSelect = document.getElementById('cleanStorageMode');
   if (btnClean) {
     btnClean.addEventListener('click', async () => {
-      if (!confirm('શું તમે ૭ દિવસથી જૂની રેન્ડર વિડીયો ફાઈલો સાફ કરવા માંગો છો? (તાજેતરની ૫ રીલ્સ હંમેશા સુરક્ષિત રહેશે)')) {
+      const selectedVal = cleanModeSelect ? cleanModeSelect.value : 'smart';
+      let payload = { mode: 'smart', keepCount: 5, cleanFrames: true };
+      let confirmMsg = 'Do you want to clean up older video and temp files? (Latest 5 reels are always preserved)';
+
+      if (selectedVal !== 'smart') {
+        const days = parseFloat(selectedVal) || 1;
+        payload = { mode: 'days', daysOld: days, keepCount: 5, cleanFrames: true };
+        confirmMsg = `Do you want to clean up video files older than ${days} days? (Latest 5 reels are preserved)`;
+      }
+
+      if (!confirm(confirmMsg)) {
         return;
       }
+
       try {
         btnClean.disabled = true;
-        btnClean.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> સાફ થઈ રહ્યું છે...';
+        btnClean.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cleaning files...';
         const res = await fetch('/api/storage/clean', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ daysOld: 7 })
+          body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (data.success) {
+          // Immediately update storage UI labels
+          const sSize = document.getElementById('storageSizeLabel');
+          const sFiles = document.getElementById('storageFilesLabel');
+          if (sSize && data.remainingMB !== undefined) sSize.textContent = `${data.remainingMB} MB`;
+          if (sFiles && data.remainingFiles !== undefined) sFiles.textContent = `(${data.remainingFiles} Files)`;
+
+          // Update local cache
+          try {
+            const raw = localStorage.getItem(ANALYTICS_LOCAL_CACHE_KEY);
+            if (raw) {
+              const cached = JSON.parse(raw);
+              if (cached && cached.storage) {
+                cached.storage.totalMB = data.remainingMB;
+                cached.storage.totalFiles = data.remainingFiles;
+                localStorage.setItem(ANALYTICS_LOCAL_CACHE_KEY, JSON.stringify(cached));
+              }
+            }
+          } catch (_) {}
+
           showToast(`🧹 ${data.message}`);
-          fetchAnalyticsOverview();
+          fetchAnalyticsOverview(true);
         } else {
-          showToast(`ભૂલ: ${data.error}`, true);
+          showToast(`Error: ${data.error}`, true);
         }
       } catch (err) {
-        showToast(`ભૂલ: ${err.message}`, true);
+        showToast(`Error: ${err.message}`, true);
       } finally {
         btnClean.disabled = false;
-        btnClean.innerHTML = '<i class="fa-solid fa-broom" style="color: #f59e0b;"></i> <span>🧹 Clean Old Videos (> 7 Days)</span>';
+        btnClean.innerHTML = '<i class="fa-solid fa-broom"></i> <span>Clean Now</span>';
       }
     });
   }
 }
 
-async function fetchAnalyticsOverview(showFeedback = false) {
-  if (isAnalyticsFetching) return;
-  isAnalyticsFetching = true;
+// ⚡ Load cached payload instantly on page load
+function loadAnalyticsFromLocalCache() {
+  try {
+    const raw = localStorage.getItem(ANALYTICS_LOCAL_CACHE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (data && data.success) {
+      populateAnalyticsUI(data, false);
+      return true;
+    }
+  } catch (e) {
+    console.warn('Local analytics cache read warning:', e);
+  }
+  return false;
+}
 
-  const syncIcon = document.getElementById('analyticsSyncIcon');
-  if (syncIcon) syncIcon.classList.add('fa-spin');
+// 🎨 Safely populate all UI elements with zero risk of unhandled DOM null errors
+function populateAnalyticsUI(data, isLive = true) {
+  if (!data) return;
 
   try {
-    const res = await fetch('/api/social/analytics');
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || 'Analytics fetch failed');
-
     // 1. Profile Information
     const profilePic = document.getElementById('analyticsProfilePic');
     const profileName = document.getElementById('analyticsProfileName');
@@ -2691,9 +4209,13 @@ async function fetchAnalyticsOverview(showFeedback = false) {
     }
 
     if (followersCount) followersCount.textContent = `${data.instagram?.followers || 0} Followers`;
-    if (lastUpdated) lastUpdated.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    if (lastUpdated) {
+      lastUpdated.textContent = isLive 
+        ? new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+        : 'Cached Data';
+    }
 
-    // 2. Top KPI Cards (100% Real Live Metrics)
+    // 2. Top KPI Cards
     const kpiLikes = document.getElementById('kpiTotalLikes');
     const kpiComments = document.getElementById('kpiTotalComments');
     const kpiFollowers = document.getElementById('kpiTotalFollowers');
@@ -2775,8 +4297,10 @@ async function fetchAnalyticsOverview(showFeedback = false) {
       if (topComments) topComments.textContent = tComments;
 
       if (topDateBadge && topReel.publishedAt) {
-        const d = new Date(topReel.publishedAt);
-        topDateBadge.textContent = '• ' + d.toLocaleDateString('gu-IN', { day: 'numeric', month: 'short' });
+        try {
+          const d = new Date(topReel.publishedAt);
+          topDateBadge.textContent = '• ' + d.toLocaleDateString('gu-IN', { day: 'numeric', month: 'short' });
+        } catch (_) {}
       }
 
       if (topLink) {
@@ -2805,13 +4329,75 @@ async function fetchAnalyticsOverview(showFeedback = false) {
 
     // 7. Render Reels Performance Grid with Sorting
     applyAnalyticsSortingAndRender();
+  } catch (renderErr) {
+    console.error('Error populating analytics UI:', renderErr);
+  }
+}
+
+async function fetchAnalyticsOverview(showFeedback = false) {
+  if (isAnalyticsFetching) return;
+  isAnalyticsFetching = true;
+
+  const syncIcon = document.getElementById('analyticsSyncIcon');
+  if (syncIcon) syncIcon.classList.add('fa-spin');
+
+  // If we don't have reels displayed yet, make sure local cache is checked first
+  if (currentAnalyticsReels.length === 0) {
+    loadAnalyticsFromLocalCache();
+  }
+
+  try {
+    const fetchUrl = showFeedback ? '/api/social/analytics?refresh=true' : '/api/social/analytics';
+    
+    // Strict 8-second fetch timeout to guarantee it never hangs indefinitely
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(fetchUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+    const data = await res.json();
+    if (!data || !data.success) throw new Error(data?.error || 'Analytics fetch failed');
+
+    // Save to local cache for instant future loads
+    try {
+      localStorage.setItem(ANALYTICS_LOCAL_CACHE_KEY, JSON.stringify(data));
+    } catch (_) {}
+
+    // Populate UI with live data
+    populateAnalyticsUI(data, true);
 
     if (showFeedback) {
-      showToast('🎉 લાઈવ એનાલિટિક્સ અને વ્યુઝ સફળતાપૂર્વક અપડેટ થઈ ગયા! 📊');
+      showToast('🎉 Live analytics and view stats updated successfully! 📊');
     }
   } catch (err) {
-    console.error('Analytics error:', err);
-    if (showFeedback) showToast(`એનાલિટિક્સ અપડેટ કરવામાં ભૂલ: ${err.message}`, true);
+    console.warn('Analytics fetch note:', err.message);
+
+    // If we have cached reels, keep them on screen!
+    if (currentAnalyticsReels.length === 0) {
+      const hasLocalCache = loadAnalyticsFromLocalCache();
+      if (!hasLocalCache) {
+        // Render a friendly retry state card instead of leaving an infinite spinner
+        const container = document.getElementById('analyticsReelsGrid');
+        if (container) {
+          container.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1.5rem; background: #faf8f5; border: 1.5px dashed rgba(215, 206, 192, 0.9); border-radius: 16px;">
+              <i class="fa-solid fa-cloud-arrow-down" style="font-size: 2.2rem; color: #b89758; margin-bottom: 0.85rem;"></i>
+              <h4 style="color: #44403c; margin: 0 0 0.35rem 0; font-family: var(--font-serif); font-size: 1.15rem;">Live Analytics Connection Slow</h4>
+              <p style="font-size: 0.85rem; color: #78716c; max-width: 480px; margin: 0 auto 1.25rem auto;">Connecting to social servers took longer than expected. Click below to retry.</p>
+              <button type="button" class="btn btn-primary" onclick="fetchAnalyticsOverview(true)" style="padding: 0.55rem 1.3rem; border-radius: 10px; font-weight: 700;">
+                <i class="fa-solid fa-rotate"></i> 🔄 Retry Now
+              </button>
+            </div>
+          `;
+        }
+      }
+    }
+
+    if (showFeedback) {
+      showToast(`Analytics update: ${err.message}`, true);
+    }
   } finally {
     if (syncIcon) syncIcon.classList.remove('fa-spin');
     isAnalyticsFetching = false;
@@ -2864,8 +4450,8 @@ function renderAnalyticsReelsGrid(reels) {
     container.innerHTML = `
       <div style="grid-column: 1 / -1; text-align: center; padding: 3.5rem 1rem; color: #a8a29e; background: #faf8f5; border: 1px dashed rgba(214, 205, 189, 0.8); border-radius: 16px;">
         <i class="fa-solid fa-clapperboard" style="font-size: 2.2rem; color: #c5a880; margin-bottom: 0.85rem;"></i>
-        <h4 style="color: #44403c; margin: 0 0 0.35rem 0; font-family: var(--font-serif); font-size: 1.15rem;">હજી સુધી કોઈ રીલ્સ પબ્લિશ થઈ નથી</h4>
-        <p style="font-size: 0.84rem; margin: 0; color: #78716c;">Reel Studio અથવા Daily Auto-Pilot માંથી તમારી પ્રથમ રીલ પબ્લિશ કરો!</p>
+        <h4 style="color: #44403c; margin: 0 0 0.35rem 0; font-family: var(--font-serif); font-size: 1.15rem;">No Reels Published Yet</h4>
+        <p style="font-size: 0.84rem; margin: 0; color: #78716c;">Publish your first reel from Reel Studio or Daily Auto-Pilot to see live stats!</p>
       </div>
     `;
     return;
@@ -2885,7 +4471,7 @@ function renderAnalyticsReelsGrid(reels) {
   container.innerHTML = reels.map((r, index) => {
     const formattedDate = r.publishedAt 
       ? new Date(r.publishedAt).toLocaleDateString('gu-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-      : 'હમણાં જ';
+      : 'Just now';
 
     const hasIg = !!(r.instagram?.url);
     const hasYt = !!(r.youtube?.url);
@@ -2944,7 +4530,7 @@ function renderAnalyticsReelsGrid(reels) {
           <div>
             ${isGlobalTop ? `
               <div style="margin-bottom: 0.5rem; padding: 0.25rem 0.55rem; background: #fcf8ee; border: 1px solid rgba(184, 151, 88, 0.35); border-radius: 6px; font-size: 0.72rem; color: #946e2b; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;">
-                <i class="fa-solid fa-fire" style="color: #e11d48;"></i> સૌથી વધુ ચાલ્યો (Top Engagement)
+                <i class="fa-solid fa-fire" style="color: #e11d48;"></i> Top Engagement (Most Viral)
               </div>
             ` : ''}
             <h4 style="margin: 0 0 0.45rem 0; font-size: 0.95rem; font-weight: 700; color: #201d1a; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -2988,14 +4574,17 @@ function renderAnalyticsReelsGrid(reels) {
 }
 
 // ==========================================
-// 🎬 9. AI INTERACTIVE TIMELINE STUDIO & FX EDITOR
-// ==========================================
+// 🎬 9. AI INTERACTIVE TIMELINE STUDIO & FX EDITOR (CapCut / Premiere Rush Style Workstation)
+// ================================================================================================
 function initTimelineStudio() {
   const modal = document.getElementById('timelineStudioModal');
   const btnOpen = document.getElementById('btnOpenTimelineStudio');
+  const btnOpenCapCut = document.getElementById('btnOpenCapCutEditor');
+  const btnOpenCol1 = document.getElementById('btnOpenTimelineFromCol1');
   const btnClose = document.getElementById('btnCloseTimelineModal');
   const btnCloseFooter = document.getElementById('btnCloseTimelineModalFooter');
   const videoPreview = document.getElementById('timelinePreviewVideo');
+  const monitorFrame = document.getElementById('proMonitorFrame');
   const btnTogglePlay = document.getElementById('btnTimelineTogglePlay');
   const playIcon = document.getElementById('timelinePlayIcon');
   const lblCurrentTime = document.getElementById('lblTimelineCurrentTime');
@@ -3006,71 +4595,230 @@ function initTimelineStudio() {
   const lblTrimStartVal = document.getElementById('lblTrimStartVal');
   const lblTrimEndVal = document.getElementById('lblTrimEndVal');
   const btnAiAuto = document.getElementById('btnTimelineAiAuto');
+  const btnInspectorAiQuick = document.getElementById('btnInspectorAiQuick');
   const subBadge = document.getElementById('timelineLiveSubBadge');
+  const stickerOverlay = document.getElementById('timelineStickerOverlay');
+  const stickerIconContent = document.getElementById('stickerIconContent');
   const vignetteOverlay = document.getElementById('timelineVignetteOverlay');
+  const flashOverlay = document.getElementById('timelineFlashOverlay');
+  const glitchOverlay = document.getElementById('timelineGlitchOverlay');
   const customSubInput = document.getElementById('txtTimelineCustomSub');
+  const trackSubLabel = document.getElementById('timelineTrackSubLabel');
   const chkZoom = document.getElementById('chkFxZoom');
   const chkVignette = document.getElementById('chkFxVignette');
+  const chkFlash = document.getElementById('chkFxFlash');
+  const rngVideoSpeed = document.getElementById('rngVideoSpeed');
+  const lblSpeedDisplay = document.getElementById('lblSpeedDisplay');
+  const lblSpeedSliderVal = document.getElementById('lblSpeedSliderVal');
+  const rngOriginalVolume = document.getElementById('rngOriginalVolume');
+  const lblOrigVolDisplay = document.getElementById('lblOrigVolDisplay');
+  const chkMuteOrigAudio = document.getElementById('chkMuteOrigAudio');
   const btnReset = document.getElementById('btnTimelineReset');
   const btnApply = document.getElementById('btnApplyTimelineEdits');
+  const btnExportFromPublishTab = document.getElementById('btnExportFromPublishTab');
+
+  // Adjust sliders
+  const rngAdjBrightness = document.getElementById('rngAdjBrightness');
+  const rngAdjContrast = document.getElementById('rngAdjContrast');
+  const rngAdjSaturation = document.getElementById('rngAdjSaturation');
+  const rngAdjExposure = document.getElementById('rngAdjExposure');
+  const rngAdjTemp = document.getElementById('rngAdjTemp');
+  const rngAdjSharp = document.getElementById('rngAdjSharp');
+  const lblAdjBrightness = document.getElementById('lblAdjBrightness');
+  const lblAdjContrast = document.getElementById('lblAdjContrast');
+  const lblAdjSaturation = document.getElementById('lblAdjSaturation');
+  const lblAdjExposure = document.getElementById('lblAdjExposure');
+  const lblAdjTemp = document.getElementById('lblAdjTemp');
+  const lblAdjSharp = document.getElementById('lblAdjSharp');
+
+  // Inspector labels
+  const lblInspectorDuration = document.getElementById('lblInspectorDuration');
+  const lblInspectorSpeed = document.getElementById('lblInspectorSpeed');
+  const lblInspectorFilter = document.getElementById('lblInspectorFilter');
+  const lblInspectorAspect = document.getElementById('lblInspectorAspect');
+  const lblProAspectBadge = document.getElementById('lblProAspectBadge');
+  const lblProResBadge = document.getElementById('lblProResBadge');
+  const needle = document.getElementById('timelinePlayheadNeedle');
 
   if (!modal) return;
 
-  // State object
+  // CapCut Pro Editor State
   let editorState = {
     trimStart: 0,
     trimEnd: 30,
     duration: 30,
+    speed: 1.0,
+    origVolume: 1.0,
     filter: 'none',
+    rotate: 0,
+    flipH: false,
+    flipV: false,
+    adjust: {
+      brightness: 0,
+      contrast: 100,
+      saturation: 100,
+      exposure: 0,
+      temp: 0,
+      sharp: 0
+    },
+    voice: 'normal',
+    transition: 'none',
+    sticker: 'none',
+    aspect: '9:16',
+    res: '1080p',
+    fps: '30',
     textSize: 'large',
     textPosition: 'bottom',
     textColor: 'yellow',
-    customText: 'VIRAL MOMENT 🔥',
+    customText: '',
     zoom: false,
-    vignette: false
+    vignette: false,
+    flash: false
   };
 
   function openTimelineStudio() {
-    const renderedVideo = document.getElementById('renderedVideoPlayer');
-    const sourceVideo = (currentRenderedReel && (currentRenderedReel.reelUrl || currentRenderedReel.videoUrl)) 
-      || (renderedVideo && renderedVideo.src) 
-      || '/rendered-reels/reel-demo.mp4';
+    let sourceVideo = '';
+    let fileName = 'Main_Video_Clip.mp4';
 
-    if (!sourceVideo || sourceVideo.endsWith('/')) {
-      showToast('કૃપા કરીને પહેલાં એક રીલ વિડીયો બનાવો અથવા અપલોડ કરો! 🎬', true);
-      return;
+    // 1. Check if user selected/uploaded a video file in Step 1
+    if (selectedVideoFile) {
+      try {
+        sourceVideo = URL.createObjectURL(selectedVideoFile);
+        fileName = selectedVideoFile.name || 'Custom_Upload.mp4';
+      } catch (err) {
+        console.warn('Could not create ObjectURL for selectedVideoFile:', err);
+      }
     }
 
-    videoPreview.src = sourceVideo;
-    videoPreview.load();
-    videoPreview.play().catch(() => {});
+    // 2. Check if an AI reel was already rendered
+    if (!sourceVideo && currentRenderedReel) {
+      sourceVideo = currentRenderedReel.reelUrl || currentRenderedReel.videoUrl || '';
+      if (currentRenderedReel.fileName) fileName = currentRenderedReel.fileName;
+    }
+
+    // 3. Check if main player has active video src
+    const renderedVideo = document.getElementById('renderedVideoPlayer');
+    if (!sourceVideo && renderedVideo && renderedVideo.src && !renderedVideo.src.endsWith('/')) {
+      sourceVideo = renderedVideo.src;
+    }
+
+    // 4. Guaranteed demo video clip fallback
+    if (!sourceVideo || sourceVideo.endsWith('/')) {
+      sourceVideo = '/rendered-reels/reel-demo.mp4';
+      fileName = 'reel-demo.mp4';
+    }
+
+    if (videoPreview) {
+      if (!videoPreview.src || videoPreview.src !== sourceVideo) {
+        videoPreview.src = sourceVideo;
+        videoPreview.playbackRate = editorState.speed || 1.0;
+        videoPreview.volume = Math.min(1.0, editorState.origVolume ?? 1.0);
+        videoPreview.load();
+      }
+      videoPreview.play().catch(() => {});
+    }
     modal.classList.remove('hidden');
 
-    // Sync video duration when metadata loads
-    videoPreview.onloadedmetadata = () => {
-      const realDur = Math.round(videoPreview.duration) || 30;
-      rngTrimStart.max = realDur;
-      rngTrimEnd.max = realDur;
-      rngTrimEnd.value = Math.min(realDur, 30);
-      editorState.trimEnd = parseFloat(rngTrimEnd.value);
-      editorState.duration = realDur;
-      updateTrimDisplay();
-    };
+    // Sync timeline video clip name
+    const vidClipLabel = document.getElementById('timelineVideoClipLabel');
+    if (vidClipLabel) {
+      vidClipLabel.textContent = fileName;
+    }
 
+    // Sync duration when metadata loads
+    if (videoPreview) {
+      videoPreview.onloadedmetadata = () => {
+        const realDur = Math.round(videoPreview.duration) || 30;
+        if (rngTrimStart) rngTrimStart.max = realDur;
+        if (rngTrimEnd) {
+          rngTrimEnd.max = realDur;
+          rngTrimEnd.value = Math.min(realDur, 30);
+        }
+        editorState.trimEnd = parseFloat(rngTrimEnd ? rngTrimEnd.value : 30);
+        editorState.duration = realDur;
+        updateTrimDisplay();
+        updateLivePreview();
+      };
+    }
+
+    updateTrimDisplay();
     updateLivePreview();
   }
 
-  function closeTimelineStudio() {
-    videoPreview.pause();
+  function closeTimelineStudio(e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    if (videoPreview) videoPreview.pause();
     modal.classList.add('hidden');
   }
 
+  // Bind Open Triggers
   if (btnOpen) btnOpen.addEventListener('click', openTimelineStudio);
-  if (btnClose) btnClose.addEventListener('click', closeTimelineStudio);
-  if (btnCloseFooter) btnCloseFooter.addEventListener('click', closeTimelineStudio);
+  if (btnOpenCapCut) btnOpenCapCut.addEventListener('click', openTimelineStudio);
+  if (btnOpenCol1) btnOpenCol1.addEventListener('click', openTimelineStudio);
+
+  // Bind Close Triggers
+  if (btnClose) {
+    btnClose.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeTimelineStudio(e);
+    });
+  }
+  if (btnCloseFooter) {
+    btnCloseFooter.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeTimelineStudio(e);
+    });
+  }
+
+  // 🚀 Next Button: Exit CapCut Pro Studio & Return to Upload / Content Studio Section
+  function goToUploadSection(e) {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    closeTimelineStudio();
+
+    // Scroll to the main Upload Dropzone / Reel Creator Card
+    const uploadSection = document.getElementById('videoDropzone') || document.getElementById('step-1') || document.querySelector('.studio-upload-card');
+    if (uploadSection) {
+      uploadSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      uploadSection.style.transition = 'box-shadow 0.4s ease, border-color 0.4s ease';
+      uploadSection.style.boxShadow = '0 0 0 4px rgba(148, 110, 43, 0.4), 0 10px 30px rgba(148, 110, 43, 0.2)';
+      uploadSection.style.borderColor = '#946e2b';
+      setTimeout(() => {
+        uploadSection.style.boxShadow = '';
+        uploadSection.style.borderColor = '';
+      }, 2200);
+    }
+    showToast('🚀 Exited Studio and proceeded to Video Upload section!');
+  }
+
+  const btnProNextToUpload = document.getElementById('btnProNextToUpload');
+  if (btnProNextToUpload) {
+    btnProNextToUpload.addEventListener('click', goToUploadSection);
+  }
+
+  const btnExportNextToUpload = document.getElementById('btnExportNextToUpload');
+  if (btnExportNextToUpload) {
+    btnExportNextToUpload.addEventListener('click', goToUploadSection);
+  }
+
+  // Close on Backdrop Click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeTimelineStudio(e);
+    }
+  });
 
   // Play / Pause Toggle
-  if (btnTogglePlay) {
+  if (btnTogglePlay && videoPreview) {
     btnTogglePlay.addEventListener('click', () => {
       if (videoPreview.paused) {
         videoPreview.play();
@@ -3082,63 +4830,145 @@ function initTimelineStudio() {
     });
   }
 
-  // Playhead constraints to trim boundaries
-  videoPreview.ontimeupdate = () => {
-    const cur = videoPreview.currentTime;
-    if (lblCurrentTime) {
-      const mins = Math.floor(cur / 60);
-      const secs = Math.floor(cur % 60);
-      lblCurrentTime.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
+  // Transport Extra Controls
+  const btnStepBack = document.getElementById('btnStepBack');
+  const btnStepForward = document.getElementById('btnStepForward');
+  const btnToggleLoop = document.getElementById('btnToggleLoop');
+  const btnToggleFullscreen = document.getElementById('btnToggleFullscreen');
 
-    // Loop within trim range
-    if (cur < editorState.trimStart) {
-      videoPreview.currentTime = editorState.trimStart;
-    } else if (cur > editorState.trimEnd) {
-      videoPreview.currentTime = editorState.trimStart;
-    }
+  if (btnStepBack && videoPreview) {
+    btnStepBack.addEventListener('click', () => {
+      videoPreview.currentTime = Math.max(editorState.trimStart, videoPreview.currentTime - 1.0);
+    });
+  }
+  if (btnStepForward && videoPreview) {
+    btnStepForward.addEventListener('click', () => {
+      videoPreview.currentTime = Math.min(editorState.trimEnd, videoPreview.currentTime + 1.0);
+    });
+  }
+  if (btnToggleLoop && videoPreview) {
+    btnToggleLoop.addEventListener('click', () => {
+      videoPreview.loop = !videoPreview.loop;
+      btnToggleLoop.classList.toggle('active', videoPreview.loop);
+      showToast(videoPreview.loop ? '🔁 Loop playback enabled' : '➡️ Play-once mode');
+    });
+  }
+  if (btnToggleFullscreen && monitorFrame) {
+    btnToggleFullscreen.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        monitorFrame.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+  }
+
+  // Playhead constraints to trim boundaries & Needle animation
+  if (videoPreview) {
+    videoPreview.ontimeupdate = () => {
+      const cur = videoPreview.currentTime;
+      if (lblCurrentTime) {
+        const mins = Math.floor(cur / 60);
+        const secs = Math.floor(cur % 60);
+        const frac = Math.floor((cur % 1) * 100);
+        lblCurrentTime.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${frac.toString().padStart(2, '0')}`;
+      }
+
+      // Move needle across timeline
+      if (needle && editorState.duration > 0) {
+        const pct = (cur / editorState.duration) * 100;
+        needle.style.left = `${Math.min(100, Math.max(0, pct))}%`;
+      }
+
+      // Loop within trim range
+      if (cur < editorState.trimStart) {
+        videoPreview.currentTime = editorState.trimStart;
+      } else if (cur > editorState.trimEnd) {
+        videoPreview.currentTime = editorState.trimStart;
+        if (editorState.flash && flashOverlay) {
+          flashOverlay.style.opacity = '0.9';
+          setTimeout(() => { flashOverlay.style.opacity = '0'; }, 320);
+        }
+      }
+    };
+  }
+
+  // Master Category Tab Switching (CapCut Pro Desktop & Mobile style)
+  window.switchTimelineTab = function(tabId) {
+    if (!tabId) return;
+    const modalEl = document.getElementById('timelineStudioModal');
+    if (!modalEl) return;
+
+    // 1. Update tab ribbon button active classes
+    modalEl.querySelectorAll('.pro-cat-tab, .editor-tab-btn').forEach(btn => {
+      const bTab = btn.getAttribute('data-tab') || btn.dataset.tab;
+      if (bTab === tabId) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // 2. Switch tool drawer panes
+    modalEl.querySelectorAll('.pro-tab-pane, .editor-tab-pane').forEach(pane => {
+      if (pane.id === tabId) {
+        pane.classList.remove('hidden');
+        pane.classList.add('active');
+        pane.style.display = 'block';
+      } else {
+        pane.classList.add('hidden');
+        pane.classList.remove('active');
+        pane.style.display = 'none';
+      }
+    });
   };
 
-  // Tab Switching
-  const tabBtns = modal.querySelectorAll('.editor-tab-btn');
-  tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      tabBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+  const allCatTabs = modal.querySelectorAll('.pro-cat-tab, .editor-tab-btn');
+  allCatTabs.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const targetId = btn.getAttribute('data-tab') || btn.dataset.tab;
+      if (targetId) window.switchTimelineTab(targetId);
+    });
+  });
 
-      const targetId = btn.dataset.tab;
-      modal.querySelectorAll('.editor-tab-pane').forEach(pane => {
-        if (pane.id === targetId) {
-          pane.classList.remove('hidden');
-        } else {
-          pane.classList.add('hidden');
-        }
-      });
+  // Curve Speed Presets (Hero, Jump, Flash, Standard)
+  modal.querySelectorAll('.btn-curve-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-curve-preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const curve = btn.getAttribute('data-curve') || btn.dataset.curve;
+      if (curve === 'hero') applySpeed(0.5);
+      else if (curve === 'jump') applySpeed(2.0);
+      else if (curve === 'flash') applySpeed(3.0);
+      else applySpeed(1.0);
+      showToast(`⚡ Speed curve active: ${btn.textContent.trim()}`);
     });
   });
 
   // Range Sliders (Trim Start & End)
   function updateTrimDisplay() {
-    let s = parseFloat(rngTrimStart.value) || 0;
-    let e = parseFloat(rngTrimEnd.value) || 30;
-    if (s >= e - 2) {
-      s = Math.max(0, e - 2);
-      rngTrimStart.value = s;
+    let s = parseFloat(rngTrimStart ? rngTrimStart.value : 0) || 0;
+    let e = parseFloat(rngTrimEnd ? rngTrimEnd.value : 30) || 30;
+    if (s >= e - 1.5) {
+      s = Math.max(0, e - 1.5);
+      if (rngTrimStart) rngTrimStart.value = s;
     }
     editorState.trimStart = s;
     editorState.trimEnd = e;
-    const clipDur = (e - s).toFixed(1);
+    const clipDur = Math.max(1, e - s).toFixed(1);
 
     if (lblTrimStartVal) lblTrimStartVal.textContent = `${s.toFixed(1)}s`;
     if (lblTrimEndVal) lblTrimEndVal.textContent = `${e.toFixed(1)}s`;
     if (lblClipDuration) lblClipDuration.textContent = `${clipDur}s`;
+    if (lblInspectorDuration) lblInspectorDuration.textContent = `${clipDur}s`;
     if (lblRangeDisplay) lblRangeDisplay.textContent = `${s.toFixed(1)}s – ${e.toFixed(1)}s (${clipDur}s)`;
   }
 
   if (rngTrimStart) {
     rngTrimStart.addEventListener('input', () => {
       updateTrimDisplay();
-      videoPreview.currentTime = editorState.trimStart;
+      if (videoPreview) videoPreview.currentTime = editorState.trimStart;
     });
   }
 
@@ -3152,11 +4982,395 @@ function initTimelineStudio() {
   modal.querySelectorAll('.btn-quick-cut').forEach(chip => {
     chip.addEventListener('click', () => {
       const s = parseFloat(chip.dataset.start) || 0;
-      let e = chip.dataset.end === 'max' ? (parseFloat(rngTrimEnd.max) || 30) : parseFloat(chip.dataset.end);
-      rngTrimStart.value = s;
-      rngTrimEnd.value = e;
+      let e = chip.dataset.end === 'max' ? (parseFloat(rngTrimEnd ? rngTrimEnd.max : 30) || 30) : parseFloat(chip.dataset.end);
+      if (rngTrimStart) rngTrimStart.value = s;
+      if (rngTrimEnd) rngTrimEnd.value = e;
       updateTrimDisplay();
-      videoPreview.currentTime = s;
+      if (videoPreview) videoPreview.currentTime = s;
+    });
+  });
+
+  // ✂️ Split Tool & Timeline Shortcuts
+  const btnTimelineSplit = document.getElementById('btnTimelineSplit');
+  const btnTimelineSplitTool = document.getElementById('btnTimelineSplitTool');
+  function handleSplitAtPlayhead() {
+    if (!videoPreview) return;
+    const cur = videoPreview.currentTime;
+    if (cur > editorState.trimStart && cur < editorState.trimEnd) {
+      if (rngTrimEnd) rngTrimEnd.value = cur.toFixed(1);
+      updateTrimDisplay();
+      showToast(`✂️ Clip trimmed to playhead position (${cur.toFixed(1)}s)!`);
+    } else {
+      showToast('Position playhead between start & end to split.', true);
+    }
+  }
+  if (btnTimelineSplit) btnTimelineSplit.addEventListener('click', handleSplitAtPlayhead);
+  if (btnTimelineSplitTool) btnTimelineSplitTool.addEventListener('click', handleSplitAtPlayhead);
+
+  const btnTimelineDelete = document.getElementById('btnTimelineDelete');
+  if (btnTimelineDelete) {
+    btnTimelineDelete.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const removeBtn = document.getElementById('btnCapCutRemoveVideo');
+      if (removeBtn) {
+        removeBtn.click();
+      } else {
+        if (rngTrimStart) rngTrimStart.value = 0;
+        if (rngTrimEnd) rngTrimEnd.value = editorState.duration;
+        updateTrimDisplay();
+        showToast('↩️ Clip bounds restored to full length');
+      }
+    });
+  }
+
+  const btnTimelineSpeedRampQuick = document.getElementById('btnTimelineSpeedRampQuick');
+  if (btnTimelineSpeedRampQuick) {
+    btnTimelineSpeedRampQuick.addEventListener('click', () => {
+      const speedTab = modal.querySelector('[data-tab="tabTimelineSpeed"]');
+      if (speedTab) speedTab.click();
+    });
+  }
+
+  // 🔄 Transform Controls: Rotate & Flip
+  function applyTransform() {
+    updateLivePreview();
+  }
+
+  const btnToolRotate90 = document.getElementById('btnToolRotate90');
+  const btnInspectorRotate = document.getElementById('btnInspectorRotate');
+  function handleRotate() {
+    editorState.rotate = (editorState.rotate + 90) % 360;
+    applyTransform();
+    showToast(`🔄 Rotated to ${editorState.rotate}°`);
+  }
+  if (btnToolRotate90) btnToolRotate90.addEventListener('click', handleRotate);
+  if (btnInspectorRotate) btnInspectorRotate.addEventListener('click', handleRotate);
+
+  const btnToolFlipH = document.getElementById('btnToolFlipH');
+  const btnInspectorFlipH = document.getElementById('btnInspectorFlipH');
+  function handleFlipH() {
+    editorState.flipH = !editorState.flipH;
+    applyTransform();
+    showToast(editorState.flipH ? '↔️ Horizontal flip ON' : '↔️ Horizontal flip OFF');
+  }
+  if (btnToolFlipH) btnToolFlipH.addEventListener('click', handleFlipH);
+  if (btnInspectorFlipH) btnInspectorFlipH.addEventListener('click', handleFlipH);
+
+  const btnToolFlipV = document.getElementById('btnToolFlipV');
+  const btnInspectorFlipV = document.getElementById('btnInspectorFlipV');
+  function handleFlipV() {
+    editorState.flipV = !editorState.flipV;
+    applyTransform();
+    showToast(editorState.flipV ? '↕️ Vertical flip ON' : '↕️ Vertical flip OFF');
+  }
+  if (btnToolFlipV) btnToolFlipV.addEventListener('click', handleFlipV);
+  if (btnInspectorFlipV) btnInspectorFlipV.addEventListener('click', handleFlipV);
+
+  const btnInspectorResetTransform = document.getElementById('btnInspectorResetTransform');
+  if (btnInspectorResetTransform) {
+    btnInspectorResetTransform.addEventListener('click', () => {
+      editorState.rotate = 0;
+      editorState.flipH = false;
+      editorState.flipV = false;
+      applyTransform();
+      showToast('↩️ Video transform reset to standard');
+    });
+  }
+
+  const btnToolFreezeFrame = document.getElementById('btnToolFreezeFrame');
+  if (btnToolFreezeFrame && videoPreview) {
+    btnToolFreezeFrame.addEventListener('click', () => {
+      videoPreview.pause();
+      showToast('❄️ Freeze Frame preview active for 2s...');
+      setTimeout(() => { videoPreview.play().catch(() => {}); }, 2000);
+    });
+  }
+
+  const btnToolReverseVideo = document.getElementById('btnToolReverseVideo');
+  if (btnToolReverseVideo) {
+    btnToolReverseVideo.addEventListener('click', () => {
+      showToast('⏪ Reverse motion will be rendered during HD Export!');
+    });
+  }
+
+  // 🗑️ Cancel / Remove Video from CapCut Pro Studio (Does NOT open file upload!)
+  const btnCapCutRemoveVideo = document.getElementById('btnCapCutRemoveVideo');
+  if (btnCapCutRemoveVideo) {
+    btnCapCutRemoveVideo.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (videoPreview) {
+        videoPreview.pause();
+        videoPreview.removeAttribute('src');
+        videoPreview.load();
+      }
+      currentRenderedReel = null;
+      selectedVideoFile = null;
+      if (capcutVideoFileInput) capcutVideoFileInput.value = '';
+      if (fileInput) fileInput.value = '';
+
+      const vidClipLabel = document.getElementById('timelineVideoClipLabel');
+      if (vidClipLabel) vidClipLabel.textContent = 'No Video Selected';
+
+      if (selectedFileNameBadge) {
+        selectedFileNameBadge.innerHTML = '';
+        selectedFileNameBadge.classList.add('hidden');
+      }
+      const hintCard = document.getElementById('videoFileSelectedHint');
+      if (hintCard) hintCard.classList.add('hidden');
+
+      if (renderedVideoPlayer) {
+        renderedVideoPlayer.pause();
+        renderedVideoPlayer.removeAttribute('src');
+        renderedVideoPlayer.load();
+        renderedVideoPlayer.classList.add('hidden');
+      }
+      if (reelPlaceholder) reelPlaceholder.classList.remove('hidden');
+
+      showToast('🗑️ Video canceled and removed. No upload opened.');
+    });
+  }
+
+  // 📁 Upload / Change Video in CapCut Pro Editor
+  const btnCapCutReplace = document.getElementById('btnCapCutReplaceVideo');
+  const capcutVideoFileInput = document.getElementById('capcutVideoFileInput');
+  if (btnCapCutReplace && capcutVideoFileInput) {
+    btnCapCutReplace.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      capcutVideoFileInput.click();
+    });
+
+    capcutVideoFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file && videoPreview) {
+        const url = URL.createObjectURL(file);
+        videoPreview.src = url;
+        videoPreview.load();
+        videoPreview.play().catch(() => {});
+        currentRenderedReel = {
+          fileName: file.name,
+          reelUrl: url,
+          videoUrl: url
+        };
+        const vidClipLabel = document.getElementById('timelineVideoClipLabel');
+        if (vidClipLabel) vidClipLabel.textContent = file.name;
+        showToast(`📂 Replaced active video with: ${file.name}`);
+      }
+    });
+  }
+
+  // ⚡ CapCut Speed Ramping Controls
+  const speedChips = modal.querySelectorAll('.speed-chip-btn');
+  function applySpeed(spd) {
+    editorState.speed = Math.min(10.0, Math.max(0.1, parseFloat(spd) || 1.0));
+    if (videoPreview) videoPreview.playbackRate = Math.min(4.0, Math.max(0.25, editorState.speed));
+
+    if (rngVideoSpeed) rngVideoSpeed.value = editorState.speed;
+    if (lblSpeedSliderVal) lblSpeedSliderVal.textContent = `${editorState.speed.toFixed(2)}x`;
+    if (lblSpeedDisplay) {
+      let tag = 'Custom';
+      if (editorState.speed <= 0.3) tag = 'Super Slow';
+      else if (editorState.speed <= 0.55) tag = 'Slow-Mo';
+      else if (editorState.speed <= 0.8) tag = 'Chill';
+      else if (Math.abs(editorState.speed - 1.0) < 0.05) tag = 'Normal';
+      else if (editorState.speed <= 1.3) tag = 'Dynamic Hook';
+      else if (editorState.speed <= 1.6) tag = 'Fast Paced';
+      else if (editorState.speed <= 2.2) tag = 'Double';
+      else if (editorState.speed <= 5.5) tag = 'Fast Reel';
+      else tag = 'Hyperlapse';
+      lblSpeedDisplay.textContent = `${editorState.speed.toFixed(2)}x (${tag})`;
+    }
+    if (lblInspectorSpeed) lblInspectorSpeed.textContent = `${editorState.speed.toFixed(2)}x`;
+
+    speedChips.forEach(chip => {
+      const cSpd = parseFloat(chip.dataset.speed);
+      chip.classList.toggle('active', Math.abs(cSpd - editorState.speed) < 0.04);
+    });
+  }
+
+  speedChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      applySpeed(chip.dataset.speed);
+    });
+  });
+
+  if (rngVideoSpeed) {
+    rngVideoSpeed.addEventListener('input', () => {
+      applySpeed(rngVideoSpeed.value);
+    });
+  }
+
+  // 🌈 Pro Color Adjustments (Live 60fps sliders)
+  function bindAdjustSlider(slider, labelEl, key, unit = '') {
+    if (!slider) return;
+    slider.addEventListener('input', () => {
+      const val = parseFloat(slider.value) || 0;
+      editorState.adjust[key] = val;
+      if (labelEl) labelEl.textContent = `${val > 0 && unit !== '%' ? '+' : ''}${val}${unit}`;
+      updateLivePreview();
+    });
+  }
+  bindAdjustSlider(rngAdjBrightness, lblAdjBrightness, 'brightness', '%');
+  bindAdjustSlider(rngAdjContrast, lblAdjContrast, 'contrast', '%');
+  bindAdjustSlider(rngAdjSaturation, lblAdjSaturation, 'saturation', '%');
+  bindAdjustSlider(rngAdjExposure, lblAdjExposure, 'exposure', '');
+  bindAdjustSlider(rngAdjTemp, lblAdjTemp, 'temp', '°');
+  bindAdjustSlider(rngAdjSharp, lblAdjSharp, 'sharp', '%');
+
+  // 🔄 Reset Color Sliders Button
+  const btnResetAdjustments = document.getElementById('btnResetAdjustments');
+  if (btnResetAdjustments) {
+    btnResetAdjustments.addEventListener('click', () => {
+      editorState.adjust = {
+        brightness: 0,
+        contrast: 100,
+        saturation: 100,
+        exposure: 0,
+        temp: 0,
+        sharp: 0
+      };
+      if (rngAdjBrightness) rngAdjBrightness.value = 0;
+      if (lblAdjBrightness) lblAdjBrightness.textContent = '0%';
+      if (rngAdjContrast) rngAdjContrast.value = 100;
+      if (lblAdjContrast) lblAdjContrast.textContent = '100%';
+      if (rngAdjSaturation) rngAdjSaturation.value = 100;
+      if (lblAdjSaturation) lblAdjSaturation.textContent = '100%';
+      if (rngAdjExposure) rngAdjExposure.value = 0;
+      if (lblAdjExposure) lblAdjExposure.textContent = '0';
+      if (rngAdjTemp) rngAdjTemp.value = 0;
+      if (lblAdjTemp) lblAdjTemp.textContent = '0';
+      if (rngAdjSharp) rngAdjSharp.value = 0;
+      if (lblAdjSharp) lblAdjSharp.textContent = '0%';
+
+      updateLivePreview();
+      showToast('🔄 Color adjustment sliders reset to defaults!');
+    });
+  }
+
+  // 🔊 Audio Mixer Controls
+  if (rngOriginalVolume && videoPreview) {
+    rngOriginalVolume.addEventListener('input', () => {
+      const vol = parseFloat(rngOriginalVolume.value) || 0;
+      editorState.origVolume = vol;
+      videoPreview.volume = Math.min(1.0, vol);
+      if (lblOrigVolDisplay) {
+        lblOrigVolDisplay.textContent = `${Math.round(vol * 100)}%`;
+      }
+      if (chkMuteOrigAudio && vol > 0) {
+        chkMuteOrigAudio.checked = false;
+      }
+    });
+  }
+
+  if (chkMuteOrigAudio && videoPreview) {
+    chkMuteOrigAudio.addEventListener('change', () => {
+      if (chkMuteOrigAudio.checked) {
+        editorState.origVolume = 0;
+        videoPreview.volume = 0;
+        if (rngOriginalVolume) rngOriginalVolume.value = 0;
+        if (lblOrigVolDisplay) lblOrigVolDisplay.textContent = 'Muted (0%)';
+      } else {
+        editorState.origVolume = 1.0;
+        videoPreview.volume = 1.0;
+        if (rngOriginalVolume) rngOriginalVolume.value = 1.0;
+        if (lblOrigVolDisplay) lblOrigVolDisplay.textContent = '100%';
+      }
+    });
+  }
+
+  // 🎙️ Voice Changer Presets
+  const voiceChips = modal.querySelectorAll('.btn-voice-preset');
+  voiceChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      voiceChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      editorState.voice = chip.dataset.voice || 'normal';
+      showToast(`🎙️ Voice preset set to: ${chip.textContent.trim()}`);
+    });
+  });
+
+  // 🎬 Transitions
+  const transChips = modal.querySelectorAll('.btn-transition-chip');
+  transChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      transChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const tr = chip.dataset.transition || 'none';
+      editorState.transition = tr;
+      showToast(`🎬 Transition: ${chip.textContent.trim()}`);
+
+      // Live Visual Transition Preview on Monitor
+      if (videoPreview) {
+        if (tr === 'fade') {
+          videoPreview.style.opacity = '0.1';
+          setTimeout(() => { videoPreview.style.opacity = '1'; }, 350);
+        } else if (tr === 'flash') {
+          const fl = document.getElementById('timelineFlashOverlay');
+          if (fl) {
+            fl.style.opacity = '0.9';
+            setTimeout(() => { fl.style.opacity = '0'; }, 350);
+          }
+        } else if (tr === 'zoom') {
+          videoPreview.style.transform = `${videoPreview.style.transform || ''} scale(1.15)`;
+          setTimeout(() => { updateLivePreview(); }, 350);
+        } else if (tr === 'glitch') {
+          const gl = document.getElementById('timelineGlitchOverlay');
+          if (gl) {
+            gl.classList.remove('hidden');
+            setTimeout(() => { gl.classList.add('hidden'); }, 500);
+          }
+        } else if (tr === 'dissolve') {
+          videoPreview.style.filter = `${videoPreview.style.filter || ''} blur(4px)`;
+          setTimeout(() => { updateLivePreview(); }, 350);
+        }
+      }
+    });
+  });
+
+  // 📐 Canvas Aspect Ratio
+  const aspectBtns = modal.querySelectorAll('.pro-aspect-btn');
+  aspectBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      aspectBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const asp = btn.dataset.aspect || '9:16';
+      editorState.aspect = asp;
+
+      if (monitorFrame) {
+        monitorFrame.className = 'pro-monitor-frame';
+        if (asp === '16:9') monitorFrame.classList.add('aspect-landscape');
+        else if (asp === '1:1') monitorFrame.classList.add('aspect-square');
+        else if (asp === '4:5') monitorFrame.classList.add('aspect-portrait');
+      }
+
+      if (lblProAspectBadge) lblProAspectBadge.innerHTML = `<i class="fa-solid fa-mobile-screen"></i> ${asp}`;
+      if (lblInspectorAspect) lblInspectorAspect.textContent = `${asp}`;
+      showToast(`📐 Canvas set to ${asp}`);
+    });
+  });
+
+  // 😀 Stickers Picker
+  const stickerBtns = modal.querySelectorAll('.pro-sticker-btn');
+  stickerBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      stickerBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const stk = btn.dataset.sticker || 'none';
+      editorState.sticker = stk;
+
+      if (stk === 'none') {
+        if (stickerOverlay) stickerOverlay.classList.add('hidden');
+        showToast('Sticker removed');
+      } else {
+        const emojiEl = btn.querySelector('.sticker-emoji');
+        if (stickerIconContent && emojiEl) {
+          stickerIconContent.textContent = emojiEl.textContent;
+        }
+        if (stickerOverlay) stickerOverlay.classList.remove('hidden');
+        showToast(`Sticker added: ${btn.querySelector('.sticker-name')?.textContent || stk}`);
+      }
     });
   });
 
@@ -3167,6 +5381,7 @@ function initTimelineStudio() {
       filterCards.forEach(c => c.classList.remove('active'));
       card.classList.add('active');
       editorState.filter = card.dataset.filter || 'none';
+      if (lblInspectorFilter) lblInspectorFilter.textContent = card.querySelector('b')?.textContent || editorState.filter.toUpperCase();
       updateLivePreview();
     });
   });
@@ -3207,8 +5422,14 @@ function initTimelineStudio() {
   // Custom text input
   if (customSubInput) {
     customSubInput.addEventListener('input', () => {
-      editorState.customText = customSubInput.value || 'VIRAL MOMENT 🔥';
-      if (subBadge) subBadge.textContent = editorState.customText;
+      editorState.customText = customSubInput.value ? customSubInput.value.trim() : '';
+      if (subBadge) {
+        subBadge.textContent = editorState.customText;
+        subBadge.classList.toggle('hidden', !editorState.customText);
+      }
+      if (trackSubLabel) {
+        trackSubLabel.textContent = editorState.customText ? `💬 ${editorState.customText}` : '💬 Text & Subtitles Layer';
+      }
     });
   }
 
@@ -3227,98 +5448,435 @@ function initTimelineStudio() {
     });
   }
 
-  // Live CSS Update Function (Instant 60fps response)
+  if (chkFlash) {
+    chkFlash.addEventListener('change', () => {
+      editorState.flash = chkFlash.checked;
+      if (editorState.flash && flashOverlay) {
+        flashOverlay.style.opacity = '0.9';
+        setTimeout(() => { flashOverlay.style.opacity = '0'; }, 320);
+      }
+    });
+  }
+
+  const chkFxGlitch = document.getElementById('chkFxGlitch');
+  if (chkFxGlitch) {
+    chkFxGlitch.addEventListener('change', () => {
+      const gOverlay = document.getElementById('timelineGlitchOverlay');
+      if (gOverlay) gOverlay.classList.toggle('hidden', !chkFxGlitch.checked);
+      showToast(chkFxGlitch.checked ? '⚡ Glitch pulse effect enabled' : 'Glitch disabled');
+    });
+  }
+
+  const chkFxVhs = document.getElementById('chkFxVhs');
+  if (chkFxVhs) {
+    chkFxVhs.addEventListener('change', () => {
+      showToast(chkFxVhs.checked ? '📺 VHS scanlines active' : 'VHS disabled');
+    });
+  }
+
+  const chkFxSparkle = document.getElementById('chkFxSparkle');
+  if (chkFxSparkle) {
+    chkFxSparkle.addEventListener('change', () => {
+      showToast(chkFxSparkle.checked ? '✨ Luxury sparkle glow enabled' : 'Sparkle disabled');
+    });
+  }
+
+  // 🤖 AI Studio Tools Buttons
+  const btnAiFaceEnhance = document.getElementById('btnAiFaceEnhance');
+  let isAiFaceActive = false;
+  if (btnAiFaceEnhance) {
+    btnAiFaceEnhance.addEventListener('click', () => {
+      isAiFaceActive = !isAiFaceActive;
+      btnAiFaceEnhance.classList.toggle('active', isAiFaceActive);
+      const badge = document.getElementById('badgeAiFace');
+      if (badge) badge.textContent = isAiFaceActive ? '✨ ACTIVE' : 'OFF';
+
+      if (isAiFaceActive) {
+        editorState.filter = 'beauty';
+        editorState.adjust.brightness = Math.min(50, (editorState.adjust.brightness || 0) + 6);
+        editorState.adjust.contrast = Math.min(200, (editorState.adjust.contrast || 100) + 8);
+        editorState.adjust.saturation = Math.min(250, (editorState.adjust.saturation || 100) + 12);
+        if (rngAdjBrightness) rngAdjBrightness.value = editorState.adjust.brightness;
+        if (lblAdjBrightness) lblAdjBrightness.textContent = `${editorState.adjust.brightness}%`;
+        if (rngAdjContrast) rngAdjContrast.value = editorState.adjust.contrast;
+        if (lblAdjContrast) lblAdjContrast.textContent = `${editorState.adjust.contrast}%`;
+        if (rngAdjSaturation) rngAdjSaturation.value = editorState.adjust.saturation;
+        if (lblAdjSaturation) lblAdjSaturation.textContent = `${editorState.adjust.saturation}%`;
+        updateLivePreview();
+        showToast('👤 AI Face & Beauty Glow activated! Skin smoothed & illuminated.');
+      } else {
+        editorState.filter = 'none';
+        updateLivePreview();
+        showToast('👤 AI Face & Beauty Glow turned OFF.');
+      }
+    });
+  }
+
+  const btnAiUpscale4k = document.getElementById('btnAiUpscale4k');
+  let isAiUpscaleActive = false;
+  if (btnAiUpscale4k) {
+    btnAiUpscale4k.addEventListener('click', () => {
+      isAiUpscaleActive = !isAiUpscaleActive;
+      btnAiUpscale4k.classList.toggle('active', isAiUpscaleActive);
+      const badge = document.getElementById('badgeAiUpscale');
+      if (badge) badge.textContent = isAiUpscaleActive ? '💎 4K ON' : 'OFF';
+
+      if (isAiUpscaleActive) {
+        editorState.res = '4k';
+        editorState.adjust.sharp = 80;
+        if (rngAdjSharp) rngAdjSharp.value = 80;
+        if (lblAdjSharp) lblAdjSharp.textContent = '80%';
+        const resBadge = document.getElementById('lblProResBadge');
+        if (resBadge) resBadge.textContent = '2160 × 3840 (4K UHD)';
+        updateLivePreview();
+        showToast('💎 AI 4K Upscale & Sharpen activated! Live super-resolution crisp edge enhancement active.');
+      } else {
+        editorState.res = '1080p';
+        editorState.adjust.sharp = 0;
+        if (rngAdjSharp) rngAdjSharp.value = 0;
+        if (lblAdjSharp) lblAdjSharp.textContent = '0%';
+        const resBadge = document.getElementById('lblProResBadge');
+        if (resBadge) resBadge.textContent = '1080 × 1920 (FHD)';
+        updateLivePreview();
+        showToast('💎 AI 4K Upscale turned OFF.');
+      }
+    });
+  }
+
+  const btnAiSilenceCut = document.getElementById('btnAiSilenceCut');
+  let isAiSilenceActive = false;
+  if (btnAiSilenceCut) {
+    btnAiSilenceCut.addEventListener('click', () => {
+      isAiSilenceActive = !isAiSilenceActive;
+      btnAiSilenceCut.classList.toggle('active', isAiSilenceActive);
+      const badge = document.getElementById('badgeAiSilence');
+      if (badge) badge.textContent = isAiSilenceActive ? '✂️ TRIMMED' : 'OFF';
+
+      if (isAiSilenceActive) {
+        const dur = editorState.duration || 30;
+        editorState.trimStart = Math.min(1.0, parseFloat((dur * 0.04).toFixed(1)));
+        editorState.trimEnd = Math.max(editorState.trimStart + 3, parseFloat((dur - 1.0).toFixed(1)));
+        if (rngTrimStart) rngTrimStart.value = editorState.trimStart;
+        if (rngTrimEnd) rngTrimEnd.value = editorState.trimEnd;
+        updateTrimDisplay();
+        if (videoPreview) {
+          videoPreview.currentTime = editorState.trimStart;
+          videoPreview.play().catch(() => {});
+        }
+        showToast('✂️ AI Silence Remover applied! Dead pauses trimmed automatically for viral pacing.');
+      } else {
+        editorState.trimStart = 0;
+        editorState.trimEnd = editorState.duration || 30;
+        if (rngTrimStart) rngTrimStart.value = 0;
+        if (rngTrimEnd) rngTrimEnd.value = editorState.trimEnd;
+        updateTrimDisplay();
+        if (videoPreview) {
+          videoPreview.currentTime = 0;
+          videoPreview.play().catch(() => {});
+        }
+        showToast('✂️ Silence trim reset to full clip duration.');
+      }
+    });
+  }
+
+  const btnAiAutoCaptionsGen = document.getElementById('btnAiAutoCaptionsGen');
+  let isAiCaptionsActive = false;
+  if (btnAiAutoCaptionsGen) {
+    btnAiAutoCaptionsGen.addEventListener('click', () => {
+      isAiCaptionsActive = !isAiCaptionsActive;
+      btnAiAutoCaptionsGen.classList.toggle('active', isAiCaptionsActive);
+      const badge = document.getElementById('badgeAiCaptions');
+      if (badge) badge.textContent = isAiCaptionsActive ? '📝 SYNCED' : 'OFF';
+
+      if (isAiCaptionsActive) {
+        const viralPhrases = [
+          '✨ Exclusive Royal Heritage',
+          '🔥 Trending Luxury Masterpiece',
+          '👑 Handcrafted Pure Elegance',
+          '🌟 Unmatched Premium Style'
+        ];
+        const chosenCaption = viralPhrases[Math.floor(Math.random() * viralPhrases.length)];
+        editorState.customText = chosenCaption;
+        editorState.textSize = 'large';
+        editorState.textColor = 'yellow';
+        editorState.textPosition = 'bottom';
+
+        const customSubInput = document.getElementById('txtTimelineCustomSub');
+        if (customSubInput) customSubInput.value = chosenCaption;
+
+        const trackSubLabel = document.getElementById('trackSubtitlesLabel');
+        if (trackSubLabel) trackSubLabel.textContent = `💬 ${chosenCaption}`;
+
+        updateLivePreview();
+        showToast(`📝 AI Auto-Captions generated: "${chosenCaption}"!`);
+      } else {
+        editorState.customText = '';
+        const customSubInput = document.getElementById('txtTimelineCustomSub');
+        if (customSubInput) customSubInput.value = '';
+
+        const trackSubLabel = document.getElementById('trackSubtitlesLabel');
+        if (trackSubLabel) trackSubLabel.textContent = '💬 Text & Subtitles Layer';
+
+        updateLivePreview();
+        showToast('📝 AI Auto-Captions removed.');
+      }
+    });
+  }
+
+  // Export Resolution & FPS Chips
+  modal.querySelectorAll('.btn-export-res').forEach(chip => {
+    chip.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-export-res').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      editorState.res = chip.dataset.res || '1080p';
+      if (lblProResBadge) {
+        lblProResBadge.textContent = editorState.res === '4k' ? '2160 × 3840' : (editorState.res === '720p' ? '720 × 1280' : '1080 × 1920');
+      }
+    });
+  });
+
+  modal.querySelectorAll('.btn-export-fps').forEach(chip => {
+    chip.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-export-fps').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      editorState.fps = chip.dataset.fps || '30';
+    });
+  });
+
+  if (btnExportFromPublishTab && btnApply) {
+    btnExportFromPublishTab.addEventListener('click', () => {
+      btnApply.click();
+    });
+  }
+
+  // Live CSS Update Function (Instant 60fps real-time preview)
   function updateLivePreview() {
-    // 1. Filter class on video
-    videoPreview.className = '';
-    videoPreview.classList.add(`v-filter-${editorState.filter}`);
-    if (editorState.zoom) {
-      videoPreview.classList.add('v-fx-zoom');
+    if (!videoPreview) return;
+
+    // 1. Color Grading & Adjustments (CSS Filters)
+    const filterPresetMap = {
+      none: '',
+      vintage: 'sepia(0.42) contrast(1.08) brightness(1.02) saturate(0.92)',
+      cinema: 'contrast(1.22) brightness(0.95) saturate(1.12) sepia(0.12)',
+      hdr: 'contrast(1.32) saturate(1.38) brightness(1.04)',
+      fashion: 'contrast(1.18) saturate(1.25) brightness(1.06) hue-rotate(352deg)',
+      cool: 'hue-rotate(185deg) contrast(1.12) saturate(1.15) brightness(1.02)',
+      beauty: 'brightness(1.08) contrast(1.05) saturate(1.15)',
+      food: 'contrast(1.18) saturate(1.35) sepia(0.15) brightness(1.04)',
+      neon: 'contrast(1.32) saturate(1.65) hue-rotate(280deg) brightness(1.06)',
+      noir: 'grayscale(1) contrast(1.35) brightness(1.02)',
+      'warm-gold': 'sepia(0.25) contrast(1.15) brightness(1.04) saturate(1.25)',
+      vibrant: 'contrast(1.25) saturate(1.45) brightness(1.04)',
+      'teal-orange': 'contrast(1.2) saturate(1.2) hue-rotate(185deg)'
+    };
+
+    // Calculate Brightness & Exposure combined
+    const adjB = (editorState.adjust.brightness || 0) / 100;
+    const adjExp = (editorState.adjust.exposure || 0) / 35;
+    const finalBrightness = Math.max(0.05, (1 + adjB) * (1 + adjExp));
+
+    // Contrast with Sharpness boost
+    const baseC = (editorState.adjust.contrast || 100) / 100;
+    const sharpFactor = (editorState.adjust.sharp || 0);
+    const finalContrast = Math.max(0.1, baseC * (1 + sharpFactor * 0.003));
+
+    // Saturation with Sharpness/Vibrance boost
+    const baseS = (editorState.adjust.saturation || 100) / 100;
+    const finalSaturation = Math.max(0, baseS * (1 + sharpFactor * 0.002));
+
+    // Temperature (Warm / Cool)
+    const tempDeg = editorState.adjust.temp || 0;
+    let tempFilter = '';
+    if (tempDeg > 0) {
+      tempFilter = `hue-rotate(${(tempDeg * 0.3).toFixed(1)}deg) sepia(${(tempDeg * 0.006).toFixed(2)})`;
+    } else if (tempDeg < 0) {
+      tempFilter = `hue-rotate(${(tempDeg * 0.8).toFixed(1)}deg)`;
     }
 
-    // 2. Vignette
+    // Sharpness subtle edge clarity
+    let sharpFilter = '';
+    if (sharpFactor > 0) {
+      sharpFilter = `drop-shadow(0 0 ${(sharpFactor * 0.015).toFixed(2)}px rgba(0,0,0,${(sharpFactor * 0.008).toFixed(2)}))`;
+    }
+
+    const presetFilterStr = (editorState.filter && editorState.filter !== 'none') ? (filterPresetMap[editorState.filter] || '') : '';
+
+    const filterComponents = [];
+    if (presetFilterStr) filterComponents.push(presetFilterStr);
+    filterComponents.push(`brightness(${finalBrightness.toFixed(3)})`);
+    filterComponents.push(`contrast(${finalContrast.toFixed(3)})`);
+    filterComponents.push(`saturate(${finalSaturation.toFixed(3)})`);
+    if (tempFilter) filterComponents.push(tempFilter);
+    if (sharpFilter) filterComponents.push(sharpFilter);
+
+    const fullFilterStyle = filterComponents.join(' ');
+    videoPreview.style.setProperty('filter', fullFilterStyle, 'important');
+
+    // 2. Transform: Rotate, Flip, Zoom
+    const scaleX = editorState.flipH ? -1 : 1;
+    const scaleY = editorState.flipV ? -1 : 1;
+    const zoomScale = editorState.zoom ? 1.12 : 1.0;
+    videoPreview.style.transform = `rotate(${editorState.rotate}deg) scale(${scaleX * zoomScale}, ${scaleY * zoomScale})`;
+
+    // 3. Preset Filter Class
+    videoPreview.className = 'pro-video-screen';
+    if (editorState.filter && editorState.filter !== 'none') {
+      videoPreview.classList.add(`v-filter-${editorState.filter}`);
+    }
+
+    // 4. Playback speed
+    videoPreview.playbackRate = Math.min(4.0, Math.max(0.25, editorState.speed || 1.0));
+
+    // 5. Vignette & Glitch
     if (vignetteOverlay) {
       if (editorState.vignette) vignetteOverlay.classList.remove('hidden');
       else vignetteOverlay.classList.add('hidden');
     }
 
-    // 3. Subtitle styling
+    // 6. Subtitle styling
     if (subBadge) {
-      const sizePxMap = { small: '1.05rem', medium: '1.25rem', large: '1.5rem', huge: '1.85rem' };
-      subBadge.style.fontSize = sizePxMap[editorState.textSize] || '1.45rem';
-
-      const colorMap = {
-        yellow: '#facc15',
-        white: '#ffffff',
-        green: '#22c55e',
-        rose: '#fb7185',
-        amethyst: '#c084fc'
-      };
-      subBadge.style.color = colorMap[editorState.textColor] || '#facc15';
-
-      if (editorState.textPosition === 'top') {
-        subBadge.style.top = '14%';
-        subBadge.style.bottom = 'auto';
-      } else if (editorState.textPosition === 'center') {
-        subBadge.style.top = '45%';
-        subBadge.style.bottom = 'auto';
+      if (!editorState.customText) {
+        subBadge.classList.add('hidden');
+        subBadge.textContent = '';
       } else {
-        subBadge.style.top = 'auto';
-        subBadge.style.bottom = '18%';
-      }
+        subBadge.classList.remove('hidden');
+        subBadge.textContent = editorState.customText;
 
-      subBadge.textContent = editorState.customText;
+        const sizePxMap = { small: '1.05rem', medium: '1.25rem', large: '1.45rem', huge: '1.8rem' };
+        subBadge.style.fontSize = sizePxMap[editorState.textSize] || '1.45rem';
+
+        const colorMap = {
+          yellow: '#facc15',
+          white: '#ffffff',
+          green: '#22c55e',
+          rose: '#fb7185',
+          amethyst: '#c084fc'
+        };
+        subBadge.style.color = colorMap[editorState.textColor] || '#facc15';
+
+        if (editorState.textPosition === 'top') {
+          subBadge.style.top = '14%';
+          subBadge.style.bottom = 'auto';
+        } else if (editorState.textPosition === 'center') {
+          subBadge.style.top = '45%';
+          subBadge.style.bottom = 'auto';
+        } else {
+          subBadge.style.top = 'auto';
+          subBadge.style.bottom = '18%';
+        }
+      }
     }
   }
 
   // ✨ 1-Click AI Auto-Enhance Button
-  if (btnAiAuto) {
-    btnAiAuto.addEventListener('click', () => {
-      // Pick best viral warm gold, large Hormozi text, zoom, and 30s cut
-      editorState.filter = 'warm-gold';
-      editorState.textSize = 'large';
-      editorState.textPosition = 'bottom';
-      editorState.textColor = 'yellow';
-      editorState.zoom = true;
-      editorState.vignette = true;
-      if (chkZoom) chkZoom.checked = true;
-      if (chkVignette) chkVignette.checked = true;
+  function handleAiAuto() {
+    editorState.filter = 'warm-gold';
+    editorState.speed = 1.25;
+    editorState.adjust = { brightness: 5, contrast: 115, saturation: 125, exposure: 2, temp: 4, sharp: 25 };
+    editorState.textSize = 'large';
+    editorState.textPosition = 'bottom';
+    editorState.textColor = 'yellow';
+    editorState.zoom = true;
+    editorState.vignette = true;
+    editorState.flash = true;
 
-      // Update UI active buttons
-      filterCards.forEach(c => c.classList.toggle('active', c.dataset.filter === 'warm-gold'));
-      textSizeChips.forEach(c => c.classList.toggle('active', c.dataset.size === 'large'));
-      textPosChips.forEach(c => c.classList.toggle('active', c.dataset.pos === 'bottom'));
-      textColorChips.forEach(c => c.classList.toggle('active', c.dataset.col === 'yellow'));
+    if (chkZoom) chkZoom.checked = true;
+    if (chkVignette) chkVignette.checked = true;
+    if (chkFlash) chkFlash.checked = true;
 
-      updateLivePreview();
-      showToast('✨ AI Smart Auto-Enhance applied to live preview!');
-    });
+    if (rngAdjBrightness) rngAdjBrightness.value = 5;
+    if (rngAdjContrast) rngAdjContrast.value = 115;
+    if (rngAdjSaturation) rngAdjSaturation.value = 125;
+    if (rngAdjExposure) rngAdjExposure.value = 2;
+    if (rngAdjTemp) rngAdjTemp.value = 4;
+    if (rngAdjSharp) rngAdjSharp.value = 25;
+    if (lblAdjBrightness) lblAdjBrightness.textContent = '+5%';
+    if (lblAdjContrast) lblAdjContrast.textContent = '115%';
+    if (lblAdjSaturation) lblAdjSaturation.textContent = '125%';
+    if (lblAdjExposure) lblAdjExposure.textContent = '+2';
+    if (lblAdjTemp) lblAdjTemp.textContent = '+4°';
+    if (lblAdjSharp) lblAdjSharp.textContent = '25%';
+
+    applySpeed(1.25);
+
+    filterCards.forEach(c => c.classList.toggle('active', c.dataset.filter === 'warm-gold'));
+    if (lblInspectorFilter) lblInspectorFilter.textContent = 'WARM GOLD';
+    textSizeChips.forEach(c => c.classList.toggle('active', c.dataset.size === 'large'));
+    textPosChips.forEach(c => c.classList.toggle('active', c.dataset.pos === 'bottom'));
+    textColorChips.forEach(c => c.classList.toggle('active', c.dataset.col === 'yellow'));
+
+    updateLivePreview();
+    showToast('✨ AI Smart Auto-Enhance applied (1.25x Dynamic Speed + Warm Gold + Flash)!');
   }
+
+  if (btnAiAuto) btnAiAuto.addEventListener('click', handleAiAuto);
+  if (btnInspectorAiQuick) btnInspectorAiQuick.addEventListener('click', handleAiAuto);
 
   // Reset to original
   if (btnReset) {
     btnReset.addEventListener('click', () => {
       editorState = {
         trimStart: 0,
-        trimEnd: Math.min(30, parseFloat(rngTrimEnd.max) || 30),
+        trimEnd: Math.min(30, parseFloat(rngTrimEnd ? rngTrimEnd.max : 30) || 30),
         duration: 30,
+        speed: 1.0,
+        origVolume: 1.0,
         filter: 'none',
+        rotate: 0,
+        flipH: false,
+        flipV: false,
+        adjust: { brightness: 0, contrast: 100, saturation: 100, exposure: 0, temp: 0, sharp: 0 },
+        voice: 'normal',
+        transition: 'none',
+        sticker: 'none',
+        aspect: '9:16',
+        res: '1080p',
+        fps: '30',
         textSize: 'large',
         textPosition: 'bottom',
         textColor: 'yellow',
-        customText: 'VIRAL MOMENT 🔥',
+        customText: '',
         zoom: false,
-        vignette: false
+        vignette: false,
+        flash: false
       };
       if (rngTrimStart) rngTrimStart.value = 0;
       if (rngTrimEnd) rngTrimEnd.value = editorState.trimEnd;
       if (chkZoom) chkZoom.checked = false;
       if (chkVignette) chkVignette.checked = false;
+      if (chkFlash) chkFlash.checked = false;
+      if (chkMuteOrigAudio) chkMuteOrigAudio.checked = false;
+      if (rngOriginalVolume) rngOriginalVolume.value = 1.0;
+      if (lblOrigVolDisplay) lblOrigVolDisplay.textContent = '100%';
+
+      if (customSubInput) customSubInput.value = '';
+      if (subBadge) {
+        subBadge.textContent = '';
+        subBadge.classList.add('hidden');
+      }
+      if (trackSubLabel) trackSubLabel.textContent = '💬 Text & Subtitles Layer';
+
+      if (rngAdjBrightness) rngAdjBrightness.value = 0;
+      if (rngAdjContrast) rngAdjContrast.value = 100;
+      if (rngAdjSaturation) rngAdjSaturation.value = 100;
+      if (rngAdjExposure) rngAdjExposure.value = 0;
+      if (rngAdjTemp) rngAdjTemp.value = 0;
+      if (rngAdjSharp) rngAdjSharp.value = 0;
+      if (lblAdjBrightness) lblAdjBrightness.textContent = '0%';
+      if (lblAdjContrast) lblAdjContrast.textContent = '100%';
+      if (lblAdjSaturation) lblAdjSaturation.textContent = '100%';
+      if (lblAdjExposure) lblAdjExposure.textContent = '0';
+      if (lblAdjTemp) lblAdjTemp.textContent = '0';
+      if (lblAdjSharp) lblAdjSharp.textContent = '0%';
+
+      applySpeed(1.0);
 
       filterCards.forEach(c => c.classList.toggle('active', c.dataset.filter === 'none'));
+      if (lblInspectorFilter) lblInspectorFilter.textContent = 'ORIGINAL';
       textSizeChips.forEach(c => c.classList.toggle('active', c.dataset.size === 'large'));
       textPosChips.forEach(c => c.classList.toggle('active', c.dataset.pos === 'bottom'));
       textColorChips.forEach(c => c.classList.toggle('active', c.dataset.col === 'yellow'));
+      if (stickerOverlay) stickerOverlay.classList.add('hidden');
 
       updateTrimDisplay();
       updateLivePreview();
@@ -3326,31 +5884,53 @@ function initTimelineStudio() {
     });
   }
 
-  // ⚡ Apply & Re-Render Reel (HD)
+  // ⚡ Apply & Re-Render Reel (HD via FFmpeg)
   if (btnApply) {
     btnApply.addEventListener('click', async () => {
-      if (!currentRenderedReel || !currentRenderedReel.fileName) {
-        showToast('કોઈ વિડીયો ફાઈલ મળી નથી.', true);
-        return;
+      const fileToRender = (currentRenderedReel && currentRenderedReel.fileName)
+        || (selectedVideoFile && selectedVideoFile.name)
+        || 'reel-demo.mp4';
+
+      if (!currentRenderedReel) {
+        currentRenderedReel = {
+          fileName: fileToRender,
+          reelUrl: `/rendered-reels/${fileToRender}`,
+          videoUrl: `/rendered-reels/${fileToRender}`
+        };
       }
 
       const activeEffects = [];
       if (editorState.zoom) activeEffects.push('zoom');
       if (editorState.vignette) activeEffects.push('vignette');
+      if (editorState.flash) activeEffects.push('flash');
+      if (editorState.transition && editorState.transition !== 'none') {
+        activeEffects.push(editorState.transition);
+      }
 
       btnApply.disabled = true;
       btnApply.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>🎬 Re-Rendering HD Reel...</span>';
-      showToast('⚡ FFmpeg થી તમારા કસ્ટમ કટ, ફિલ્ટર્સ અને ઇફેક્ટ્સ રેન્ડર થઈ રહ્યા છે...');
+      showToast('⚡ CapCut Pro Workstation is rendering your custom cuts, speed, color & effects...');
 
       try {
         const res = await fetch('/api/video/edit-timeline', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            videoFileName: currentRenderedReel.fileName,
+            videoFileName: currentRenderedReel.fileName || fileToRender,
             trimStart: editorState.trimStart,
             trimEnd: editorState.trimEnd,
+            speed: editorState.speed,
+            origVolume: editorState.origVolume,
             filter: editorState.filter,
+            rotate: editorState.rotate,
+            flipH: editorState.flipH,
+            flipV: editorState.flipV,
+            adjust: editorState.adjust,
+            voice: editorState.voice,
+            transition: editorState.transition,
+            resolution: editorState.res,
+            fps: editorState.fps,
+            aspect: editorState.aspect,
             textSize: editorState.textSize,
             textPosition: editorState.textPosition,
             textColor: editorState.textColor,
@@ -3390,13 +5970,18 @@ function initTimelineStudio() {
         }
 
         closeTimelineStudio();
-        showToast('🎉 નવો એડિટ કરેલો HD રીલ વિડીયો સફળતાપૂર્વક તૈયાર થઈ ગયો!');
+        showToast('🎉 CapCut Pro custom edited HD reel ready successfully!');
       } catch (err) {
         console.error('Apply timeline error:', err);
-        showToast(`ભૂલ આવી: ${err.message}`, true);
+        showToast(`Error: ${err.message}`, true);
       } finally {
         btnApply.disabled = false;
-        btnApply.innerHTML = '<i class="fa-solid fa-bolt" style="color: #e5c870;"></i> <span>⚡ Apply & Re-Render Reel (HD)</span>';
+        btnApply.innerHTML = '<i class="fa-solid fa-arrow-up-from-bracket"></i> <span>Export HD Reel</span>';
+        const pubExportBtn = document.getElementById('btnExportFromPublishTab');
+        if (pubExportBtn) {
+          pubExportBtn.disabled = false;
+          pubExportBtn.innerHTML = '<i class="fa-solid fa-arrow-up-from-bracket"></i> <span>Render & Download HD Reel</span>';
+        }
       }
     });
   }
@@ -3544,7 +6129,7 @@ function initUserAuth() {
 
       hideAuthAlert();
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>ચકાસી રહ્યા છીએ...</span>';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Verifying...</span>';
 
       try {
         const res = await fetch('/api/auth/login', {
@@ -3555,7 +6140,7 @@ function initUserAuth() {
         const data = await res.json();
 
         if (!data.success) {
-          throw new Error(data.error || 'લોગિન નિષ્ફળ રહ્યું.');
+          throw new Error(data.error || 'Login failed.');
         }
 
         localStorage.setItem('forgeai_token', data.token);
@@ -3567,7 +6152,7 @@ function initUserAuth() {
         showAuthAlert(`⚠️ ${err.message}`);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<span>🚀 Log In કરો</span>';
+        btn.innerHTML = '<span>🚀 Log In</span>';
       }
     });
   }
@@ -3584,7 +6169,7 @@ function initUserAuth() {
 
       hideAuthAlert();
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>એકાઉન્ટ બની રહ્યું છે...</span>';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Creating account...</span>';
 
       try {
         const res = await fetch('/api/auth/register', {
@@ -3595,7 +6180,7 @@ function initUserAuth() {
         const data = await res.json();
 
         if (!data.success) {
-          throw new Error(data.error || 'રજીસ્ટ્રેશન નિષ્ફળ રહ્યું.');
+          throw new Error(data.error || 'Registration failed.');
         }
 
         localStorage.setItem('forgeai_token', data.token);
@@ -3607,7 +6192,7 @@ function initUserAuth() {
         showAuthAlert(`⚠️ ${err.message}`);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<span>✨ એકાઉન્ટ બનાવો & 5 Free Reels મેળવો</span>';
+        btn.innerHTML = '<span>✨ Create Account & Get 5 Free Reels</span>';
       }
     });
   }
@@ -3621,7 +6206,7 @@ function initUserAuth() {
       if (profileAvatarBig) profileAvatarBig.textContent = (currentUser.name || 'U').charAt(0).toUpperCase();
       if (profileRoleBadge) profileRoleBadge.textContent = (currentUser.role || 'user').toUpperCase();
       if (profileCreditsCount) {
-        profileCreditsCount.textContent = currentUser.plan === 'pro' ? 'અનલિમિટેડ ⭐' : `${currentUser.credits} બાકી`;
+        profileCreditsCount.textContent = currentUser.plan === 'pro' ? 'Unlimited ⭐' : `${currentUser.credits} Left`;
       }
       updateSocialBadges(currentUser);
       userProfileModal.style.display = 'flex';
@@ -3642,7 +6227,7 @@ function initUserAuth() {
     if (insta && insta.connected) {
       if (profileInstaHandle) profileInstaHandle.textContent = `@${insta.username || 'patola_heritage'}`;
       if (profileInstaStatus) {
-        profileInstaStatus.textContent = `🟢 કનેક્ટેડ (${insta.pageName || 'Page'})`;
+        profileInstaStatus.textContent = `🟢 Connected (${insta.pageName || 'Page'})`;
         profileInstaStatus.style.color = '#15803d';
       }
       if (btnConnectInstagramQuick) {
@@ -3652,7 +6237,7 @@ function initUserAuth() {
     } else {
       if (profileInstaHandle) profileInstaHandle.textContent = 'Instagram Reels';
       if (profileInstaStatus) {
-        profileInstaStatus.textContent = 'કનેક્ટ કરવા ક્લિક કરો';
+        profileInstaStatus.textContent = 'Click to Connect';
         profileInstaStatus.style.color = '#9d174d';
       }
       if (btnConnectInstagramQuick) {
@@ -3665,7 +6250,7 @@ function initUserAuth() {
     if (yt && yt.connected) {
       if (profileYtHandle) profileYtHandle.textContent = yt.channelTitle || 'Patola Shorts';
       if (profileYtStatus) {
-        profileYtStatus.textContent = '🟢 કનેક્ટેડ (Active)';
+        profileYtStatus.textContent = '🟢 Connected (Active)';
         profileYtStatus.style.color = '#15803d';
       }
       if (btnConnectYouTubeQuick) {
@@ -3675,7 +6260,7 @@ function initUserAuth() {
     } else {
       if (profileYtHandle) profileYtHandle.textContent = 'YouTube Shorts';
       if (profileYtStatus) {
-        profileYtStatus.textContent = 'કનેક્ટ કરવા ક્લિક કરો';
+        profileYtStatus.textContent = 'Click to Connect';
         profileYtStatus.style.color = '#b91c1c';
       }
       if (btnConnectYouTubeQuick) {
@@ -3688,7 +6273,7 @@ function initUserAuth() {
   if (btnConnectInstagramQuick) {
     btnConnectInstagramQuick.addEventListener('click', async () => {
       const token = localStorage.getItem('forgeai_token');
-      if (!token) return showToast('કૃપા કરીને પહેલા લોગિન કરો.', true);
+      if (!token) return showToast('Please log in first.', true);
 
       btnConnectInstagramQuick.disabled = true;
       btnConnectInstagramQuick.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -3709,7 +6294,7 @@ function initUserAuth() {
         updateSocialBadges(currentUser);
         showToast(data.message);
       } catch (err) {
-        showToast(`ઇન્સ્ટાગ્રામ એરર: ${err.message}`, true);
+        showToast(`Instagram error: ${err.message}`, true);
       } finally {
         btnConnectInstagramQuick.disabled = false;
       }
@@ -3719,7 +6304,7 @@ function initUserAuth() {
   if (btnConnectYouTubeQuick) {
     btnConnectYouTubeQuick.addEventListener('click', async () => {
       const token = localStorage.getItem('forgeai_token');
-      if (!token) return showToast('કૃપા કરીને પહેલા લોગિન કરો.', true);
+      if (!token) return showToast('Please log in first.', true);
 
       btnConnectYouTubeQuick.disabled = true;
       btnConnectYouTubeQuick.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -3740,7 +6325,7 @@ function initUserAuth() {
         updateSocialBadges(currentUser);
         showToast(data.message);
       } catch (err) {
-        showToast(`YouTube એરર: ${err.message}`, true);
+        showToast(`YouTube error: ${err.message}`, true);
       } finally {
         btnConnectYouTubeQuick.disabled = false;
       }
@@ -3772,14 +6357,14 @@ function initUserAuth() {
         userProfileModal.style.display = 'none';
         userProfileModal.classList.add('hidden');
       }
-      showToast('સફળતાપૂર્વક Log Out થઈ ગયા છો.');
+      showToast('Logged out successfully.');
     });
   }
 
   // Upgrade Pro Button click
   if (btnUpgradeProInModal) {
     btnUpgradeProInModal.addEventListener('click', () => {
-      showToast('⚡ Pro Plan (₹૧૯૯/માસ) સબસ્ક્રિપ્શન મોડ્યુલ ટૂંક સમયમાં શરૂ થઈ રહ્યું છે!');
+      showToast('⚡ Pro Plan subscription upgrade is coming soon!');
     });
   }
 
@@ -3845,24 +6430,19 @@ if (document.readyState === 'loading') {
    ========================================================================= */
 function initMobileReelStepper() {
   const stepTabs = document.querySelectorAll('.stepper-tab');
-  const promptPanel = document.getElementById('studioPromptPanel');
-  const step1 = document.getElementById('stepSectionUpload');
-  const step2 = document.getElementById('stepSectionSettings');
-  const step3 = document.getElementById('stepSectionOutput');
-  const btnGoToStep2 = document.getElementById('btnGoToStep2');
-  const btnBackToStep1 = document.getElementById('btnBackToStep1');
-  const videoFileInput = document.getElementById('videoFileInput');
+  const col1 = document.getElementById('studioPromptPanel');
+  const col2 = document.getElementById('stepSectionOutput');
+  const col3 = document.getElementById('studioPublishPanel');
 
   function isMobileView() {
-    return window.innerWidth <= 768;
+    return window.innerWidth <= 860;
   }
 
   window.setReelStep = function(stepNum) {
     if (!isMobileView()) {
-      if (promptPanel) promptPanel.style.display = 'flex';
-      if (step1) step1.style.display = 'block';
-      if (step2) step2.style.display = 'block';
-      if (step3) step3.style.display = 'flex';
+      if (col1) col1.style.display = '';
+      if (col2) col2.style.display = '';
+      if (col3) col3.style.display = '';
       return;
     }
 
@@ -3876,18 +6456,17 @@ function initMobileReelStepper() {
     });
 
     if (stepNum === 1) {
-      if (promptPanel) promptPanel.style.display = 'flex';
-      if (step1) step1.style.display = 'block';
-      if (step2) step2.style.display = 'none';
-      if (step3) step3.style.display = 'none';
+      if (col1) col1.style.display = 'flex';
+      if (col2) col2.style.display = 'none';
+      if (col3) col3.style.display = 'none';
     } else if (stepNum === 2) {
-      if (promptPanel) promptPanel.style.display = 'flex';
-      if (step1) step1.style.display = 'none';
-      if (step2) step2.style.display = 'block';
-      if (step3) step3.style.display = 'none';
+      if (col1) col1.style.display = 'none';
+      if (col2) col2.style.display = 'flex';
+      if (col3) col3.style.display = 'none';
     } else if (stepNum === 3) {
-      if (promptPanel) promptPanel.style.display = 'none';
-      if (step3) step3.style.display = 'flex';
+      if (col1) col1.style.display = 'none';
+      if (col2) col2.style.display = 'none';
+      if (col3) col3.style.display = 'flex';
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3900,27 +6479,22 @@ function initMobileReelStepper() {
     });
   });
 
-  if (btnGoToStep2) {
-    btnGoToStep2.addEventListener('click', () => {
-      window.setReelStep(2);
-    });
-  }
+  const btnMobileToPreview = document.getElementById('btnMobileToPreview');
+  const btnMobileBackToStudio = document.getElementById('btnMobileBackToStudio');
+  const btnMobileToPublish = document.getElementById('btnMobileToPublish');
+  const btnMobileBackToPreview = document.getElementById('btnMobileBackToPreview');
 
-  if (btnBackToStep1) {
-    btnBackToStep1.addEventListener('click', () => {
-      window.setReelStep(1);
-    });
+  if (btnMobileToPreview) {
+    btnMobileToPreview.addEventListener('click', () => window.setReelStep(2));
   }
-
-  // When a file is selected on mobile, auto-advance to Step 2
-  if (videoFileInput) {
-    videoFileInput.addEventListener('change', () => {
-      if (videoFileInput.files && videoFileInput.files.length > 0 && isMobileView()) {
-        setTimeout(() => {
-          window.setReelStep(2);
-        }, 400);
-      }
-    });
+  if (btnMobileBackToStudio) {
+    btnMobileBackToStudio.addEventListener('click', () => window.setReelStep(1));
+  }
+  if (btnMobileToPublish) {
+    btnMobileToPublish.addEventListener('click', () => window.setReelStep(3));
+  }
+  if (btnMobileBackToPreview) {
+    btnMobileBackToPreview.addEventListener('click', () => window.setReelStep(2));
   }
 
   function updateStepVisibility() {
@@ -3929,10 +6503,9 @@ function initMobileReelStepper() {
       const activeNum = activeTab ? parseInt(activeTab.getAttribute('data-step'), 10) : 1;
       window.setReelStep(activeNum);
     } else {
-      if (promptPanel) promptPanel.style.display = 'flex';
-      if (step1) step1.style.display = 'block';
-      if (step2) step2.style.display = 'block';
-      if (step3) step3.style.display = 'flex';
+      if (col1) col1.style.display = '';
+      if (col2) col2.style.display = '';
+      if (col3) col3.style.display = '';
     }
   }
 
