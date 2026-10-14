@@ -1126,12 +1126,14 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
 }
 
 .file-input-hidden {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-  width: 100%;
-  height: 100%;
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  z-index: -999 !important;
 }
 
 .drop-icon {
@@ -2907,9 +2909,9 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
   }
 
-  /* Main Container & Studio Columns in Mobile View */
-  .main-container,
-  #videoStudioView.studio-3col-container {
+  /* Main Container & Studio Columns in Mobile View (Only when active/not hidden) */
+  .main-container:not(.hidden),
+  #videoStudioView.studio-3col-container:not(.hidden) {
     display: flex !important;
     flex-direction: column !important;
     width: 100% !important;
@@ -3337,6 +3339,8 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
 
 /* Mode Navigation Pills */
 .mode-nav {
+  position: relative !important;
+  z-index: 100 !important;
   background: #eae5dc !important;
   border: 1px solid rgba(214, 205, 189, 0.8) !important;
   border-radius: 9999px !important;
@@ -3345,6 +3349,10 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   gap: 0.3rem !important;
 }
 .mode-tab {
+  position: relative !important;
+  z-index: 101 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
   border-radius: 9999px !important;
   font-size: 0.82rem !important;
   font-weight: 600 !important;
@@ -3463,6 +3471,8 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
 
 /* COLUMN 1: CONTENT STUDIO COMPONENTS */
 .studio-upload-card {
+  position: relative;
+  overflow: hidden;
   border: 2px dashed rgba(200, 185, 160, 0.85);
   border-radius: 16px;
   padding: 1.8rem 1.2rem;
@@ -6253,6 +6263,1068 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
 .pro-tools-drawer::-webkit-scrollbar-thumb:hover,
 .pro-inspector-panel::-webkit-scrollbar-thumb:hover,
 .pro-timeline-tracks::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 110, 43, 0.7);
+  background: #00f2fe;
 }
+
+/* ==========================================================================
+   🎬 CAPCUT PRO PC OBSIDIAN DARK THEME (MATCHING YOUTUBE VIDEO _bsmMfMyIeI)
+   ========================================================================== */
+
+/* Top Nav Button */
+.capcut-nav-btn {
+  border: 1.5px solid rgba(14, 116, 144, 0.4) !important;
+  background: rgba(14, 165, 233, 0.12) !important;
+  color: #1c1917 !important;
+  font-weight: 700 !important;
+  transition: all 0.25s ease !important;
+}
+
+.capcut-nav-btn .mode-tab-label {
+  color: #1c1917 !important;
+  font-weight: 700 !important;
+}
+
+.capcut-nav-btn i {
+  color: #0284c7 !important;
+}
+
+.capcut-nav-btn:hover {
+  background: rgba(14, 165, 233, 0.22) !important;
+  color: #000000 !important;
+  box-shadow: 0 2px 12px rgba(14, 165, 233, 0.25) !important;
+  transform: translateY(-1px);
+}
+
+.capcut-nav-btn:hover .mode-tab-label {
+  color: #000000 !important;
+}
+
+.capcut-pro-tag {
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: #000000 !important;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);
+  margin-left: 0.35rem;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Modal Backing & Main Card */
+#timelineStudioModal {
+  backdrop-filter: blur(16px) !important;
+  background: rgba(5, 5, 8, 0.88) !important;
+}
+
+#timelineStudioModal .pro-studio-card {
+  width: 98vw !important;
+  max-width: 1560px !important;
+  height: 96vh !important;
+  max-height: 96vh !important;
+  background: #111114 !important;
+  border: 1px solid #27272f !important;
+  border-radius: 14px !important;
+  box-shadow: 0 35px 120px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+  color: #f4f4f5 !important;
+}
+
+/* 1. Top Application Bar */
+#timelineStudioModal .pro-studio-topbar {
+  background: #18181c !important;
+  border-bottom: 1px solid #27272f !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5) !important;
+  padding: 0.65rem 1.25rem !important;
+}
+
+#timelineStudioModal .pro-brand-chip {
+  background: #202026 !important;
+  border: 1px solid #2e2e38 !important;
+}
+
+#timelineStudioModal .pro-brand-icon {
+  color: #00f2fe !important;
+  font-size: 1.15rem !important;
+  filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.6));
+}
+
+#timelineStudioModal .pro-brand-name {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+}
+
+#timelineStudioModal .pro-project-input {
+  background: #1f1f25 !important;
+  border: 1px solid #2e2e38 !important;
+  color: #f4f4f5 !important;
+  border-radius: 6px !important;
+}
+
+#timelineStudioModal .pro-project-input:focus {
+  border-color: #00f2fe !important;
+  background: #272732 !important;
+  box-shadow: 0 0 0 2px rgba(0, 242, 254, 0.3) !important;
+}
+
+#timelineStudioModal .pro-badge-saved {
+  color: #4ade80 !important;
+  background: rgba(34, 197, 94, 0.12) !important;
+  border: 1px solid rgba(34, 197, 94, 0.3) !important;
+}
+
+#timelineStudioModal .pro-transport-quick {
+  background: #1f1f25 !important;
+  border: 1px solid #2e2e38 !important;
+  border-radius: 8px !important;
+}
+
+#timelineStudioModal .btn-pro-icon-sm {
+  color: #a1a1aa !important;
+}
+
+#timelineStudioModal .btn-pro-icon-sm:hover {
+  background: #2a2a34 !important;
+  color: #00f2fe !important;
+}
+
+#timelineStudioModal .pro-v-divider {
+  background: #33333d !important;
+}
+
+#timelineStudioModal .pro-canvas-pill {
+  color: #00f2fe !important;
+  background: rgba(0, 242, 254, 0.1) !important;
+  border: 1px solid rgba(0, 242, 254, 0.35) !important;
+}
+
+#timelineStudioModal .pro-res-pill {
+  color: #a1a1aa !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+#timelineStudioModal .btn-pro-ai {
+  background: linear-gradient(135deg, #1e1b4b, #3730a3) !important;
+  border: 1px solid #6366f1 !important;
+  color: #c7d2fe !important;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35) !important;
+}
+
+#timelineStudioModal .btn-pro-ai:hover {
+  background: linear-gradient(135deg, #3730a3, #4f46e5) !important;
+  color: #ffffff !important;
+}
+
+#timelineStudioModal .btn-pro-ghost {
+  background: #1f1f25 !important;
+  border: 1px solid #2e2e38 !important;
+  color: #d4d4d8 !important;
+}
+
+#timelineStudioModal .btn-pro-ghost:hover {
+  background: #2a2a34 !important;
+  color: #ffffff !important;
+}
+
+/* Signature CapCut Gradient Export Button */
+#timelineStudioModal .btn-pro-export-master {
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
+  border: none !important;
+  color: #09090b !important;
+  font-weight: 800 !important;
+  box-shadow: 0 4px 18px rgba(0, 242, 254, 0.45) !important;
+}
+
+#timelineStudioModal .btn-pro-export-master:hover {
+  box-shadow: 0 6px 26px rgba(0, 242, 254, 0.75) !important;
+  transform: translateY(-1px) scale(1.02);
+}
+
+#timelineStudioModal .btn-pro-next {
+  background: #202026 !important;
+  border: 1px solid #3f3f4c !important;
+  color: #ffffff !important;
+}
+
+#timelineStudioModal .btn-pro-next:hover {
+  background: #2a2a34 !important;
+  border-color: #00f2fe !important;
+  color: #00f2fe !important;
+}
+
+#timelineStudioModal .btn-pro-close {
+  background: #1f1f25 !important;
+  border: 1px solid #2e2e38 !important;
+  color: #a1a1aa !important;
+}
+
+#timelineStudioModal .btn-pro-close:hover {
+  background: #ef4444 !important;
+  border-color: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+/* 2. Ribbon Category Tabs */
+#timelineStudioModal .pro-category-nav {
+  background: #141418 !important;
+  border-bottom: 1px solid #222228 !important;
+}
+
+#timelineStudioModal .pro-cat-tab {
+  color: #a1a1aa !important;
+}
+
+#timelineStudioModal .pro-cat-tab:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+#timelineStudioModal .pro-cat-tab.active {
+  color: #00f2fe !important;
+  border-bottom: 2.5px solid #00f2fe !important;
+  background: #1a1a22 !important;
+}
+
+/* 3. 3-Column Workstation Body */
+#timelineStudioModal .pro-workstation-main {
+  background: #0d0d10 !important;
+  grid-template-columns: 340px 1fr 280px !important;
+}
+
+/* 3A. Left Drawer */
+#timelineStudioModal .pro-tools-drawer {
+  background: #141418 !important;
+  border-right: 1px solid #222228 !important;
+}
+
+#timelineStudioModal .pro-pane-header h4 {
+  color: #ffffff !important;
+}
+
+#timelineStudioModal .pro-pane-sub {
+  color: #71717a !important;
+}
+
+#timelineStudioModal .pro-group-box {
+  background: #18181d !important;
+  border: 1px solid #272730 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4) !important;
+  color: #f4f4f5 !important;
+}
+
+#timelineStudioModal .pro-group-label {
+  color: #e4e4e7 !important;
+}
+
+#timelineStudioModal .pro-sub-label {
+  color: #a1a1aa !important;
+}
+
+#timelineStudioModal .pro-slider {
+  accent-color: #00f2fe !important;
+}
+
+#timelineStudioModal .pro-val-highlight {
+  color: #00f2fe !important;
+}
+
+#timelineStudioModal .btn-pro-tool {
+  background: #202026 !important;
+  border: 1px solid #2e2e38 !important;
+  color: #e4e4e7 !important;
+}
+
+#timelineStudioModal .btn-pro-tool:hover {
+  background: #282834 !important;
+  color: #00f2fe !important;
+  border-color: #00f2fe !important;
+}
+
+#timelineStudioModal .btn-pro-tool.active {
+  background: rgba(0, 242, 254, 0.12) !important;
+  border-color: #00f2fe !important;
+  color: #00f2fe !important;
+}
+
+#timelineStudioModal .timeline-filter-card {
+  background: #202026 !important;
+  border: 1px solid #2e2e38 !important;
+  color: #e4e4e7 !important;
+}
+
+#timelineStudioModal .timeline-filter-card:hover {
+  border-color: #00f2fe !important;
+  background: #282834 !important;
+}
+
+#timelineStudioModal .timeline-filter-card.active {
+  border: 2px solid #00f2fe !important;
+  background: rgba(0, 242, 254, 0.15) !important;
+  color: #00f2fe !important;
+}
+
+#timelineStudioModal .btn-pro-ai-card {
+  background: #202026 !important;
+  border: 1px solid #2e2e38 !important;
+  color: #e4e4e7 !important;
+}
+
+#timelineStudioModal .btn-pro-ai-card:hover {
+  background: #282834 !important;
+  border-color: #6366f1 !important;
+}
+
+#timelineStudioModal .btn-pro-ai-card.active {
+  background: rgba(99, 102, 241, 0.18) !important;
+  border: 2px solid #818cf8 !important;
+}
+
+#timelineStudioModal .ai-card-text b {
+  color: #ffffff !important;
+}
+
+#timelineStudioModal .ai-card-text p {
+  color: #a1a1aa !important;
+}
+
+#timelineStudioModal .pro-fx-toggle-card {
+  background: #202026 !important;
+  border: 1px solid #2e2e38 !important;
+  color: #ffffff !important;
+}
+
+#timelineStudioModal .pro-fx-toggle-card:hover {
+  background: #272732 !important;
+  border-color: #00f2fe !important;
+}
+
+#timelineStudioModal .pro-fx-toggle-card b {
+  color: #ffffff !important;
+}
+
+#timelineStudioModal .pro-fx-toggle-card p {
+  color: #a1a1aa !important;
+}
+
+#timelineStudioModal .pro-checkbox {
+  accent-color: #00f2fe !important;
+}
+
+#timelineStudioModal .pro-chips-grid .chip,
+#timelineStudioModal .pro-quick-chips-row .chip {
+  background: #202026 !important;
+  border: 1px solid #2e2e38 !important;
+  color: #a1a1aa !important;
+}
+
+#timelineStudioModal .pro-chips-grid .chip:hover,
+#timelineStudioModal .pro-quick-chips-row .chip:hover {
+  background: #282834 !important;
+  border-color: #00f2fe !important;
+  color: #ffffff !important;
+}
+
+#timelineStudioModal .pro-chips-grid .chip.active,
+#timelineStudioModal .pro-quick-chips-row .chip.active {
+  background: #00f2fe !important;
+  color: #09090b !important;
+  border-color: #00f2fe !important;
+  font-weight: 700 !important;
+}
+
+#timelineStudioModal .speed-chip-btn {
+  background: #202026 !important;
+  border: 1px solid #2e2e38 !important;
+  color: #e4e4e7 !important;
+}
+
+#timelineStudioModal .speed-chip-btn:hover {
+  border-color: #00f2fe !important;
+  background: #272734 !important;
+}
+
+#timelineStudioModal .speed-chip-btn.active {
+  border-color: #00f2fe !important;
+  background: rgba(0, 242, 254, 0.15) !important;
+  color: #00f2fe !important;
+}
+
+/* 3B. Center: Player Stage (Pitch Black Studio Monitor) */
+#timelineStudioModal .pro-player-stage {
+  background: #0c0c0e !important;
+}
+
+#timelineStudioModal .pro-player-monitor-wrap {
+  background: #000000 !important;
+  border: 1px solid #202026 !important;
+  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.95) !important;
+}
+
+#timelineStudioModal .pro-video-player {
+  background: #000000 !important;
+}
+
+#timelineStudioModal .pro-transport-bar {
+  background: #18181c !important;
+  border: 1px solid #272730 !important;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.7) !important;
+}
+
+#timelineStudioModal .btn-transport {
+  color: #a1a1aa !important;
+}
+
+#timelineStudioModal .btn-transport:hover {
+  background: #262630 !important;
+  color: #ffffff !important;
+}
+
+#timelineStudioModal .btn-transport.btn-play-main {
+  background: linear-gradient(135deg, #00f2fe, #4facfe) !important;
+  color: #09090b !important;
+  box-shadow: 0 0 18px rgba(0, 242, 254, 0.5) !important;
+}
+
+#timelineStudioModal .btn-transport.btn-play-main:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 28px rgba(0, 242, 254, 0.85) !important;
+}
+
+#timelineStudioModal .pro-timecode-box {
+  font-family: 'JetBrains Mono', monospace !important;
+  color: #00f2fe !important;
+}
+
+/* 3C. Right Column: Inspector Panel */
+#timelineStudioModal .pro-inspector-panel {
+  background: #141418 !important;
+  border-left: 1px solid #222228 !important;
+  color: #e4e4e7 !important;
+}
+
+#timelineStudioModal .meta-row {
+  border-bottom: 1px solid #22222a !important;
+  color: #a1a1aa !important;
+}
+
+#timelineStudioModal .meta-row b {
+  color: #ffffff !important;
+}
+
+/* 4. Multi-Track Timeline */
+#timelineStudioModal .pro-timeline-container {
+  background: #121215 !important;
+  border-top: 1px solid #22222a !important;
+  height: 175px !important;
+}
+
+#timelineStudioModal .pro-timeline-toolbar {
+  background: #18181c !important;
+  border-bottom: 1px solid #222228 !important;
+}
+
+#timelineStudioModal .btn-timeline-action {
+  background: #202026 !important;
+  border: 1px solid #2e2e38 !important;
+  color: #d4d4d8 !important;
+}
+
+#timelineStudioModal .btn-timeline-action:hover {
+  background: #282834 !important;
+  color: #00f2fe !important;
+  border-color: #00f2fe !important;
+}
+
+#timelineStudioModal .timeline-range-badge {
+  background: rgba(0, 242, 254, 0.1) !important;
+  border: 1px solid rgba(0, 242, 254, 0.35) !important;
+  color: #00f2fe !important;
+}
+
+#timelineStudioModal .timeline-zoom-chip {
+  color: #a1a1aa !important;
+}
+
+#timelineStudioModal .pro-timeline-tracks {
+  background: #0a0a0d !important;
+}
+
+#timelineStudioModal .pro-time-ruler {
+  border-bottom: 1px solid #222228 !important;
+  color: #71717a !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+#timelineStudioModal .pro-track-lane {
+  height: 42px !important;
+  margin-bottom: 6px !important;
+}
+
+#timelineStudioModal .pro-track-lane .track-tag {
+  width: 140px !important;
+  min-width: 140px !important;
+  color: #e4e4e7 !important;
+  background: #18181c !important;
+  border: 1px solid #272732 !important;
+  border-radius: 6px !important;
+  padding: 0 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  box-sizing: border-box !important;
+  font-size: 0.78rem !important;
+  white-space: nowrap !important;
+}
+
+#timelineStudioModal .btn-quick-ratio {
+  background: #202026;
+  border: 1px solid #2e2e38;
+  color: #a1a1aa;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+#timelineStudioModal .btn-quick-ratio:hover {
+  background: #282834;
+  color: #00f2fe;
+  border-color: #00f2fe;
+}
+
+#timelineStudioModal .btn-quick-ratio.active {
+  background: rgba(0, 242, 254, 0.15);
+  color: #00f2fe;
+  border-color: #00f2fe;
+}
+
+#timelineStudioModal .track-content-lane {
+  background: #141419 !important;
+  border: 1px solid #22222a !important;
+}
+
+#timelineStudioModal .video-clip-block {
+  background: linear-gradient(135deg, #1e293b, #334155) !important;
+  border: 1.5px solid #475569 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+
+#timelineStudioModal .video-clip-block:hover,
+#timelineStudioModal .video-clip-block.selected {
+  border-color: #00f2fe !important;
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.5) !important;
+}
+
+#timelineStudioModal .audio-clip-block {
+  background: linear-gradient(135deg, #064e3b, #047857) !important;
+  border: 1.5px solid #10b981 !important;
+  color: #ecfdf5 !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+#timelineStudioModal .text-clip-block {
+  background: linear-gradient(135deg, #581c87, #7e22ce) !important;
+  border: 1.5px solid #c084fc !important;
+  color: #faf5ff !important;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.25) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Authentic CapCut Audio Waveform Graphic */
+#timelineStudioModal .waveform-graphic {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(255, 255, 255, 0.45) 2px,
+    rgba(255, 255, 255, 0.45) 4px
+  );
+  opacity: 0.65;
+  pointer-events: none;
+  border-radius: 4px;
+}
+
+/* Filmstrip Thumbnails Preview Strip */
+#timelineStudioModal .clip-thumbnails-strip {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.08) 0px,
+    rgba(255, 255, 255, 0.08) 46px,
+    rgba(0, 0, 0, 0.6) 46px,
+    rgba(0, 0, 0, 0.6) 48px
+  );
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* Clip Trim Drag Handles (Left & Right) */
+#timelineStudioModal .clip-trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+  transition: all 0.2s ease;
+}
+#timelineStudioModal .clip-trim-handle:hover {
+  background: #00f2fe;
+}
+#timelineStudioModal .clip-trim-handle.handle-left {
+  left: 0;
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+  border-right: 1.5px solid rgba(0, 0, 0, 0.6);
+}
+#timelineStudioModal .clip-trim-handle.handle-right {
+  right: 0;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  border-left: 1.5px solid rgba(0, 0, 0, 0.6);
+}
+#timelineStudioModal .clip-trim-handle::after {
+  content: '';
+  width: 2px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 1px;
+}
+#timelineStudioModal .clip-trim-handle:hover::after {
+  background: #09090b;
+}
+
+#timelineStudioModal .pro-playhead-needle {
+  background: #00f2fe !important;
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.95) !important;
+}
+
+#timelineStudioModal .pro-playhead-needle::after {
+  background: #00f2fe !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 8px rgba(0, 242, 254, 0.8) !important;
+}
+
+#timelineStudioModal .pro-adjust-slider-row {
+  border-bottom: 1px solid #22222a !important;
+}
+
+#timelineStudioModal .pro-tools-drawer::-webkit-scrollbar-track,
+#timelineStudioModal .pro-inspector-panel::-webkit-scrollbar-track,
+#timelineStudioModal .pro-timeline-tracks::-webkit-scrollbar-track {
+  background: #141418 !important;
+}
+
+#timelineStudioModal .pro-tools-drawer::-webkit-scrollbar-thumb,
+#timelineStudioModal .pro-inspector-panel::-webkit-scrollbar-thumb,
+#timelineStudioModal .pro-timeline-tracks::-webkit-scrollbar-thumb {
+  background: #272732 !important;
+}
+
+#timelineStudioModal .pro-tools-drawer::-webkit-scrollbar-thumb:hover,
+#timelineStudioModal .pro-inspector-panel::-webkit-scrollbar-thumb:hover,
+#timelineStudioModal .pro-timeline-tracks::-webkit-scrollbar-thumb:hover {
+  background: #00f2fe !important;
+}
+
+/* ==========================================================================
+   🎬 CAPCUT PRO ADVANCED WORKSTATION SUITE:
+   Chroma Key Backdrop, Multi-Clip Controls, Beat Markers & Dynamic Animations
+   ========================================================================== */
+
+/* 1. Virtual Chroma Key Backdrop Layer (Placed under transparent video) */
+.pro-chroma-bg-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background-size: cover;
+  background-position: center;
+  transition: all 0.3s ease;
+}
+
+.pro-chroma-bg-layer.bg-penthouse {
+  background: linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.8)), radial-gradient(circle at 80% 20%, #38bdf8 0%, transparent 60%), #0f172a;
+}
+.pro-chroma-bg-layer.bg-cyberpunk {
+  background: linear-gradient(135deg, #09090b 0%, #1e1035 50%, #032030 100%), radial-gradient(circle at 50% 50%, #ec4899 0%, transparent 70%);
+}
+.pro-chroma-bg-layer.bg-studio {
+  background: radial-gradient(circle at center, #27272a 0%, #09090b 100%);
+}
+.pro-chroma-bg-layer.bg-sunset {
+  background: linear-gradient(180deg, #f97316 0%, #db2777 50%, #4c1d95 100%);
+}
+.pro-chroma-bg-layer.bg-blur {
+  background: #18181b;
+  filter: blur(20px);
+}
+.pro-chroma-bg-layer.bg-none {
+  background: #000000;
+}
+
+/* Ensure video is on top of chroma backdrop */
+#timelineStudioModal .pro-video-screen {
+  position: relative;
+  z-index: 2;
+}
+
+/* 2. Track Control Buttons (🔒 Lock & 👁️ Hide) */
+.btn-track-ctl {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #a1a1aa;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-track-ctl:hover {
+  background: rgba(0, 242, 254, 0.2);
+  color: #00f2fe;
+  border-color: #00f2fe;
+}
+.btn-track-ctl.active-lock {
+  background: rgba(239, 68, 68, 0.25) !important;
+  color: #ef4444 !important;
+  border-color: #ef4444 !important;
+}
+.btn-track-ctl.active-hide {
+  background: rgba(245, 158, 11, 0.25) !important;
+  color: #f59e0b !important;
+  border-color: #f59e0b !important;
+}
+
+/* 3. Audio Beat Markers on Timeline Ruler */
+.pro-beat-marks-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.beat-mark-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+  z-index: 5;
+}
+.beat-mark-tick::before {
+  content: '⚡';
+  position: absolute;
+  top: -12px;
+  left: -6px;
+  font-size: 9px;
+}
+
+/* 4. Text Subtitle Animations */
+@keyframes textTypewriter {
+  0% { width: 0; opacity: 0; }
+  10% { width: 0; opacity: 1; }
+  100% { width: 100%; opacity: 1; }
+}
+@keyframes textBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+@keyframes textPop {
+  0% { transform: scale(0.6); opacity: 0; }
+  80% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes textNeonPulse {
+  0%, 100% { filter: drop-shadow(0 0 5px #00f2fe) drop-shadow(0 0 15px #00f2fe); }
+  50% { filter: drop-shadow(0 0 15px #f43f5e) drop-shadow(0 0 30px #f43f5e); }
+}
+@keyframes textSlideUp {
+  0% { transform: translateY(30px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.anim-typewriter { animation: textPop 0.4s ease-out; }
+.anim-bounce { animation: textBounce 0.9s infinite ease-in-out; }
+.anim-pop { animation: textPop 0.35s ease-out; }
+.anim-pulse { animation: textNeonPulse 1.2s infinite ease-in-out; }
+.anim-slide { animation: textSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* 5. Template Card Hover */
+.template-card-item:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* 6. CapCut Audio Studio & Song Changer Styles */
+.btn-track-change-song {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(11, 15, 25, 0.85);
+  border: 1px solid rgba(0, 242, 254, 0.5);
+  color: #00f2fe;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.btn-track-change-song:hover {
+  background: #00f2fe;
+  color: #0b0f19;
+  border-color: #00f2fe;
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+}
+
+#timelineStudioModal .audio-clip-block {
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#timelineStudioModal .audio-clip-block:hover {
+  border-color: #00f2fe !important;
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.35) !important;
+}
+
+#timelineStudioModal .audio-clip-block.muted {
+  opacity: 0.45;
+  filter: grayscale(0.8);
+}
+
+.btn-bgm-preset {
+  text-align: left;
+  display: flex !important;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem !important;
+  padding: 0.55rem 0.75rem !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #e2e8f0 !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-bgm-preset:hover {
+  background: rgba(255, 255, 255, 0.09) !important;
+  border-color: rgba(0, 242, 254, 0.4) !important;
+  color: #fff !important;
+  transform: translateY(-1px);
+}
+
+.btn-bgm-preset.active {
+  background: rgba(16, 185, 129, 0.18) !important;
+  border-color: #10b981 !important;
+  color: #34d399 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3) !important;
+  font-weight: 700;
+}
+
+@keyframes audioGlowPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(0, 242, 254, 0); }
+  50% { box-shadow: 0 0 25px rgba(0, 242, 254, 0.6); }
+}
+
+.audio-pulse-focus {
+  animation: audioGlowPulse 1.2s ease-in-out 2;
+}
+
+/* ========================================================
+   🛡️ Strict View Isolation & Visibility Controls
+   ======================================================== */
+.hidden,
+.main-container.hidden,
+#videoStudioView.hidden,
+#videoStudioView.studio-3col-container.hidden,
+#schedulerView.hidden,
+#analyticsView.hidden {
+  display: none !important;
+}
+
+#analyticsView:not(.hidden) {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1.5rem !important;
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+}
+
+/* ========================================================
+   📸 Scheduler View: Luxury 3-Column Studio Aesthetic (Photo 2 Match)
+   ======================================================== */
+#schedulerView.hidden {
+  display: none !important;
+}
+
+#schedulerView:not(.hidden) {
+  display: grid !important;
+  grid-template-columns: 1fr 340px 1fr !important;
+  gap: 1.5rem !important;
+  max-width: 1440px !important;
+  margin: 0 auto !important;
+  padding: 1.5rem !important;
+  box-sizing: border-box !important;
+}
+
+.file-selected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #ecfdf5;
+  border: 1.5px solid #10b981;
+  color: #065f46;
+  padding: 0.55rem 0.95rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  width: 100%;
+  box-sizing: border-box;
+  justify-content: space-between;
+}
+
+.file-selected-badge .btn-remove-file {
+  background: rgba(239, 68, 68, 0.15);
+  border: none;
+  color: #ef4444;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  transition: all 0.2s ease;
+}
+
+.file-selected-badge .btn-remove-file:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+#schedulerView .prompt-panel,
+#schedulerView .output-panel {
+  background: #ffffff !important;
+  border: 1px solid rgba(215, 206, 192, 0.6) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04) !important;
+  padding: 1.5rem !important;
+}
+
+#schedulerView .preview-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+#schedulerView .studio-upload-card {
+  position: relative !important;
+  overflow: hidden !important;
+  background: #faf8f5 !important;
+  border: 1.5px dashed rgba(215, 206, 192, 0.8) !important;
+  border-radius: 16px !important;
+  padding: 1.6rem 1rem !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  transition: all 0.22s ease !important;
+}
+
+#schedulerView .studio-upload-card:hover {
+  border-color: #b89758 !important;
+  background: #fbf7ef !important;
+}
+
+#schedulerView .time-chip {
+  background: #fbf7ee !important;
+  border: 1px solid rgba(184, 151, 88, 0.3) !important;
+  color: #443f39 !important;
+  font-weight: 600 !important;
+  border-radius: 9999px !important;
+  padding: 0.4rem 0.8rem !important;
+  font-size: 0.78rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+#schedulerView .time-chip:hover,
+#schedulerView .time-chip.active {
+  background: #1c1917 !important;
+  color: #f7eedb !important;
+  border-color: #1c1917 !important;
+  transform: translateY(-1px) !important;
+}
+
+#schedulerView .part-card-item {
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+#schedulerView .part-card-item:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06) !important;
+  border-color: #b89758 !important;
+}
+
+#schedulerView #schedLatestPlayer.has-video {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+@media (max-width: 1100px) {
+  #schedulerView {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+
 

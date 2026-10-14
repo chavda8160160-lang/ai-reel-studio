@@ -53,7 +53,33 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 500 * 1024 * 1024 } // 500MB max
+  limits: {
+    fileSize: 15 * 1024 * 1024 * 1024, // 15GB max for 4K / full-length / multi-part videos
+    fieldSize: 100 * 1024 * 1024       // 100MB max for text form fields
+  }
+});
+
+// Serve uploaded media statically
+app.use('/uploads', express.static(UPLOADS_DIR));
+
+// 🎵 Timeline Studio BGM Audio Upload
+app.post('/api/audio/upload-timeline-bgm', upload.single('audioFile'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No audio file uploaded.' });
+    }
+    const relPath = `/uploads/${req.file.filename}`;
+    console.log(`🎵 [Timeline Studio] Custom audio uploaded: ${req.file.originalname} -> ${req.file.filename}`);
+    return res.json({
+      success: true,
+      audioUrl: relPath,
+      fileName: req.file.filename,
+      originalName: req.file.originalname
+    });
+  } catch (err) {
+    console.error('Audio upload error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Scheduled Reels Storage & Background Status Checker
@@ -352,12 +378,18 @@ function formatAssTime(seconds) {
 }
 
 // Generate Alex Hormozi Style Dynamic Subtitle (.ass) file
-function generateAssSubtitleFile(captions, hookText, durationSec = 30, styleMode = 'hormozi') {
+function generateAssSubtitleFile(captions, hookText, durationSec = 30, styleMode = 'hormozi', resX = 1080, resY = 1920) {
   const assPath = path.join(os.tmpdir(), `sub-${Date.now()}-${Math.round(Math.random() * 1000)}.ass`);
   let events = '';
 
   const primaryCol = styleMode === 'electric-cyan' ? '&H00FFFF00&' : '&H0000FFFF&'; // Cyan or Yellow
   const accentCol = styleMode === 'electric-cyan' ? '&H0000FFFF&' : '&H0000FF00&';  // Yellow or Neon Green
+
+  const isLandscape = resX > resY;
+  const wordFontSize = isLandscape ? 52 : 72;
+  const hookFontSize = isLandscape ? 44 : 58;
+  const wordMarginV = isLandscape ? 90 : 380;
+  const hookMarginV = isLandscape ? 60 : 220;
 
   // 1. Hook Badge at Top for the first 3.5 seconds
   if (hookText) {
@@ -383,7 +415,7 @@ function generateAssSubtitleFile(captions, hookText, durationSec = 30, styleMode
       { start: 0.5, end: Math.min(dur, step), text: "WAIT FOR THIS! 🔥", col: primaryCol },
       { start: step, end: Math.min(dur, step * 2), text: "WATCH TILL THE END 👀", col: accentCol },
       { start: step * 2, end: Math.min(dur, step * 3), text: "DON'T MISS THIS! 💡", col: primaryCol },
-      { start: step * 3, end: Math.min(dur, dur - 0.5), text: "FOLLOW FOR NEXT PART 🚀", col: '&H00FFFFFF&' }
+      { start: step * 3, end: Math.min(dur, dur - 0.5), text: isLandscape ? "SUBSCRIBE FOR PART 2 🔔" : "FOLLOW FOR NEXT PART 🚀", col: '&H00FFFFFF&' }
     ];
     for (const d of defaults) {
       if (d.start < dur) {
@@ -393,18 +425,18 @@ function generateAssSubtitleFile(captions, hookText, durationSec = 30, styleMode
   }
 
   const assContent = `[Script Info]
-Title: Alex Hormozi Dynamic Subtitles
+Title: Dynamic Subtitles
 ScriptType: v4.00+
 WrapStyle: 0
 ScaledBorderAndShadow: yes
 YCbCr Matrix: TV.601
-PlayResX: 1080
-PlayResY: 1920
+PlayResX: ${resX}
+PlayResY: ${resY}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: HormoziWord,Arial,72,&H0000FFFF,&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,3,2,60,60,380,1
-Style: HormoziHook,Arial,58,&H00FFFFFF,&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,7,2,8,60,60,220,1
+Style: HormoziWord,Arial,${wordFontSize},&H0000FFFF,&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,3,2,60,60,${wordMarginV},1
+Style: HormoziHook,Arial,${hookFontSize},&H00FFFFFF,&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,7,2,8,60,60,${hookMarginV},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -1130,6 +1162,11 @@ Respond ONLY with valid JSON:`;
     const outputFileName = `reel-${Date.now()}-${Math.round(Math.random() * 1000)}.mp4`;
     const outputPath = path.join(REELS_DIR, outputFileName);
     const isDirectUpload = req.body.isDirectUpload === 'true' || videoStyle === 'original' || targetDuration === 'original';
+    const videoType = req.body.videoType || 'shorts';
+    const isLandscape = (videoType === 'youtube_long' || videoType === 'cinema');
+    const isSquare = (videoType === 'square');
+    const targetW = isLandscape ? 1920 : (isSquare ? 1080 : 1080);
+    const targetH = isLandscape ? 1080 : (isSquare ? 1080 : 1920);
 
     let maxSec = 30;
     if (isDirectUpload) {
@@ -1150,10 +1187,10 @@ Respond ONLY with valid JSON:`;
 
     let vFilters = [];
     if (isDirectUpload) {
-      // Direct Upload: Preserve original colors and frame as-is, just adapt to 9:16 vertical
+      // Direct Upload: Preserve original colors and frame as-is, adapt to target resolution
       vFilters = [
-        'scale=1080:1920:force_original_aspect_ratio=decrease',
-        'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black'
+        `scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease`,
+        `pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black`
       ];
     } else {
       if (videoStyle === 'cinematic-movie') {
@@ -1169,24 +1206,24 @@ Respond ONLY with valid JSON:`;
       }
 
       vFilters = [
-        'scale=1080:1920:force_original_aspect_ratio=decrease',
-        'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
+        `scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease`,
+        `pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:black`,
         `eq=saturation=${sat}:contrast=${con}:brightness=${bri}`,
         'fade=t=in:st=0:d=0.8',
         `fade=t=out:st=${Math.max(1, maxSec - 1.5)}:d=1.5`
       ];
     }
 
-    console.log(`🎬 Rendering 9:16 Reel (${maxSec}s) | Direct Mode: ${isDirectUpload}`);
+    console.log(`🎬 Rendering ${isLandscape ? '16:9 HD' : (isSquare ? '1:1 Square' : '9:16 Vertical')} Video (${maxSec}s) | Format: ${videoType} | Direct: ${isDirectUpload}`);
 
     let assFilePath = null;
     if (!isDirectUpload && subtitlesStyle !== 'none') {
       try {
-        assFilePath = generateAssSubtitleFile(aiDirectorRecipe.captions, aiDirectorRecipe.hookOverlay, maxSec, subtitlesStyle);
+        assFilePath = generateAssSubtitleFile(aiDirectorRecipe.captions, aiDirectorRecipe.hookOverlay, maxSec, subtitlesStyle, targetW, targetH);
         if (assFilePath && fs.existsSync(assFilePath)) {
           const escapedAss = path.resolve(assFilePath).replace(/\\/g, '/').replace(/:/g, '\\:');
           vFilters.push(`subtitles='${escapedAss}'`);
-          console.log(`🎬 [Subtitles Engine] Burning Alex Hormozi dynamic subtitles (${subtitlesStyle})`);
+          console.log(`🎬 [Subtitles Engine] Burning dynamic subtitles (${subtitlesStyle})`);
         }
       } catch (assErr) {
         console.warn('⚠️ Subtitle generation notice:', assErr.message);
@@ -1377,8 +1414,11 @@ Respond ONLY with valid JSON:`;
       bgmEnabled: hasValidBgm,
       bgmTrack,
       fileName: outputFileName,
-      duration: `${maxSec} Seconds`,
-      aspectRatio: '9:16 (1080x1920) - Instagram Reels / YouTube Shorts',
+      duration: maxSec >= 60 ? `${Math.round(maxSec / 60)} Minutes (${maxSec}s)` : `${maxSec} Seconds`,
+      durationSec: maxSec,
+      videoType: videoType,
+      isLongVideo: isLandscape || maxSec > 180,
+      aspectRatio: isLandscape ? '16:9 (1920x1080) - YouTube Long Video' : (isSquare ? '1:1 (1080x1080) - Square' : '9:16 (1080x1920) - YouTube Shorts / Reels'),
       recipe: aiDirectorRecipe,
       isScheduled: !!scheduledItem,
       scheduledItem,
@@ -1786,7 +1826,7 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
 // 🎬 Feature #5: AI Timeline Studio & Video FX Editor (Cut, Filters, Text, Effects)
 app.post('/api/video/edit-timeline', async (req, res) => {
   try {
-    const { videoFileName, trimStart, trimEnd, speed, filter, textSize, textPosition, textColor, effects, customCaption, origVolume, rotate, flipH, flipV, adjust, voice, resolution, fps, aspect } = req.body;
+    const { videoFileName, trimStart, trimEnd, speed, filter, textSize, textPosition, textColor, effects, customCaption, origVolume, rotate, flipH, flipV, adjust, voice, resolution, fps, aspect, chromaKey, font, textAnim, clips, bgmTrack, bgmVolume, muteOrigAudio } = req.body;
     if (!videoFileName) {
       return res.status(400).json({ error: 'Video file name is required.' });
     }
@@ -1837,6 +1877,14 @@ app.post('/api/video/edit-timeline', async (req, res) => {
     const hasZoom = fxList.includes('zoom');
     if (hasZoom) {
       vFilters.push('crop=in_w*0.88:in_h*0.88:(in_w-out_w)/2:(in_h-out_h)/2');
+    }
+
+    // 3B. Chroma Key (Green / Blue Screen Color Keying)
+    if (chromaKey && chromaKey.enabled) {
+      const rawCol = (chromaKey.color || '#00FF00').replace('#', '');
+      const sim = Math.max(0.01, Math.min(0.8, parseFloat(chromaKey.similarity) || 0.25));
+      const blend = Math.max(0.0, Math.min(0.5, parseFloat(chromaKey.blend) || 0.10));
+      vFilters.push(`colorkey=0x${rawCol}:${sim}:${blend}`);
     }
 
     // 4. Scale & Pad according to Canvas Aspect & Output Resolution
@@ -1967,6 +2015,7 @@ app.post('/api/video/edit-timeline', async (req, res) => {
         assEvents += `Dialogue: 0,${sTime},${eTime},EditorStyle,,0,0,0,,{\\c${chosenCol}}${cleanText}\n`;
       });
 
+      const chosenFont = (font && typeof font === 'string') ? font.replace(/['",]/g, '') : 'Arial';
       const assContent = `[Script Info]
 Title: Timeline Studio Subtitles
 ScriptType: v4.00+
@@ -1975,7 +2024,7 @@ PlayResY: 1920
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: EditorStyle,Arial,${chosenSize},${chosenCol},&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,3,${chosenAlign},60,60,${chosenMarginV},1
+Style: EditorStyle,${chosenFont},${chosenSize},${chosenCol},&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,3,${chosenAlign},60,60,${chosenMarginV},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -1987,19 +2036,47 @@ ${assEvents}`;
     }
 
     const finalClipDuration = rawDuration / playbackSpeed;
-    console.log(`🎬 [CapCut Studio] Rendering edited reel: Start ${startSec}s, Raw ${rawDuration}s -> Final ${finalClipDuration.toFixed(1)}s, Speed ${playbackSpeed}x, Filter: ${selectedFilter}, FX: ${fxList.join(',')}`);
+
+    // Check if user specified a BGM Soundtrack
+    let bgmFilePath = null;
+    if (bgmTrack && typeof bgmTrack === 'string' && bgmTrack.trim() && bgmTrack !== 'none') {
+      const cleanBgm = bgmTrack.trim();
+      const pPublic = path.join(__dirname, 'public', cleanBgm.startsWith('/') ? cleanBgm.slice(1) : cleanBgm);
+      const pUploads = path.join(UPLOADS_DIR, path.basename(cleanBgm));
+      const pPublicBgm = path.join(__dirname, 'public', 'audio', 'bgm', path.basename(cleanBgm));
+      if (fs.existsSync(pPublic)) bgmFilePath = pPublic;
+      else if (fs.existsSync(pUploads)) bgmFilePath = pUploads;
+      else if (fs.existsSync(pPublicBgm)) bgmFilePath = pPublicBgm;
+    }
+
+    const isMuteOrig = (muteOrigAudio === true || muteOrigAudio === 'true');
+    const bgmVol = Math.max(0, Math.min(2, parseFloat(bgmVolume) ?? 0.85));
+
+    console.log(`🎬 [CapCut Studio] Rendering edited reel: Start ${startSec}s, Raw ${rawDuration}s -> Final ${finalClipDuration.toFixed(1)}s, Speed ${playbackSpeed}x, Filter: ${selectedFilter}, BGM: ${bgmFilePath ? path.basename(bgmFilePath) : 'None'}, MuteOrig: ${isMuteOrig}`);
 
     await new Promise((resolve, reject) => {
-      let ff = ffmpeg(videoPath)
-        .setStartTime(startSec)
-        .setDuration(rawDuration)
-        .videoFilters(vFilters);
+      if (bgmFilePath && fs.existsSync(bgmFilePath)) {
+        let ff = ffmpeg(videoPath)
+          .setStartTime(startSec)
+          .setDuration(rawDuration)
+          .input(bgmFilePath)
+          .inputOptions(['-stream_loop -1']); // Loop BGM if clip is long
 
-      if (aFilters.length > 0) {
-        ff = ff.audioFilters(aFilters);
-      }
+        const complex = [];
+        complex.push(`[0:v]${vFilters.join(',')}[vout]`);
 
-      ff.outputOptions([
+        if (isMuteOrig) {
+          complex.push(`[1:a]volume=${bgmVol},afade=t=in:st=0:d=1.0,afade=t=out:st=${Math.max(1, rawDuration - 1.5)}:d=1.5[aout]`);
+        } else {
+          let origAF = aFilters.length > 0 ? aFilters.join(',') : 'volume=1.0';
+          complex.push(`[0:a]${origAF}[orig_a]`);
+          complex.push(`[1:a]volume=${bgmVol},afade=t=in:st=0:d=1.0,afade=t=out:st=${Math.max(1, rawDuration - 1.5)}:d=1.5[bgm_a]`);
+          complex.push(`[orig_a][bgm_a]amix=inputs=2:duration=first:dropout_transition=2[aout]`);
+        }
+
+        ff.complexFilter(complex).outputOptions([
+          '-map [vout]',
+          '-map [aout]',
           '-c:v libx264',
           '-preset fast',
           '-crf 22',
@@ -2011,6 +2088,31 @@ ${assEvents}`;
         .save(outputPath)
         .on('end', () => resolve())
         .on('error', (err) => reject(err));
+      } else {
+        let ff = ffmpeg(videoPath)
+          .setStartTime(startSec)
+          .setDuration(rawDuration)
+          .videoFilters(vFilters);
+
+        if (isMuteOrig) {
+          ff = ff.noAudio();
+        } else if (aFilters.length > 0) {
+          ff = ff.audioFilters(aFilters);
+        }
+
+        ff.outputOptions([
+          '-c:v libx264',
+          '-preset fast',
+          '-crf 22',
+          '-pix_fmt yuv420p',
+          '-c:a aac',
+          '-b:a 192k',
+          '-movflags +faststart'
+        ])
+        .save(outputPath)
+        .on('end', () => resolve())
+        .on('error', (err) => reject(err));
+      }
     });
 
     if (assPath && fs.existsSync(assPath)) {
@@ -2151,7 +2253,7 @@ async function getOrRefreshYouTubeToken(customToken) {
   return token;
 }
 
-// YouTube Data API v3 100% Direct Publishing Engine
+// YouTube Data API v3 100% Direct Publishing Engine (Shorts & up to 10-Min Videos)
 async function publishShortDirectToYouTube(videoPath, title, description, tags, customToken) {
   const token = await getOrRefreshYouTubeToken(customToken);
   if (!token) throw new Error('YouTube Access Token is missing. Please add token in Settings.');
@@ -2161,7 +2263,32 @@ async function publishShortDirectToYouTube(videoPath, title, description, tags, 
   const videoBuffer = await fsp.readFile(videoPath);
   console.log(`🚀 [YouTube API] Starting direct upload for ${path.basename(videoPath)} (${(fileStat.size / (1024*1024)).toFixed(2)} MB)...`);
 
-  const tagArray = tags ? (Array.isArray(tags) ? tags : String(tags).split(',').map(t => t.trim())) : ['Shorts', 'Viral', 'Trending'];
+  // Detect whether this is a YouTube Short (vertical & <= 180s) or Long Video
+  let isShort = false;
+  let durationSec = 30;
+  try {
+    await new Promise((resProbe) => {
+      ffmpeg.ffprobe(videoPath, (err, meta) => {
+        if (!err && meta?.format?.duration) {
+          durationSec = Math.round(meta.format.duration);
+          const vStream = meta.streams?.find(s => s.codec_type === 'video');
+          const w = vStream?.width || 1080;
+          const h = vStream?.height || 1920;
+          if (w < h && durationSec <= 180) {
+            isShort = true;
+          }
+        }
+        resProbe();
+      });
+    });
+  } catch (_) {}
+
+  const defaultTitle = isShort ? 'Viral AI Reel #Shorts' : 'Viral AI Video | Must Watch';
+  const defaultDesc = isShort 
+    ? 'Created with AI Video Director #Shorts #Reels' 
+    : 'Created with AI Video Director. Watch full video, like and subscribe for more!';
+  const defaultTags = isShort ? ['Shorts', 'Viral', 'Trending'] : ['YouTube', 'Video', 'Trending', 'Viral'];
+  const tagArray = tags ? (Array.isArray(tags) ? tags : String(tags).split(',').map(t => t.trim())) : defaultTags;
 
   // Step 1: Initialize Resumable Upload Session
   const initRes = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
@@ -2174,8 +2301,8 @@ async function publishShortDirectToYouTube(videoPath, title, description, tags, 
     },
     body: JSON.stringify({
       snippet: {
-        title: title || 'Viral AI Reel #Shorts',
-        description: description || 'Created with AI Video Director #Shorts #Reels',
+        title: title || defaultTitle,
+        description: description || defaultDesc,
         tags: tagArray,
         categoryId: '22'
       },
@@ -2214,14 +2341,18 @@ async function publishShortDirectToYouTube(videoPath, title, description, tags, 
   }
 
   const videoId = uploadData.id;
-  const postUrl = `https://www.youtube.com/shorts/${videoId}`;
-  console.log(`🎉 [YouTube API] Short Published Successfully! Video ID: ${videoId} -> ${postUrl}`);
+  const postUrl = isShort 
+    ? `https://www.youtube.com/shorts/${videoId}` 
+    : `https://www.youtube.com/watch?v=${videoId}`;
+  console.log(`🎉 [YouTube API] ${isShort ? 'Short' : 'Long Video'} Published Successfully! Video ID: ${videoId} -> ${postUrl}`);
 
   return {
     success: true,
     videoId,
     postUrl,
-    message: '🎉 YouTube Short published directly to your channel!'
+    isShort,
+    durationSec,
+    message: isShort ? '🎉 YouTube Short published directly to your channel!' : '🎉 YouTube Video (10-Min / Long) published directly to your channel!'
   };
 }
 
@@ -2259,6 +2390,9 @@ app.post('/api/social/publish-youtube-direct', async (req, res) => {
   }
 });
 
+// Map to prevent duplicate double-posts within 3 minutes
+const recentPublishMap = new Map();
+
 // One-Click Dual Social Media Publishing (Instagram Reels + YouTube Shorts simultaneously)
 app.post('/api/social/publish-both-direct', async (req, res) => {
   try {
@@ -2280,6 +2414,19 @@ app.post('/api/social/publish-both-direct', async (req, res) => {
     if (!videoPath || !fs.existsSync(videoPath)) {
       return res.status(404).json({ error: 'Video file not found.' });
     }
+
+    // 🛡️ Double-post guard: check if this video was published in the last 3 minutes
+    const baseName = path.basename(videoPath);
+    const lastPostTime = recentPublishMap.get(baseName);
+    if (lastPostTime && (Date.now() - lastPostTime) < 180000 && req.body.force !== true) {
+      console.warn(`⚠️ [Double-Post Guard] Video "${baseName}" was already published ${Math.round((Date.now() - lastPostTime)/1000)}s ago! Blocking duplicate post.`);
+      return res.json({
+        success: true,
+        alreadyPublished: true,
+        message: 'આ વિડીયો હમણાં જ થોડીક સેકન્ડ પહેલા પોસ્ટ થઈ ગયો છે. ડુપ્લિકેટ પોસ્ટ અટકાવી દેવામાં આવી છે!'
+      });
+    }
+    recentPublishMap.set(baseName, Date.now());
 
     const fullCaption = `${caption || ''}\n\n${hashtags || ''}`.trim();
     const results = { instagram: null, youtube: null };
@@ -2786,29 +2933,63 @@ function saveSchedulerState(state) {
   fs.writeFileSync(SCHEDULER_FILE, JSON.stringify(state, null, 2), 'utf8');
 }
 
-let dailyCronTask = null;
+let dailyCronTasks = [];
 
-function setupDailyCron(timeStr) {
-  if (dailyCronTask) {
-    dailyCronTask.stop();
-    dailyCronTask = null;
+function setupDailyCron(timeInput) {
+  if (Array.isArray(dailyCronTasks)) {
+    dailyCronTasks.forEach(t => {
+      try { if (t && t.stop) t.stop(); } catch (_) {}
+    });
   }
+  dailyCronTasks = [];
 
-  const parts = (timeStr || '08:30').split(':');
-  const hour = parseInt(parts[0], 10) || 8;
-  const minute = parseInt(parts[1], 10) || 30;
-  const cronExp = `${minute} ${hour} * * *`;
+  let times = [];
+  if (Array.isArray(timeInput)) {
+    times = timeInput;
+  } else if (typeof timeInput === 'string') {
+    times = timeInput.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  if (times.length === 0) times = ['08:30'];
 
-  dailyCronTask = cron.schedule(cronExp, async () => {
-    console.log(`⏰ [CRON TRIGGER] Executing scheduled daily 30s cut at ${timeStr}...`);
+  times.forEach(timeStr => {
+    const parts = (timeStr || '08:30').split(':');
+    const hour = parseInt(parts[0], 10) || 8;
+    const minute = parseInt(parts[1], 10) || 30;
+    const cronExp = `${minute} ${hour} * * *`;
+
     try {
-      await processNextReelFromMasterVideo();
-    } catch (err) {
-      console.error('Cron job execution failed:', err);
+      const task = cron.schedule(cronExp, async () => {
+        console.log(`⏰ [CRON TRIGGER] Executing scheduled daily 30s cut at ${timeStr}...`);
+        try {
+          await processNextReelFromMasterVideo();
+        } catch (err) {
+          console.error(`Cron job execution failed for ${timeStr}:`, err);
+        }
+      });
+      dailyCronTasks.push(task);
+      console.log(`⏰ Daily auto-pilot cron activated for ${timeStr} every day (cron: "${cronExp}")`);
+    } catch (e) {
+      console.error(`Failed to register cron for ${timeStr}:`, e.message);
     }
   });
+}
 
-  console.log(`⏰ Daily auto-pilot cron activated for ${timeStr} every day (cron: "${cronExp}")`);
+// Smart Series / Franchise Name Extractor (e.g. GTA 6, The Punisher)
+function getSeriesLabel(fileName) {
+  if (!fileName) return '';
+  const lower = fileName.toLowerCase();
+  if (lower.includes('gta') || lower.includes('grand theft auto')) {
+    return 'GTA 6';
+  }
+  if (lower.includes('punisher')) {
+    return 'The Punisher';
+  }
+  const clean = fileName
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/[._-]/g, ' ')
+    .replace(/\b(720p|1080p|2160p|4k|web-dl|ds4k|hindi|english|dub|esub|x264|x265|hdhub4u|ag|extended|look|official|trailer|gameplay)\b/gi, '')
+    .trim();
+  return clean.length > 20 ? clean.slice(0, 20) : clean;
 }
 
 // Core Engine: Cut Next 30s Segment from Master Video with Zero Duplication
@@ -2833,6 +3014,17 @@ async function processNextReelFromMasterVideo() {
 
   // If this video has exhausted all its 30s parts, automatically check if next video exists in queue!
   if (startSec >= totalDur) {
+    // 🧹 Auto-Delete the finished master video from internal memory to free up disk space!
+    const finishedVidPath = state.masterVideo && state.masterVideo.path;
+    if (finishedVidPath && fs.existsSync(finishedVidPath)) {
+      try {
+        fs.unlinkSync(finishedVidPath);
+        console.log(`🧹 [Auto-Cleanup] All reels finished! Master video automatically deleted from app memory: ${finishedVidPath}`);
+      } catch (e) {
+        console.warn(`Could not delete finished master video:`, e.message);
+      }
+    }
+
     if (state.masterVideosQueue && state.masterVideosQueue.length > 0) {
       const nextVid = state.masterVideosQueue.shift();
       console.log(`🎬 [Auto-Pilot Queue] Finished master video "${state.masterVideo.originalName}". Automatically promoting next video in queue: "${nextVid.originalName}"`);
@@ -2843,7 +3035,9 @@ async function processNextReelFromMasterVideo() {
       totalDur = nextVid.totalDurationSeconds || 60;
       startSec = 0;
     } else {
-      throw new Error('All 30-second reel parts from this master video and queue are complete!');
+      state.isActive = false;
+      saveSchedulerState(state);
+      throw new Error('All 30-second reel parts from this master video are complete! Video automatically cleaned up from app memory.');
     }
   }
 
@@ -2872,16 +3066,19 @@ async function processNextReelFromMasterVideo() {
 
   // 2. Gemini AI Vision for Part Title, Caption & Hashtags
   const apiKey = process.env.GEMINI_API_KEY;
+  const seriesName = getSeriesLabel(state.masterVideo.originalName || state.masterVideo.fileName);
+  const hookLabel = seriesName ? `${seriesName} • PART ${partNum} 🔥` : `PART ${partNum} 🔥`;
+
   let partRecipe = {
-    detectedTopic: `Part ${partNum} Story`,
+    detectedTopic: seriesName ? `${seriesName} Part ${partNum} Scene` : `Part ${partNum} Story`,
     themeName: 'Cinematic Vibrant',
     saturation: 1.25,
     contrast: 1.12,
     brightness: 0.02,
-    viralTitle: `Part ${partNum}: Watch What Happens Next! 🔥 #Shorts`,
-    viralCaption: `Part ${partNum} | Don't miss this episode! Follow for Part ${partNum + 1} tomorrow at ${state.scheduledTime}. ✨`,
-    viralHashtags: `#ViralShorts #Part${partNum} #TrendingReels #StoryTime #Shorts #DailyVideo`,
-    hookOverlay: `Part ${partNum} 🔥`
+    viralTitle: seriesName ? `🎮 ${seriesName} - Part ${partNum}: Watch What Happens! 🔥 #Shorts` : `Part ${partNum}: Watch What Happens Next! 🔥 #Shorts`,
+    viralCaption: `🎮 ${seriesName ? seriesName + ' ' : ''}Part ${partNum} | Don't miss this gameplay! Follow for Part ${partNum + 1} next at ${state.scheduledTime}. ✨`,
+    viralHashtags: `#${(seriesName || 'Series').replace(/\s+/g, '')} #Part${partNum} #Gaming #GTA6 #GTA6Clips #TrendingReels #StoryTime #Shorts #DailyVideo`,
+    hookOverlay: hookLabel
   };
 
   if (apiKey) {
@@ -2893,6 +3090,8 @@ async function processNextReelFromMasterVideo() {
       parts.push({
         text: `You are an elite YouTube Shorts & Instagram Reels Director.
 This is Part ${partNum} of a multi-part daily series cut from a longer video (Time: ${startSec}s to ${endSec}s).
+FRANCHISE / TOPIC: "${seriesName || 'Gaming / Movie Series'}".
+CRITICAL REQUIREMENT: Since this is "${seriesName || 'Gaming'}", the on-screen text, title and caption MUST prominently feature "${seriesName || 'GTA 6'}"!
 Analyze the visual frame.
 Generate JSON with:
 1. "detectedTopic": 1-sentence description of this scene
@@ -2900,11 +3099,11 @@ Generate JSON with:
 3. "saturation": Number between 1.15 and 1.35
 4. "contrast": Number between 1.08 and 1.18
 5. "brightness": Number between -0.01 and 0.03
-6. "viralTitle": Irresistible title starting with "Part ${partNum}: " (include emojis & #Shorts)
-7. "viralCaption": Captivating caption referencing Part ${partNum} with hook and reminder to follow for next part
-8. "viralHashtags": 12 viral hashtags including #Part${partNum} #Shorts #TrendingReels
-9. "hookOverlay": "Part ${partNum} 🔥"
-10. "captions": Array of 3-5 timed punchy uppercase subtitle items, e.g. [{"startSec": 0.5, "endSec": 3.5, "text": "PART ${partNum} MUST WATCH", "highlightColor": "&H0000FFFF&"}]
+6. "viralTitle": Irresistible title starting with "${seriesName ? seriesName + ' - Part ' + partNum : 'Part ' + partNum}: " (include emojis & #Shorts)
+7. "viralCaption": Captivating caption referencing "${seriesName} Part ${partNum}" with hook and reminder to follow for Part ${partNum + 1}
+8. "viralHashtags": 12 viral hashtags including #${(seriesName || 'GTA6').replace(/\s+/g, '')} #Part${partNum} #Gaming #Shorts #TrendingReels
+9. "hookOverlay": "${hookLabel}"
+10. "captions": Array of 3-5 timed punchy uppercase subtitle items, e.g. [{"startSec": 0.5, "endSec": 3.5, "text": "${(seriesName || 'GTA 6').toUpperCase()} PART ${partNum}", "highlightColor": "&H0000FFFF&"}]
 Respond ONLY with valid JSON.`
       });
 
@@ -2920,7 +3119,14 @@ Respond ONLY with valid JSON.`
       if (aiRes.ok) {
         const d = await aiRes.json();
         const txt = d.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (txt) partRecipe = { ...partRecipe, ...JSON.parse(txt) };
+        if (txt) {
+          const parsed = JSON.parse(txt);
+          partRecipe = { ...partRecipe, ...parsed };
+          // Always ensure the franchise name (e.g. GTA 6) is in the hookOverlay
+          if (seriesName && (!partRecipe.hookOverlay || !partRecipe.hookOverlay.toLowerCase().includes(seriesName.toLowerCase()))) {
+            partRecipe.hookOverlay = hookLabel;
+          }
+        }
       }
     } catch (e) {
       console.warn('AI recipe error for part:', e.message);
@@ -3054,6 +3260,9 @@ Respond ONLY with valid JSON.`
     }
   }
 
+  // 🛡️ Prevent manual duplicate publish for this file
+  recentPublishMap.set(outputFileName, Date.now());
+
   // 📲 Send Instant Alert to WhatsApp & Telegram
   if (historyItem.instagramPostUrl || historyItem.youtubePostUrl) {
     let plain = `🎉 ForgeAI Auto-Pilot: Part ${partNum} Published!\n\n`;
@@ -3141,20 +3350,31 @@ app.post('/api/scheduler/setup', upload.fields([{ name: 'masterVideo', maxCount:
 
       saveSchedulerState(state);
       console.log(`🎬 Auto-Pilot: Processed ${videoItems.length} video(s). Active: "${state.masterVideo.originalName}", Queue count: ${state.masterVideosQueue.length}`);
-    } else {
-      state.scheduledTime = scheduledTime;
-      saveSchedulerState(state);
     }
 
+    const { scheduledTimes, reelsPerDay } = req.body;
+    if (scheduledTimes) {
+      state.scheduledTimes = Array.isArray(scheduledTimes) ? scheduledTimes : String(scheduledTimes).split(',').map(s => s.trim()).filter(Boolean);
+      state.scheduledTime = state.scheduledTimes[0] || scheduledTime;
+      state.reelsPerDay = parseInt(reelsPerDay, 10) || state.scheduledTimes.length;
+    } else if (scheduledTime) {
+      state.scheduledTime = scheduledTime;
+      state.scheduledTimes = [scheduledTime];
+      state.reelsPerDay = parseInt(reelsPerDay, 10) || 1;
+    }
+    state.isActive = true;
+    saveSchedulerState(state);
+
     if (state.isActive) {
-      setupDailyCron(state.scheduledTime);
+      setupDailyCron(state.scheduledTimes || state.scheduledTime);
     }
 
     const totalVideosCount = (state.masterVideo ? 1 : 0) + (state.masterVideosQueue ? state.masterVideosQueue.length : 0);
+    const timesStr = (state.scheduledTimes || [state.scheduledTime]).join(', ');
     res.json({
       success: true,
       state,
-      message: `શેડ્યૂલર દરરોજ ${state.scheduledTime} વાગ્યે સેટ થઈ ગયું છે! કુલ ${totalVideosCount} વિડિયો ઉપલબ્ધ છે.`
+      message: `શેડ્યૂલર દરરોજ ${timesStr} વાગ્યે (${state.reelsPerDay || 1} રીલ/દિવસ) સેટ થઈ ગયું છે! કુલ ${totalVideosCount} વિડિયો ઉપલબ્ધ છે.`
     });
   } catch (err) {
     console.error('Scheduler setup error:', err);
@@ -3337,6 +3557,174 @@ app.post('/api/scheduler/load-sample', async (req, res) => {
       success: true,
       state,
       message: '૧૫ મિનિટનો સેમ્પલ વિડીયો સફળતાપૂર્વક લોડ થઈ ગયો! (કુલ ૩૦ ભાગો)'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 📥 Auto-Detect videos in Downloads folder & subfolders
+app.get('/api/scheduler/detect-downloads', async (req, res) => {
+  try {
+    const downloadsDir = path.join(os.homedir(), 'Downloads');
+    if (!fs.existsSync(downloadsDir)) {
+      return res.json({ success: true, videos: [] });
+    }
+
+    const results = [];
+    const scanDir = async (dir, depth = 0) => {
+      if (depth > 2) return;
+      try {
+        const entries = await fsp.readdir(dir, { withFileTypes: true });
+        for (const ent of entries) {
+          const fullPath = path.join(dir, ent.name);
+          if (ent.isDirectory()) {
+            await scanDir(fullPath, depth + 1);
+          } else if (/\.(mp4|mkv|mov|webm|avi)$/i.test(ent.name)) {
+            try {
+              const stats = await fsp.stat(fullPath);
+              if (stats.size > 1024 * 1024) { // Videos >= 1MB
+                results.push({
+                  name: ent.name,
+                  path: fullPath,
+                  sizeMB: (stats.size / (1024 * 1024)).toFixed(1),
+                  modifiedAt: stats.mtime
+                });
+              }
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
+    };
+
+    await scanDir(downloadsDir, 0);
+
+    results.sort((a, b) => b.modifiedAt - a.modifiedAt);
+    res.json({ success: true, videos: results.slice(0, 25) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ⚡ 1-Click Load Video directly from Downloads into Auto-Pilot
+app.post('/api/scheduler/load-downloads-video', async (req, res) => {
+  try {
+    const { videoPath, scheduledTime } = req.body;
+    let targetPath = videoPath;
+    
+    if (!targetPath) {
+      const downloadsDir = path.join(os.homedir(), 'Downloads');
+      let candidateVideos = [];
+      const scanDir = async (dir, depth = 0) => {
+        if (depth > 2) return;
+        try {
+          const entries = await fsp.readdir(dir, { withFileTypes: true });
+          for (const ent of entries) {
+            const fullPath = path.join(dir, ent.name);
+            if (ent.isDirectory()) {
+              await scanDir(fullPath, depth + 1);
+            } else if (/\.(mp4|mkv|mov|webm|avi)$/i.test(ent.name)) {
+              try {
+                const stat = await fsp.stat(fullPath);
+                candidateVideos.push({ path: fullPath, mtime: stat.mtime });
+              } catch (_) {}
+            }
+          }
+        } catch (_) {}
+      };
+      await scanDir(downloadsDir, 0);
+      if (candidateVideos.length > 0) {
+        candidateVideos.sort((a, b) => b.mtime - a.mtime);
+        targetPath = candidateVideos[0].path;
+      }
+    }
+
+    if (!targetPath || !fs.existsSync(targetPath)) {
+      return res.status(404).json({ error: 'ડાઉનલોડ્સ ફોલ્ડરમાં વિડીયો મળ્યો નથી.' });
+    }
+
+    const durationSeconds = await new Promise((resolve) => {
+      ffmpeg.ffprobe(targetPath, (err, metadata) => {
+        if (err || !metadata?.format?.duration) resolve(3083);
+        else resolve(Math.round(metadata.format.duration));
+      });
+    });
+
+    const totalParts = Math.ceil(durationSeconds / 30);
+    const fileName = path.basename(targetPath);
+
+    // 🛡️ Copy to Internal Application Memory (uploads/videos/) so user can safely delete from PC Downloads
+    const safeBaseName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const internalMasterName = `master-${Date.now()}-${safeBaseName}`;
+    const internalMasterPath = path.join(UPLOADS_DIR, internalMasterName);
+
+    let effectivePath = targetPath;
+    let isInternalCopy = false;
+
+    try {
+      console.log(`📦 Linking/storing video to internal application storage: ${internalMasterPath}...`);
+      try {
+        await fsp.link(targetPath, internalMasterPath);
+        console.log(`⚡ Master video instantly hardlinked (0s) in app memory!`);
+      } catch (_) {
+        await fsp.copyFile(targetPath, internalMasterPath);
+        console.log(`✅ Master video copied to app memory!`);
+      }
+      effectivePath = internalMasterPath;
+      isInternalCopy = true;
+    } catch (copyErr) {
+      console.warn('Could not store file in internal memory, using source path:', copyErr.message);
+    }
+
+    const { scheduledTimes, reelsPerDay = 1 } = req.body;
+    let activeTimes = [];
+    if (scheduledTimes && Array.isArray(scheduledTimes) && scheduledTimes.length > 0) {
+      activeTimes = scheduledTimes;
+    } else if (scheduledTime) {
+      activeTimes = [scheduledTime];
+    } else {
+      activeTimes = ['08:30'];
+    }
+
+    let state = getSchedulerState();
+    const newVideoItem = {
+      id: `mv-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      originalName: fileName,
+      fileName: path.basename(effectivePath),
+      path: effectivePath,
+      sourceOriginalPath: targetPath,
+      isInternalCopy,
+      totalDurationSeconds: durationSeconds,
+      totalDurationFormatted: `${Math.floor(durationSeconds / 60)} min ${durationSeconds % 60} sec`,
+      totalParts,
+      addedAt: new Date().toISOString()
+    };
+
+    let responseMsg = '';
+    if (!state.masterVideo || !state.masterVideo.path || !fs.existsSync(state.masterVideo.path) || req.body.replaceActive === 'true') {
+      state.isActive = true;
+      state.scheduledTime = activeTimes[0] || '08:30';
+      state.scheduledTimes = activeTimes;
+      state.reelsPerDay = parseInt(reelsPerDay, 10) || activeTimes.length || 1;
+      state.masterVideo = newVideoItem;
+      state.currentPart = 1;
+      state.lastPostedSeconds = 0;
+      if (!Array.isArray(state.masterVideosQueue)) state.masterVideosQueue = [];
+      if (!Array.isArray(state.history)) state.history = [];
+      responseMsg = `"${fileName}" સફળતાપૂર્વક એપ્લિકેશન મેમરીમાં સેવ થઈ ગયો! (હવે તમે PC Downloads માંથી ફાઈલ ડિલીટ કરી શકો છો. જ્યારે ${totalParts} ભાગો પૂરા થશે ત્યારે એપમાંથી પણ આપોઆપ ડિલીટ થઈ જશે)`;
+    } else {
+      if (!Array.isArray(state.masterVideosQueue)) state.masterVideosQueue = [];
+      state.masterVideosQueue.push(newVideoItem);
+      responseMsg = `🎬 "${fileName}" કતાર (Queue #${state.masterVideosQueue.length}) માં ઉમેરાઈ ગયો! પહેલાનો વિડીયો પૂરો થતાં જ આ વિડીયો આપોઆપ ચાલુ થઈ જશે.`;
+    }
+
+    saveSchedulerState(state);
+    setupDailyCron(state.scheduledTimes || state.scheduledTime);
+
+    res.json({
+      success: true,
+      state,
+      message: responseMsg
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -3838,7 +4226,58 @@ app.post('/api/storage/clean', async (req, res) => {
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
+// 🛡️ Multer & Express Global Error Handler (prevents raw HTML error dumps)
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    console.error('⚠️ [Multer Error]:', err.code, err.message);
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        error: 'વિડીયો ફાઈલની સાઈઝ ખૂબ મોટી છે (15GB થી વધુ). કૃપા કરીને 15GB થી નાની ફાઈલ વાપરો અથવા "1-Click Load from PC Downloads" વાપરો.'
+      });
+    }
+    return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
+  }
+  if (err) {
+    console.error('⚠️ [Server Error]:', err.message || err);
+    return res.status(500).json({ success: false, error: err.message || 'Server error occurred.' });
+  }
+  next();
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 ForgeAI Reel Studio & Video Automation running at http://localhost:${PORT}`);
   console.log(`🎬 Rendered 30s Reels stored in: ${REELS_DIR}`);
+
+  // Restore daily scheduler cron if active on server boot
+  try {
+    const schedState = getSchedulerState();
+    if (schedState.isActive && schedState.masterVideo) {
+      const times = schedState.scheduledTimes || [schedState.scheduledTime || '08:30'];
+      setupDailyCron(times);
+      console.log(`⏰ [Auto-Pilot Scheduler] Restored daily schedule for [${times.join(', ')}] (${schedState.reelsPerDay || 1} reels/day) for "${schedState.masterVideo.originalName}" (Next: Part ${schedState.currentPart} at ${schedState.lastPostedSeconds}s)`);
+
+      // 🛡️ Smart Catch-Up: If PC was turned off during scheduled time, catch up automatically on boot!
+      const now = new Date();
+      const currentHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const todayISO = now.toISOString().slice(0, 10);
+      const postedToday = (schedState.history || []).filter(h => h.postedAt && h.postedAt.startsWith(todayISO)).length;
+      
+      const missedSlots = times.filter(t => t <= currentHM).length;
+      if (missedSlots > postedToday) {
+        const needed = missedSlots - postedToday;
+        console.log(`⏰ [Smart Catch-Up] PC was turned ON after scheduled time! Detected ${needed} missed reel(s) for today. Triggering automatic catch-up in 30 seconds...`);
+        setTimeout(async () => {
+          try {
+            console.log(`🚀 [Smart Catch-Up] Executing missed reel for today now...`);
+            await processNextReelFromMasterVideo();
+          } catch (e) {
+            console.warn('Smart catch-up error:', e.message);
+          }
+        }, 30000);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to restore scheduler on boot:', err.message);
+  }
 });

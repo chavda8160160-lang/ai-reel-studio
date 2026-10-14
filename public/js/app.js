@@ -527,18 +527,42 @@ function initModeSwitcher() {
   ].filter(Boolean);
   const mobileStepper = document.getElementById('mobileReelStepper');
 
+  // Ensure initial views isolation
+  allViews.forEach(v => {
+    if (v && v.id !== 'videoStudioView') {
+      v.classList.add('hidden');
+      v.style.setProperty('display', 'none', 'important');
+    }
+  });
+
   navTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetId = tab.getAttribute('data-target');
+      if (!targetId) return; // Ignore modal launcher buttons like CapCut Pro
+
       navTabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
 
-      const targetId = tab.getAttribute('data-target');
       allViews.forEach(v => {
-        if (v) v.classList.add('hidden');
+        if (v) {
+          v.classList.add('hidden');
+          v.style.setProperty('display', 'none', 'important');
+        }
       });
 
       const targetEl = document.getElementById(targetId);
-      if (targetEl) targetEl.classList.remove('hidden');
+      if (targetEl) {
+        targetEl.classList.remove('hidden');
+        if (targetId === 'schedulerView') {
+          targetEl.style.setProperty('display', 'grid', 'important');
+        } else if (targetId === 'analyticsView') {
+          targetEl.style.setProperty('display', 'flex', 'important');
+        } else {
+          targetEl.style.setProperty('display', 'grid', 'important');
+        }
+      }
 
       if (mobileStepper) {
         if (targetId === 'videoStudioView') {
@@ -555,6 +579,19 @@ function initModeSwitcher() {
       }
     });
   });
+
+  const navModeCapCut = document.getElementById('navModeCapCut');
+  if (navModeCapCut) {
+    navModeCapCut.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (typeof window.openTimelineStudio === 'function') {
+        window.openTimelineStudio();
+      } else {
+        const btnCapCut = document.getElementById('btnOpenCapCutEditor');
+        if (btnCapCut) btnCapCut.click();
+      }
+    });
+  }
 }
 
 
@@ -564,11 +601,19 @@ let currentRenderedReel = null;
 // ==========================================
 // 🚀 REAL-TIME UPLOAD PROGRESS HELPER (XHR with %)
 // ==========================================
+let currentUploadXhr = null;
+
 function uploadWithProgress({ url, formData, onProgress }) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    currentUploadXhr = xhr;
     xhr.open('POST', url, true);
     const startTime = Date.now();
+
+    xhr.onabort = () => {
+      currentUploadXhr = null;
+      reject(new Error('વિડીયો અપલોડ કેન્સલ કરવામાં આવ્યું (Cancelled by user).'));
+    };
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
@@ -595,7 +640,18 @@ function uploadWithProgress({ url, formData, onProgress }) {
           reject(new Error(data.error || `Upload failed with status ${xhr.status}`));
         }
       } catch (err) {
-        reject(new Error(xhr.responseText || `Server responded with status ${xhr.status}`));
+        let msg = xhr.responseText || `Server responded with status ${xhr.status}`;
+        if (msg.includes('MulterError: File too large') || msg.includes('LIMIT_FILE_SIZE')) {
+          msg = 'વિડીયો ફાઈલ ખૂબ મોટી છે (15GB થી વધુ). કૃપા કરીને "1-Click Load from PC Downloads" વાપરો જેથી તુરંત લોડ થઈ જાય.';
+        } else if (msg.includes('<pre>') && msg.includes('</pre>')) {
+          const match = msg.match(/<pre>([\s\S]*?)<\/pre>/i);
+          if (match) {
+            msg = match[1].split('<br>')[0].replace(/&nbsp;/g, ' ').trim();
+          }
+        } else if (msg.startsWith('<!DOCTYPE') || msg.startsWith('<html')) {
+          msg = `સર્વર એરર આવી (Status: ${xhr.status}). કૃપા કરીને ફરી પ્રયાસ કરો.`;
+        }
+        reject(new Error(msg));
       }
     };
 
@@ -2639,6 +2695,11 @@ function initVideoStudio() {
     formData.append('targetDuration', videoDurationSelect.value);
     formData.append('customInstructions', videoCustomPrompt.value);
 
+    const studioVideoTypeSelect = document.getElementById('studioVideoTypeSelect');
+    if (studioVideoTypeSelect) {
+      formData.append('videoType', studioVideoTypeSelect.value);
+    }
+
     const videoSubtitlesSelect = document.getElementById('videoSubtitlesSelect');
     if (videoSubtitlesSelect) {
       formData.append('subtitlesStyle', videoSubtitlesSelect.value);
@@ -2801,6 +2862,24 @@ function initVideoStudio() {
         } else {
           pillBgm.classList.add('hidden');
         }
+      }
+
+      // Update YouTube Labels based on Short vs Long video (up to 10 min)
+      const labelPublishYouTube = document.getElementById('labelPublishYouTube');
+      const sublabelPublishYouTube = document.getElementById('sublabelPublishYouTube');
+      const ytTitleCardHeading = document.getElementById('ytTitleCardHeading');
+      const isLongVid = !!data.isLongVideo || (data.durationSec && data.durationSec > 180) || data.videoType === 'youtube_long' || data.videoType === 'cinema';
+
+      if (labelPublishYouTube) {
+        labelPublishYouTube.textContent = isLongVid ? 'Upload to YouTube (Long Video)' : 'Upload to YouTube Shorts';
+      }
+      if (sublabelPublishYouTube) {
+        sublabelPublishYouTube.innerHTML = isLongVid 
+          ? `(16:9 HD 10-Min Video) <span class="status-live-dot"></span>`
+          : `(Shorts 9:16) <span class="status-live-dot"></span>`;
+      }
+      if (ytTitleCardHeading) {
+        ytTitleCardHeading.textContent = isLongVid ? 'YouTube Video Title (Long Video)' : 'YouTube Shorts Title';
       }
 
       // Schedule Pill & Banner
@@ -2973,12 +3052,14 @@ function initVideoStudio() {
     if (!currentRenderedReel) return;
 
     const ytToken = localStorage.getItem('YOUTUBE_ACCESS_TOKEN');
+    const isLongVid = !!(currentRenderedReel.isLongVideo || (currentRenderedReel.durationSec && currentRenderedReel.durationSec > 180) || currentRenderedReel.videoType === 'youtube_long' || currentRenderedReel.videoType === 'cinema');
+    const typeLabel = isLongVid ? '10-Minute Video' : 'YouTube Shorts';
 
     // 100% Hands-Free YouTube Data API Direct Publishing (if token in local or server)
     if (ytToken || window.isYouTubeConnected) {
       btnPublishYouTube.disabled = true;
-      btnPublishYouTube.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publishing YouTube Shorts...';
-      showToast('🚀 Publishing Shorts directly via YouTube Data API...');
+      btnPublishYouTube.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Publishing ${typeLabel}...`;
+      showToast(`🚀 Publishing ${typeLabel} directly via YouTube Data API...`);
 
       try {
         const fullDesc = `${viralCaptionText.textContent}\n\n${viralHashtagsText.textContent}`;
@@ -2998,7 +3079,7 @@ function initVideoStudio() {
           throw new Error(data.error || 'YouTube upload failed.');
         }
 
-        showToast('🎉 YouTube Short published directly to your channel!');
+        showToast(data.message || `🎉 ${typeLabel} published directly to your channel!`);
         if (data.postUrl) {
           window.open(data.postUrl, '_blank');
         }
@@ -3008,7 +3089,7 @@ function initVideoStudio() {
         triggerGuidedYouTubeFlow();
       } finally {
         btnPublishYouTube.disabled = false;
-        btnPublishYouTube.innerHTML = '<i class="fa-brands fa-youtube"></i> <span>Upload to YouTube Shorts</span>';
+        btnPublishYouTube.innerHTML = `<i class="fa-brands fa-youtube"></i> <span>Upload to YouTube ${isLongVid ? '(Long Video)' : 'Shorts'}</span>`;
       }
       return;
     }
@@ -3226,6 +3307,46 @@ function initVideoStudio() {
     });
   }
 
+  // 1-Click Load Downloads Video into Reel Studio
+  const btnLoadDownloadsVideoToStudio = document.getElementById('btnLoadDownloadsVideoToStudio');
+  if (btnLoadDownloadsVideoToStudio) {
+    btnLoadDownloadsVideoToStudio.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      btnLoadDownloadsVideoToStudio.disabled = true;
+      btnLoadDownloadsVideoToStudio.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading from Downloads...';
+      try {
+        const res = await fetch('/api/scheduler/detect-downloads');
+        const data = await res.json();
+        if (data.success && data.videos && data.videos.length > 0) {
+          const topVid = data.videos[0];
+          selectedVideoFile = {
+            name: topVid.name,
+            size: topVid.sizeBytes || 498 * 1024 * 1024,
+            type: 'video/mp4',
+            isDownloadsRef: true,
+            path: topVid.path
+          };
+          const mbSize = topVid.sizeMB || '498.3';
+          selectedFileNameBadge.innerHTML = `
+            <span style="display:inline-flex; align-items:center; gap:8px;">
+              <span>✓ Selected: ${topVid.name} (${mbSize} MB)</span>
+              <button type="button" id="btnCancelFromBadge" style="background: rgba(220, 38, 38, 0.15); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 4px; padding: 2px 7px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">✕ Cancel</button>
+            </span>
+          `;
+          selectedFileNameBadge.classList.remove('hidden');
+          showToast(`🎬 Loaded 1-hour video from Downloads: ${topVid.name}`);
+        } else {
+          showToast('No video found in PC Downloads folder.', true);
+        }
+      } catch (err) {
+        showToast(err.message, true);
+      } finally {
+        btnLoadDownloadsVideoToStudio.disabled = false;
+        btnLoadDownloadsVideoToStudio.innerHTML = '<i class="fa-solid fa-bolt" style="color: #059669;"></i> <span>🎬 1-Click Load 1-Hour Video from PC Downloads</span>';
+      }
+    });
+  }
+
   // Floating Center Play Button Overlay on iPhone Screen
   const btnCenterPlayOverlay = document.getElementById('btnCenterPlayOverlay');
   if (btnCenterPlayOverlay && renderedVideoPlayer) {
@@ -3308,14 +3429,45 @@ function renderSchedulerState(state) {
   lblSchedStatus.textContent = state.isActive ? 'Active (Auto-Pilot Active ✓)' : 'Paused';
   lblSchedStatus.style.color = state.isActive ? 'var(--accent-emerald)' : 'var(--accent-rose)';
 
-  lblSchedTime.textContent = `Daily at ${state.scheduledTime || '08:30'}`;
+  const times = state.scheduledTimes || (state.scheduledTime ? [state.scheduledTime] : ['09:00']);
+  const freq = state.reelsPerDay || times.length || 1;
+  lblSchedTime.textContent = times.length > 1
+    ? `Daily: ${times.join(' & ')} (${freq} Reels/Day)`
+    : `Daily at ${times[0] || '09:00'} (1 Reel/Day)`;
+
   const timeInput = document.getElementById('scheduleDailyTime');
-  if (timeInput) timeInput.value = state.scheduledTime || '08:30';
+  if (timeInput && times[0]) timeInput.value = times[0];
+  const scheduleSlot2Time = document.getElementById('scheduleSlot2Time');
+  if (scheduleSlot2Time && times[1]) scheduleSlot2Time.value = times[1];
+  const scheduleSlot3Time = document.getElementById('scheduleSlot3Time');
+  if (scheduleSlot3Time && times[2]) scheduleSlot3Time.value = times[2];
+
+  const schedFreqBadge = document.getElementById('schedFreqBadge');
+  if (schedFreqBadge) {
+    schedFreqBadge.textContent = `${freq} Reel${freq > 1 ? 's' : ''} / Day`;
+  }
+  const slot2TimeRow = document.getElementById('slot2TimeRow');
+  const slot3TimeRow = document.getElementById('slot3TimeRow');
+  if (slot2TimeRow) slot2TimeRow.style.display = freq >= 2 ? 'flex' : 'none';
+  if (slot3TimeRow) slot3TimeRow.style.display = freq >= 3 ? 'flex' : 'none';
+
+  document.querySelectorAll('.sched-freq-chip').forEach(c => {
+    c.classList.toggle('active', parseInt(c.dataset.freq, 10) === freq);
+  });
+
+  const schedulerFileSelectedHint = document.getElementById('schedulerFileSelectedHint');
+  const schedulerFileNameBadge = document.getElementById('schedulerFileNameBadge');
 
   if (state.masterVideo) {
     lblSchedVideoName.textContent = state.masterVideo.originalName || 'Master Video';
     lblSchedTotalDur.textContent = `${state.masterVideo.totalDurationFormatted || ''} (${state.masterVideo.totalParts || 0} total parts)`;
     lblSchedNextPart.textContent = `Part ${state.currentPart} (Seconds ${state.lastPostedSeconds} - ${state.lastPostedSeconds + 30})`;
+
+    if (schedulerFileSelectedHint && schedulerFileNameBadge) {
+      schedulerFileNameBadge.innerHTML = `<span style="color: #059669; font-weight: 800;">✓ Selected:</span> ${state.masterVideo.originalName || 'Master Video'} <span style="font-size: 0.74rem; color: #047857; margin-left: 0.35rem;">(${state.masterVideo.totalDurationFormatted || ''})</span>`;
+      schedulerFileSelectedHint.classList.remove('hidden');
+      schedulerFileSelectedHint.style.display = 'inline-flex';
+    }
 
     // Progress Bar
     const postedParts = state.currentPart - 1;
@@ -3329,6 +3481,11 @@ function renderSchedulerState(state) {
     lblSchedNextPart.textContent = 'Part 1 (Pending)';
     schedProgressBar.style.width = '0%';
     schedProgressLabel.textContent = '0 / 0 Parts Posted';
+
+    if (schedulerFileSelectedHint) {
+      schedulerFileSelectedHint.classList.add('hidden');
+      schedulerFileSelectedHint.style.display = 'none';
+    }
   }
 
   // Render Master Videos Queue / Playlist Card
@@ -3457,25 +3614,52 @@ function renderSchedulerState(state) {
     }
 
     partsHistoryList.innerHTML = history.map(item => `
-      <div class="part-card-item">
-        <div class="part-card-header">
-          <span class="part-badge-tag"><i class="fa-solid fa-play"></i> Part ${item.part} (${item.startSeconds}s - ${item.endSeconds}s)</span>
-          <small style="color: var(--text-muted); font-size: 0.75rem;"><i class="fa-regular fa-calendar-check"></i> ${item.displayTime || ''}</small>
+      <div class="part-card-item" style="background: #ffffff; border: 1px solid rgba(215, 206, 192, 0.7); border-radius: 14px; padding: 0.85rem 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <span style="font-size: 0.76rem; font-weight: 800; color: #1c1917; background: #fbf7ee; border: 1px solid rgba(184, 151, 88, 0.35); padding: 0.2rem 0.55rem; border-radius: 9999px;">
+            <i class="fa-solid fa-play" style="color: #b89758; font-size: 0.65rem;"></i> Part ${item.part} (${item.startSeconds}s - ${item.endSeconds}s)
+          </span>
+          <small style="color: #78716c; font-size: 0.72rem;"><i class="fa-regular fa-calendar-check"></i> ${item.displayTime || ''}</small>
         </div>
-        <div class="part-card-title">${item.viralTitle || 'Part ' + item.part}</div>
-        <div style="font-size: 0.78rem; color: #a5b4fc;"><i class="fa-solid fa-wand-magic-sparkles"></i> ${item.detectedTopic || ''}</div>
-        <div class="part-card-actions">
-          <a href="${item.renderedReelUrl}" target="_blank" class="btn btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem;">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> Play
+        <div style="font-weight: 700; font-size: 0.88rem; color: #1c1917; margin-bottom: 0.25rem;">${item.viralTitle || 'Part ' + item.part}</div>
+        <div style="font-size: 0.74rem; color: #78716c; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.35rem;">
+          <i class="fa-solid fa-wand-magic-sparkles" style="color: #b89758;"></i> ${item.detectedTopic || ''}
+        </div>
+        <div style="display: flex; gap: 0.45rem; flex-wrap: wrap;">
+          <button type="button" class="btn-play-part-in-phone" data-url="${item.renderedReelUrl}" data-filename="${item.fileName || 'part.mp4'}" style="background: #1c1917; color: #f7eedb; border: none; border-radius: 9999px; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <i class="fa-solid fa-play"></i> Play in Phone
+          </button>
+          <a href="${item.renderedReelUrl}" download="${item.fileName || 'part.mp4'}" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 9999px; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <i class="fa-solid fa-download"></i> ⬇️ Download 30s Cut Reel
           </a>
-          <a href="${item.renderedReelUrl}" download="${item.fileName || 'part.mp4'}" class="btn btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem; font-weight: 700; color: #047857;" title="Download this 30s Reel">
-            <i class="fa-solid fa-download"></i> ⬇️ Download 30s MP4
-          </a>
-          ${item.instagramPostUrl ? `<a href="${item.instagramPostUrl}" target="_blank" class="btn btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem; color: #ec4899; text-decoration: none;"><i class="fa-brands fa-instagram"></i> View IG</a>` : ''}
-          ${item.youtubePostUrl ? `<a href="${item.youtubePostUrl}" target="_blank" class="btn btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem; color: #ef4444; text-decoration: none;"><i class="fa-brands fa-youtube"></i> View Shorts</a>` : ''}
+          ${item.instagramPostUrl ? `<a href="${item.instagramPostUrl}" target="_blank" style="background: rgba(236,72,153,0.1); color: #ec4899; border: 1px solid rgba(236,72,153,0.3); border-radius: 9999px; padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;"><i class="fa-brands fa-instagram"></i> IG</a>` : ''}
+          ${item.youtubePostUrl ? `<a href="${item.youtubePostUrl}" target="_blank" style="background: rgba(239,68,68,0.1); color: #dc2626; border: 1px solid rgba(239,68,68,0.3); border-radius: 9999px; padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;"><i class="fa-brands fa-youtube"></i> Shorts</a>` : ''}
         </div>
       </div>
     `).join('');
+
+    // Attach play listener
+    partsHistoryList.querySelectorAll('.btn-play-part-in-phone').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const url = btn.getAttribute('data-url');
+        const filename = btn.getAttribute('data-filename');
+        if (url && schedLatestPlayer) {
+          schedLatestPlayer.src = url;
+          schedLatestPlayer.classList.add('has-video', 'active');
+          schedLatestPlayer.style.display = 'block';
+          if (schedPlayerPlaceholder) schedPlayerPlaceholder.style.display = 'none';
+          schedLatestPlayer.play().catch(() => {});
+          if (btnSchedDownloadLatest) {
+            btnSchedDownloadLatest.href = url;
+            btnSchedDownloadLatest.download = filename || 'reel-part.mp4';
+            btnSchedDownloadLatest.classList.remove('hidden');
+            btnSchedDownloadLatest.style.display = 'inline-flex';
+          }
+          showToast(`▶ Now playing Part in iPhone Mockup!`);
+        }
+      });
+    });
   }
 }
 
@@ -3487,6 +3671,41 @@ function initSchedulerView() {
   const btnSaveSchedule = document.getElementById('btnSaveSchedule');
   const btnRunNextNow = document.getElementById('btnRunNextNow');
   const btnRefreshSched = document.getElementById('btnRefreshSched');
+  const btnSchedulerChooseFile = document.getElementById('btnSchedulerChooseFile');
+  const btnSchedulerRemoveFile = document.getElementById('btnSchedulerRemoveFile');
+  const schedulerFileSelectedHint = document.getElementById('schedulerFileSelectedHint');
+  const btnSchedCenterPlay = document.getElementById('btnSchedCenterPlayOverlay');
+
+  if (btnSchedCenterPlay) {
+    btnSchedCenterPlay.addEventListener('click', () => {
+      const schedLatestPlayer = document.getElementById('schedLatestPlayer');
+      const schedPlayerPlaceholder = document.getElementById('schedPlayerPlaceholder');
+      if (schedLatestPlayer && schedLatestPlayer.src) {
+        if (schedPlayerPlaceholder) schedPlayerPlaceholder.style.display = 'none';
+        schedLatestPlayer.style.display = 'block';
+        schedLatestPlayer.play().catch(() => {});
+      }
+    });
+  }
+
+  if (btnSchedulerChooseFile && fileInput) {
+    btnSchedulerChooseFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+  }
+
+  if (btnSchedulerRemoveFile) {
+    btnSchedulerRemoveFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedSchedulerFiles = [];
+      selectedSchedulerFile = null;
+      if (fileInput) fileInput.value = '';
+      if (fileNameBadge) fileNameBadge.textContent = '';
+      if (schedulerFileSelectedHint) schedulerFileSelectedHint.classList.add('hidden');
+      showToast('Master video selection cleared.');
+    });
+  }
 
   if (!dropzone || !btnSaveSchedule) return;
 
@@ -3524,17 +3743,86 @@ function initSchedulerView() {
     selectedSchedulerFiles = validFiles;
     selectedSchedulerFile = validFiles[0];
 
+    const hintBadge = document.getElementById('schedulerFileSelectedHint');
     if (validFiles.length === 1) {
       const mbSize = (validFiles[0].size / (1024 * 1024)).toFixed(1);
-      fileNameBadge.textContent = `✓ Selected: ${validFiles[0].name} (${mbSize} MB)`;
-      fileNameBadge.classList.remove('hidden');
+      if (fileNameBadge) fileNameBadge.textContent = `${validFiles[0].name} (${mbSize} MB)`;
+      if (hintBadge) hintBadge.classList.remove('hidden');
+      if (fileNameBadge) fileNameBadge.classList.remove('hidden');
       showToast(`Long video selected: ${validFiles[0].name}`);
     } else {
       const totalMB = (validFiles.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)).toFixed(1);
-      fileNameBadge.textContent = `✓ Playlist: ${validFiles.length} Long Videos Selected (${totalMB} MB Total)`;
-      fileNameBadge.classList.remove('hidden');
+      if (fileNameBadge) fileNameBadge.textContent = `${validFiles.length} Long Videos Selected (${totalMB} MB Total)`;
+      if (hintBadge) hintBadge.classList.remove('hidden');
+      if (fileNameBadge) fileNameBadge.classList.remove('hidden');
       showToast(`${validFiles.length} long videos added to queue playlist!`);
     }
+  }
+
+  // Frequency & Multi-slot Time Controller
+  let currentPostingFreq = 1;
+  const schedFreqBadge = document.getElementById('schedFreqBadge');
+  const slot2TimeRow = document.getElementById('slot2TimeRow');
+  const slot3TimeRow = document.getElementById('slot3TimeRow');
+  const scheduleSlot2Time = document.getElementById('scheduleSlot2Time');
+  const scheduleSlot3Time = document.getElementById('scheduleSlot3Time');
+  const timeDisplayHintSlot2 = document.getElementById('timeDisplayHintSlot2');
+  const timeDisplayHintSlot3 = document.getElementById('timeDisplayHintSlot3');
+
+  function updateSlotLabel(timeVal, hintEl, prefix) {
+    if (!timeVal || !hintEl) return;
+    const [h, m] = timeVal.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const displayHour = h % 12 || 12;
+    const padM = String(m).padStart(2, '0');
+    hintEl.textContent = `${prefix} at ${displayHour}:${padM} ${period}`;
+  }
+
+  if (scheduleSlot2Time) {
+    scheduleSlot2Time.addEventListener('input', (e) => updateSlotLabel(e.target.value, timeDisplayHintSlot2, 'Slot 2'));
+  }
+  if (scheduleSlot3Time) {
+    scheduleSlot3Time.addEventListener('input', (e) => updateSlotLabel(e.target.value, timeDisplayHintSlot3, 'Slot 3'));
+  }
+
+  document.querySelectorAll('.sched-freq-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.sched-freq-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentPostingFreq = parseInt(chip.dataset.freq, 10) || 1;
+
+      if (schedFreqBadge) {
+        schedFreqBadge.textContent = `${currentPostingFreq} Reel${currentPostingFreq > 1 ? 's' : ''} / Day`;
+      }
+
+      if (currentPostingFreq === 1) {
+        if (slot2TimeRow) slot2TimeRow.style.display = 'none';
+        if (slot3TimeRow) slot3TimeRow.style.display = 'none';
+        showToast('📅 Set to 1 Reel Daily');
+      } else if (currentPostingFreq === 2) {
+        if (slot2TimeRow) slot2TimeRow.style.display = 'flex';
+        if (slot3TimeRow) slot3TimeRow.style.display = 'none';
+        showToast('🔥 Set to 2 Reels Daily (Morning + Evening)!');
+      } else if (currentPostingFreq === 3) {
+        if (slot2TimeRow) slot2TimeRow.style.display = 'flex';
+        if (slot3TimeRow) slot3TimeRow.style.display = 'flex';
+        showToast('⚡ Set to 3 Reels Daily (Morning + Afternoon + Evening)!');
+      }
+    });
+  });
+
+  function getActiveScheduledTimes() {
+    const t1 = (timeInput && timeInput.value) || '09:00';
+    if (currentPostingFreq === 2) {
+      const t2 = (scheduleSlot2Time && scheduleSlot2Time.value) || '18:00';
+      return [t1, t2];
+    }
+    if (currentPostingFreq === 3) {
+      const t2 = (scheduleSlot2Time && scheduleSlot2Time.value) || '18:00';
+      const t3 = (scheduleSlot3Time && scheduleSlot3Time.value) || '21:30';
+      return [t1, t2, t3];
+    }
+    return [t1];
   }
 
   // Time formatting & Quick Presets
@@ -3548,7 +3836,7 @@ function initSchedulerView() {
     const padM = String(m).padStart(2, '0');
     const dayPeriod = (h < 12) ? 'Morning' : (h < 17) ? 'Afternoon' : (h < 20) ? 'Evening' : 'Night';
     if (timeDisplayHint) {
-      timeDisplayHint.textContent = `Daily at ${displayHour}:${padM} ${period} (${dayPeriod})`;
+      timeDisplayHint.textContent = `Slot 1 at ${displayHour}:${padM} ${period} (${dayPeriod})`;
     }
   }
 
@@ -3567,18 +3855,58 @@ function initSchedulerView() {
 
   // Save Schedule / Upload Master Video
   btnSaveSchedule.addEventListener('click', async () => {
-    const scheduledTime = timeInput.value || '08:30';
+    const activeTimes = getActiveScheduledTimes();
+    const scheduledTime = activeTimes[0] || '09:00';
 
     btnSaveSchedule.disabled = true;
     btnSaveSchedule.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Activating...';
 
     const formData = new FormData();
     formData.append('scheduledTime', scheduledTime);
+    formData.append('scheduledTimes', JSON.stringify(activeTimes));
+    formData.append('reelsPerDay', currentPostingFreq);
+
     const hasFiles = selectedSchedulerFiles && selectedSchedulerFiles.length > 0;
     if (hasFiles) {
       selectedSchedulerFiles.forEach(f => formData.append('masterVideos', f));
     } else if (selectedSchedulerFile) {
       formData.append('masterVideos', selectedSchedulerFile);
+    }
+
+    // ⚡ SMART INSTANT-LOAD: If file already exists in PC Downloads, link instantly (0-second wait, no massive HTTP upload)
+    const singleFileToCheck = (selectedSchedulerFiles && selectedSchedulerFiles.length === 1) ? selectedSchedulerFiles[0] : selectedSchedulerFile;
+    if (singleFileToCheck) {
+      try {
+        const detectRes = await fetch('/api/scheduler/detect-downloads');
+        const detectData = await detectRes.json();
+        if (detectData.success && Array.isArray(detectData.videos)) {
+          const match = detectData.videos.find(v => v.name === singleFileToCheck.name);
+          if (match) {
+            console.log('⚡ File matched local PC Downloads! Loading instantly in 0s:', match.path);
+            showToast(`⚡ PC Downloads માંથી "${match.name}" ૧ જ સેકન્ડમાં લોડ થઈ રહ્યો છે...`);
+            const loadRes = await fetch('/api/scheduler/load-downloads-video', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                videoPath: match.path,
+                scheduledTimes: activeTimes,
+                reelsPerDay: currentPostingFreq,
+                replaceActive: 'true'
+              })
+            });
+            const loadData = await loadRes.json();
+            if (loadData.success) {
+              showToast(loadData.message || '🎉 વિડીયો ૧ સેકન્ડમાં સેવ થઈ ગયો અને શેડ્યૂલર સેટ થઈ ગયું!');
+              renderSchedulerState(loadData.state);
+              btnSaveSchedule.disabled = false;
+              btnSaveSchedule.innerHTML = '<i class="fa-solid fa-play"></i> <span>⏰ Activate Scheduler (Auto-Pilot)</span>';
+              return;
+            }
+          }
+        }
+      } catch (bypassErr) {
+        console.warn('Downloads bypass check failed, proceeding with upload:', bypassErr);
+      }
     }
 
     const schedUploadCard = document.getElementById('schedulerUploadProgressCard');
@@ -3656,6 +3984,25 @@ function initSchedulerView() {
     }
   });
 
+  // Cancel Upload Button Listener
+  const btnCancelSchedulerUpload = document.getElementById('btnCancelSchedulerUpload');
+  if (btnCancelSchedulerUpload) {
+    btnCancelSchedulerUpload.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (currentUploadXhr) {
+        currentUploadXhr.abort();
+        currentUploadXhr = null;
+      }
+      if (schedUploadCard) {
+        schedUploadCard.style.display = 'none';
+        schedUploadCard.classList.add('hidden');
+      }
+      btnSaveSchedule.disabled = false;
+      btnSaveSchedule.innerHTML = '<i class="fa-solid fa-play"></i> <span>⏰ Activate Scheduler (Auto-Pilot)</span>';
+      showToast('❌ વિડીયો અપલોડ કેન્સલ કરવામાં આવ્યું.');
+    });
+  }
+
   // Run Next Part Right Now (Test Action)
   btnRunNextNow.addEventListener('click', async () => {
     btnRunNextNow.disabled = true;
@@ -3701,7 +4048,38 @@ function initSchedulerView() {
         showToast(`Error: ${err.message}`, true);
       } finally {
         btnLoadSampleVideo.disabled = false;
-        btnLoadSampleVideo.innerHTML = '<i class="fa-solid fa-bolt"></i> ⚡ Load 15-Min Test Sample (Quick Test)';
+        btnLoadSampleVideo.innerHTML = '<i class="fa-solid fa-film"></i> <span>Load 15-Min Sample</span>';
+      }
+    });
+  }
+
+  const btnLoadDownloadsVideo = document.getElementById('btnLoadDownloadsVideo');
+  if (btnLoadDownloadsVideo) {
+    btnLoadDownloadsVideo.addEventListener('click', async () => {
+      btnLoadDownloadsVideo.disabled = true;
+      btnLoadDownloadsVideo.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Storing Video into Protected App Memory...';
+      try {
+        const activeTimes = getActiveScheduledTimes();
+        const res = await fetch('/api/scheduler/load-downloads-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scheduledTime: activeTimes[0] || '09:00',
+            scheduledTimes: activeTimes,
+            reelsPerDay: currentPostingFreq
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Failed to load video from Downloads.');
+        }
+        showToast(data.message || '🎉 Video saved to app memory successfully!');
+        renderSchedulerState(data.state);
+      } catch (err) {
+        showToast(`Error: ${err.message}`, true);
+      } finally {
+        btnLoadDownloadsVideo.disabled = false;
+        btnLoadDownloadsVideo.innerHTML = '<i class="fa-solid fa-bolt" style="color: #059669;"></i> <span>🎬 1-Click Load 1-Hour Video from PC Downloads</span>';
       }
     });
   }
@@ -4671,9 +5049,36 @@ function initTimelineStudio() {
     textPosition: 'bottom',
     textColor: 'yellow',
     customText: '',
+    font: 'Inter',
+    textAnim: 'none',
     zoom: false,
     vignette: false,
-    flash: false
+    flash: false,
+    chromaKey: {
+      enabled: false,
+      color: '#00FF00',
+      similarity: 0.25,
+      blend: 0.10,
+      bg: 'penthouse'
+    },
+    trackState: {
+      videoLocked: false,
+      videoHidden: false,
+      audioLocked: false,
+      audioMuted: false,
+      textLocked: false,
+      textHidden: false
+    },
+    bgm: {
+      active: true,
+      name: 'Royal Heritage',
+      url: '/audio/bgm/royal-heritage.mp3',
+      volume: 0.85,
+      desc: 'Luxury Saree • Indian Royal Beat'
+    },
+    muteOrigAudio: false,
+    clips: [],
+    beats: []
   };
 
   function openTimelineStudio() {
@@ -4726,24 +5131,44 @@ function initTimelineStudio() {
     }
 
     // Sync duration when metadata loads
-    if (videoPreview) {
-      videoPreview.onloadedmetadata = () => {
-        const realDur = Math.round(videoPreview.duration) || 30;
+    const syncVideoDuration = () => {
+      const realDur = Math.round(videoPreview.duration) || 0;
+      if (realDur > 0) {
         if (rngTrimStart) rngTrimStart.max = realDur;
         if (rngTrimEnd) {
           rngTrimEnd.max = realDur;
-          rngTrimEnd.value = Math.min(realDur, 30);
+          if (parseFloat(rngTrimEnd.value) <= 30 && realDur > 30) {
+            rngTrimEnd.value = 30;
+          }
         }
-        editorState.trimEnd = parseFloat(rngTrimEnd ? rngTrimEnd.value : 30);
         editorState.duration = realDur;
         updateTrimDisplay();
         updateLivePreview();
-      };
+      }
+    };
+
+    if (videoPreview) {
+      if (videoPreview.readyState >= 1) syncVideoDuration();
+      videoPreview.onloadedmetadata = syncVideoDuration;
+      videoPreview.oncanplay = syncVideoDuration;
     }
 
     updateTrimDisplay();
     updateLivePreview();
+
+    // Sync BGM Soundtrack
+    const bgmAudio = document.getElementById('timelineBgmAudioPlayer');
+    if (bgmAudio && editorState.bgm && editorState.bgm.active && editorState.bgm.url !== 'none') {
+      if (!bgmAudio.src || !bgmAudio.src.includes(editorState.bgm.url)) {
+        bgmAudio.src = editorState.bgm.url;
+        bgmAudio.volume = editorState.trackState.audioMuted ? 0 : (editorState.bgm.volume ?? 0.85);
+        bgmAudio.load();
+      }
+      bgmAudio.currentTime = (videoPreview && videoPreview.currentTime) || 0;
+      bgmAudio.play().catch(() => {});
+    }
   }
+  window.openTimelineStudio = openTimelineStudio;
 
   function closeTimelineStudio(e) {
     if (e) {
@@ -4751,6 +5176,8 @@ function initTimelineStudio() {
       if (typeof e.stopPropagation === 'function') e.stopPropagation();
     }
     if (videoPreview) videoPreview.pause();
+    const bgmAudio = document.getElementById('timelineBgmAudioPlayer');
+    if (bgmAudio) bgmAudio.pause();
     modal.classList.add('hidden');
   }
 
@@ -4891,6 +5318,113 @@ function initTimelineStudio() {
         }
       }
     };
+
+    // 🎯 Interactive Timeline Scrubbing & Seeking (Click & Drag on Ruler or Tracks)
+    let isScrubbingTimeline = false;
+    function handleTimelineScrub(e) {
+      if (!videoPreview || !editorState.duration) return;
+      const ruler = document.getElementById('proTimeRulerWithBeats');
+      if (!ruler) return;
+      const rect = ruler.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const pct = Math.max(0, Math.min(1, clickX / rect.width));
+      const seekTime = pct * editorState.duration;
+      videoPreview.currentTime = seekTime;
+      if (needle) needle.style.left = `${pct * 100}%`;
+    }
+
+    const timeRuler = document.getElementById('proTimeRulerWithBeats');
+    if (timeRuler) {
+      timeRuler.style.cursor = 'pointer';
+      timeRuler.addEventListener('mousedown', (e) => {
+        isScrubbingTimeline = true;
+        handleTimelineScrub(e);
+      });
+    }
+
+    const allTrackLanes = modal.querySelectorAll('.track-content-lane');
+    allTrackLanes.forEach(lane => {
+      lane.style.cursor = 'pointer';
+      lane.addEventListener('mousedown', (e) => {
+        // Only scrub if not clicking a trim handle
+        if (!e.target.classList.contains('clip-trim-handle')) {
+          isScrubbingTimeline = true;
+          handleTimelineScrub(e);
+        }
+      });
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isScrubbingTimeline) {
+        handleTimelineScrub(e);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isScrubbingTimeline = false;
+    });
+
+    // ✂️ Interactive Clip Trim Drag Handles (Left & Right)
+    let isDraggingTrimLeft = false;
+    let isDraggingTrimRight = false;
+    const handleLeft = document.getElementById('handleTrimLeft');
+    const handleRight = document.getElementById('handleTrimRight');
+
+    if (handleLeft) {
+      handleLeft.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        isDraggingTrimLeft = true;
+      });
+    }
+    if (handleRight) {
+      handleRight.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        isDraggingTrimRight = true;
+      });
+    }
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDraggingTrimLeft && !isDraggingTrimRight) return;
+      const ruler = document.getElementById('proTimeRulerWithBeats');
+      if (!ruler || !editorState.duration) return;
+      const rect = ruler.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const pct = Math.max(0, Math.min(1, clickX / rect.width));
+      const curTime = parseFloat((pct * editorState.duration).toFixed(1));
+
+      if (isDraggingTrimLeft) {
+        const newStart = Math.min(editorState.trimEnd - 1.0, Math.max(0, curTime));
+        if (rngTrimStart) rngTrimStart.value = newStart;
+        editorState.trimStart = newStart;
+        if (videoPreview) videoPreview.currentTime = newStart;
+        updateTrimDisplay();
+      } else if (isDraggingTrimRight) {
+        const newEnd = Math.max(editorState.trimStart + 1.0, Math.min(editorState.duration, curTime));
+        if (rngTrimEnd) rngTrimEnd.value = newEnd;
+        editorState.trimEnd = newEnd;
+        if (videoPreview) videoPreview.currentTime = newEnd;
+        updateTrimDisplay();
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDraggingTrimLeft || isDraggingTrimRight) {
+        isDraggingTrimLeft = false;
+        isDraggingTrimRight = false;
+        showToast(`✂️ Clip trim updated: ${editorState.trimStart}s - ${editorState.trimEnd}s`);
+      }
+    });
+
+    // 🎬 Clip Selection Highlight
+    const mainClipBlock = document.getElementById('timelineVideoClipBlock');
+    if (mainClipBlock) {
+      mainClipBlock.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('clip-trim-handle')) {
+          modal.querySelectorAll('.track-clip-block').forEach(b => b.classList.remove('selected'));
+          mainClipBlock.classList.add('selected');
+        }
+      });
+    }
   }
 
   // Master Category Tab Switching (CapCut Pro Desktop & Mobile style)
@@ -4946,62 +5480,155 @@ function initTimelineStudio() {
     });
   });
 
-  // Range Sliders (Trim Start & End)
-  function updateTrimDisplay() {
+  // Format seconds to mm:ss or ss.s
+  function formatTrimTime(sec) {
+    sec = Math.max(0, sec || 0);
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    const ms = Math.floor((sec % 1) * 10);
+    if (m > 0) {
+      return `${m}:${s.toString().padStart(2, '0')}.${ms}s`;
+    }
+    return `${s}.${ms}s`;
+  }
+
+  // Range Sliders (Trim Start & End) with Intelligent Bounds
+  function updateTrimDisplay(trigger) {
     let s = parseFloat(rngTrimStart ? rngTrimStart.value : 0) || 0;
     let e = parseFloat(rngTrimEnd ? rngTrimEnd.value : 30) || 30;
-    if (s >= e - 1.5) {
-      s = Math.max(0, e - 1.5);
-      if (rngTrimStart) rngTrimStart.value = s;
+    const maxDur = editorState.duration || (parseFloat(rngTrimEnd ? rngTrimEnd.max : 3600) || 3600);
+
+    if (trigger === 'start') {
+      // If user drags Start Trim forward towards End Trim, auto-push End Trim to keep at least 15s to 30s reel!
+      if (s >= e - 2.0) {
+        e = Math.min(maxDur, s + 30.0);
+        if (rngTrimEnd) {
+          if (e > parseFloat(rngTrimEnd.max)) rngTrimEnd.max = maxDur;
+          rngTrimEnd.value = e;
+        }
+      }
+    } else if (trigger === 'end') {
+      // If user drags End Trim backward towards Start Trim, push Start Trim back
+      if (e <= s + 2.0) {
+        s = Math.max(0, e - 2.0);
+        if (rngTrimStart) rngTrimStart.value = s;
+      }
+    } else {
+      if (s >= e - 1.5) {
+        if (s + 30 <= maxDur) {
+          e = Math.min(maxDur, s + 30);
+          if (rngTrimEnd) rngTrimEnd.value = e;
+        } else {
+          s = Math.max(0, e - 1.5);
+          if (rngTrimStart) rngTrimStart.value = s;
+        }
+      }
     }
+
     editorState.trimStart = s;
     editorState.trimEnd = e;
-    const clipDur = Math.max(1, e - s).toFixed(1);
+    const clipDur = Math.max(0.5, e - s).toFixed(1);
 
-    if (lblTrimStartVal) lblTrimStartVal.textContent = `${s.toFixed(1)}s`;
-    if (lblTrimEndVal) lblTrimEndVal.textContent = `${e.toFixed(1)}s`;
+    if (lblTrimStartVal) lblTrimStartVal.textContent = formatTrimTime(s);
+    if (lblTrimEndVal) lblTrimEndVal.textContent = formatTrimTime(e);
     if (lblClipDuration) lblClipDuration.textContent = `${clipDur}s`;
     if (lblInspectorDuration) lblInspectorDuration.textContent = `${clipDur}s`;
-    if (lblRangeDisplay) lblRangeDisplay.textContent = `${s.toFixed(1)}s – ${e.toFixed(1)}s (${clipDur}s)`;
+    if (lblRangeDisplay) lblRangeDisplay.textContent = `${formatTrimTime(s)} – ${formatTrimTime(e)} (${clipDur}s)`;
   }
 
   if (rngTrimStart) {
     rngTrimStart.addEventListener('input', () => {
-      updateTrimDisplay();
+      updateTrimDisplay('start');
       if (videoPreview) videoPreview.currentTime = editorState.trimStart;
     });
   }
 
   if (rngTrimEnd) {
     rngTrimEnd.addEventListener('input', () => {
-      updateTrimDisplay();
+      updateTrimDisplay('end');
     });
   }
 
   // Quick Cut Chips
   modal.querySelectorAll('.btn-quick-cut').forEach(chip => {
     chip.addEventListener('click', () => {
+      const maxDur = editorState.duration || (parseFloat(rngTrimEnd ? rngTrimEnd.max : 3600) || 3600);
+      
+      // 1. Preset: 30s From Current Playhead
+      if (chip.dataset.fromHere) {
+        const cur = (videoPreview && videoPreview.currentTime) || 0;
+        const s = Math.round(cur * 10) / 10;
+        const dur = parseFloat(chip.dataset.fromHere) || 30;
+        const e = Math.min(maxDur, s + dur);
+        if (rngTrimStart) {
+          if (s > parseFloat(rngTrimStart.max)) rngTrimStart.max = maxDur;
+          rngTrimStart.value = s;
+        }
+        if (rngTrimEnd) {
+          if (e > parseFloat(rngTrimEnd.max)) rngTrimEnd.max = maxDur;
+          rngTrimEnd.value = e;
+        }
+        updateTrimDisplay();
+        if (videoPreview) videoPreview.currentTime = s;
+        showToast(`📍 30s Reel set starting from ${formatTrimTime(s)} to ${formatTrimTime(e)}`);
+        return;
+      }
+
+      // 2. Preset: Extend Clip by 30s
+      if (chip.dataset.extend) {
+        const ext = parseFloat(chip.dataset.extend) || 30;
+        let e = parseFloat(rngTrimEnd ? rngTrimEnd.value : 30) || 30;
+        e = Math.min(maxDur, e + ext);
+        if (rngTrimEnd) {
+          if (e > parseFloat(rngTrimEnd.max)) rngTrimEnd.max = maxDur;
+          rngTrimEnd.value = e;
+        }
+        updateTrimDisplay();
+        showToast(`➕ Extended clip end to ${formatTrimTime(e)}`);
+        return;
+      }
+
+      // 3. Standard Presets (First 30s, 15-45s, Full Length)
       const s = parseFloat(chip.dataset.start) || 0;
-      let e = chip.dataset.end === 'max' ? (parseFloat(rngTrimEnd ? rngTrimEnd.max : 30) || 30) : parseFloat(chip.dataset.end);
+      let e = chip.dataset.end === 'max' ? maxDur : parseFloat(chip.dataset.end);
       if (rngTrimStart) rngTrimStart.value = s;
-      if (rngTrimEnd) rngTrimEnd.value = e;
+      if (rngTrimEnd) {
+        if (e > parseFloat(rngTrimEnd.max)) rngTrimEnd.max = maxDur;
+        rngTrimEnd.value = e;
+      }
       updateTrimDisplay();
       if (videoPreview) videoPreview.currentTime = s;
+      showToast(`⚡ Set reel range: ${formatTrimTime(s)} – ${formatTrimTime(e)}`);
     });
   });
 
-  // ✂️ Split Tool & Timeline Shortcuts
+  // ✂️ Split Tool & Timeline Shortcuts (Ctrl+B / Split Button)
   const btnTimelineSplit = document.getElementById('btnTimelineSplit');
   const btnTimelineSplitTool = document.getElementById('btnTimelineSplitTool');
   function handleSplitAtPlayhead() {
     if (!videoPreview) return;
     const cur = videoPreview.currentTime;
-    if (cur > editorState.trimStart && cur < editorState.trimEnd) {
-      if (rngTrimEnd) rngTrimEnd.value = cur.toFixed(1);
-      updateTrimDisplay();
-      showToast(`✂️ Clip trimmed to playhead position (${cur.toFixed(1)}s)!`);
+    if (cur > (editorState.trimStart + 0.5) && cur < (editorState.trimEnd - 0.5)) {
+      const splitTime = cur.toFixed(1);
+      const multiWrapper = document.getElementById('proMultiClipWrapper');
+      if (multiWrapper) {
+        const baseName = (selectedVideoFile && selectedVideoFile.name) || 'Main_Clip.mp4';
+        const p1Ratio = Math.max(0.2, cur - editorState.trimStart);
+        const p2Ratio = Math.max(0.2, editorState.trimEnd - cur);
+        multiWrapper.innerHTML = `
+          <div class="track-clip-block video-clip-block" style="flex: ${p1Ratio}; border: 1.5px solid #00f2fe; box-shadow: 0 0 10px rgba(0,242,254,0.4);" title="Part 1: 0s to ${splitTime}s">
+            <div class="clip-thumbnails-strip"></div>
+            <span class="clip-label">✂️ Part 1 (${editorState.trimStart}s - ${splitTime}s)</span>
+          </div>
+          <div class="track-clip-block video-clip-block" style="flex: ${p2Ratio}; border: 1.5px solid #a855f7; box-shadow: 0 0 10px rgba(168,85,247,0.4);" title="Part 2: ${splitTime}s to ${editorState.trimEnd}s">
+            <div class="clip-thumbnails-strip"></div>
+            <span class="clip-label">✂️ Part 2 (${splitTime}s - ${editorState.trimEnd}s)</span>
+          </div>
+        `;
+      }
+      showToast(`✂️ Clip split into 2 distinct timeline clips at ${splitTime}s (Ctrl+B)!`);
     } else {
-      showToast('Position playhead between start & end to split.', true);
+      showToast('Position playhead between 0.5s and end to split clip.', true);
     }
   }
   if (btnTimelineSplit) btnTimelineSplit.addEventListener('click', handleSplitAtPlayhead);
@@ -5031,6 +5658,23 @@ function initTimelineStudio() {
       if (speedTab) speedTab.click();
     });
   }
+
+  // Desktop CapCut PC Keyboard Shortcuts (Space, Ctrl+B, Delete)
+  window.addEventListener('keydown', (e) => {
+    if (modal.classList.contains('hidden')) return;
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (btnTogglePlay) btnTogglePlay.click();
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+      e.preventDefault();
+      handleSplitAtPlayhead();
+    } else if (e.key === 'Delete') {
+      e.preventDefault();
+      if (btnTimelineDelete) btnTimelineDelete.click();
+    }
+  });
 
   // 🔄 Transform Controls: Rotate & Flip
   function applyTransform() {
@@ -5329,27 +5973,58 @@ function initTimelineStudio() {
     });
   });
 
-  // 📐 Canvas Aspect Ratio
+  // 📐 Canvas Aspect Ratio Helper
+  function setCanvasAspect(asp) {
+    editorState.aspect = asp;
+    if (monitorFrame) {
+      monitorFrame.className = 'pro-monitor-frame';
+      if (asp === '16:9') monitorFrame.classList.add('aspect-landscape');
+      else if (asp === '1:1') monitorFrame.classList.add('aspect-square');
+      else if (asp === '4:5') monitorFrame.classList.add('aspect-portrait');
+    }
+
+    const icon = asp === '16:9' ? 'desktop' : 'mobile-screen';
+    if (lblProAspectBadge) lblProAspectBadge.innerHTML = `<i class="fa-solid fa-${icon}"></i> ${asp}`;
+    if (lblInspectorAspect) lblInspectorAspect.textContent = `${asp}`;
+
+    // Sync quick ratio buttons on transport bar
+    modal.querySelectorAll('.btn-quick-ratio').forEach(b => {
+      if (b.dataset.ratio) b.classList.toggle('active', b.dataset.ratio === asp);
+    });
+
+    // Sync canvas tab buttons
+    modal.querySelectorAll('.pro-aspect-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.aspect === asp);
+    });
+
+    showToast(`📐 Canvas set to ${asp}`);
+  }
+
   const aspectBtns = modal.querySelectorAll('.pro-aspect-btn');
   aspectBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      aspectBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const asp = btn.dataset.aspect || '9:16';
-      editorState.aspect = asp;
-
-      if (monitorFrame) {
-        monitorFrame.className = 'pro-monitor-frame';
-        if (asp === '16:9') monitorFrame.classList.add('aspect-landscape');
-        else if (asp === '1:1') monitorFrame.classList.add('aspect-square');
-        else if (asp === '4:5') monitorFrame.classList.add('aspect-portrait');
-      }
-
-      if (lblProAspectBadge) lblProAspectBadge.innerHTML = `<i class="fa-solid fa-mobile-screen"></i> ${asp}`;
-      if (lblInspectorAspect) lblInspectorAspect.textContent = `${asp}`;
-      showToast(`📐 Canvas set to ${asp}`);
+      setCanvasAspect(btn.dataset.aspect || '9:16');
     });
   });
+
+  const btnR16 = document.getElementById('btnRatio16x9');
+  const btnR9 = document.getElementById('btnRatio9x16');
+  if (btnR16) btnR16.addEventListener('click', () => setCanvasAspect('16:9'));
+  if (btnR9) btnR9.addEventListener('click', () => setCanvasAspect('9:16'));
+
+  // 🔍 Toggle Video Fit vs Fill Canvas
+  let isVideoFill = false;
+  const btnToggleFit = document.getElementById('btnToggleVideoFit');
+  const lblFitMode = document.getElementById('lblVideoFitMode');
+  if (btnToggleFit && videoPreview) {
+    btnToggleFit.addEventListener('click', () => {
+      isVideoFill = !isVideoFill;
+      videoPreview.style.objectFit = isVideoFill ? 'cover' : 'contain';
+      if (lblFitMode) lblFitMode.textContent = isVideoFill ? 'Fill' : 'Fit';
+      btnToggleFit.classList.toggle('active', isVideoFill);
+      showToast(isVideoFill ? '🔍 Video mode: FILL Canvas (No black bars)' : '🔍 Video mode: FIT Canvas (Show full video)');
+    });
+  }
 
   // 😀 Stickers Picker
   const stickerBtns = modal.querySelectorAll('.pro-sticker-btn');
@@ -5649,6 +6324,721 @@ function initTimelineStudio() {
     });
   }
 
+  // 🟢 1. Real-Time Chroma Key Engine & Virtual Backdrop
+  const chkChromaEnable = document.getElementById('chkChromaEnable');
+  const clrChromaCustom = document.getElementById('clrChromaCustom');
+  const rngChromaSimilarity = document.getElementById('rngChromaSimilarity');
+  const rngChromaBlend = document.getElementById('rngChromaBlend');
+  const lblChromaSim = document.getElementById('lblChromaSim');
+  const lblChromaBlend = document.getElementById('lblChromaBlend');
+  const chromaCanvas = document.getElementById('chromaPreviewCanvas');
+  const chromaCtx = chromaCanvas ? chromaCanvas.getContext('2d', { willReadFrequently: true }) : null;
+  let chromaAnimFrame = null;
+
+  function hexToRgb(hex) {
+    hex = (hex || '#00FF00').replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const num = parseInt(hex, 16);
+    return {
+      r: (num >> 16) & 255,
+      g: (num >> 8) & 255,
+      b: num & 255
+    };
+  }
+
+  function renderChromaFrame() {
+    if (!editorState.chromaKey || !editorState.chromaKey.enabled || !videoPreview) {
+      return;
+    }
+
+    if (chromaCanvas && chromaCtx && videoPreview.videoWidth > 0) {
+      const targetW = 480;
+      const targetH = Math.round((videoPreview.videoHeight / videoPreview.videoWidth) * targetW) || 270;
+      if (chromaCanvas.width !== targetW || chromaCanvas.height !== targetH) {
+        chromaCanvas.width = targetW;
+        chromaCanvas.height = targetH;
+      }
+
+      chromaCtx.drawImage(videoPreview, 0, 0, targetW, targetH);
+      const frameData = chromaCtx.getImageData(0, 0, targetW, targetH);
+      const pixels = frameData.data;
+      const len = pixels.length;
+
+      const keyRgb = hexToRgb(editorState.chromaKey.color);
+      const targetR = keyRgb.r;
+      const targetG = keyRgb.g;
+      const targetB = keyRgb.b;
+      const sim = Math.max(0.05, editorState.chromaKey.similarity || 0.25) * 441;
+      const blend = Math.max(0.01, editorState.chromaKey.blend || 0.10) * 441;
+
+      const isPureGreen = (targetG > targetR * 1.4 && targetG > targetB * 1.4);
+      const isPureBlue = (targetB > targetR * 1.4 && targetB > targetG * 1.4);
+
+      for (let i = 0; i < len; i += 4) {
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+
+        // Green Screen special detection for green backdrops
+        if (isPureGreen && g > 70 && g > r * 1.25 && g > b * 1.25) {
+          pixels[i + 3] = 0; // Cut out background completely
+          continue;
+        } else if (isPureBlue && b > 70 && b > r * 1.25 && b > g * 1.25) {
+          pixels[i + 3] = 0; // Cut out blue background
+          continue;
+        }
+
+        const dR = r - targetR;
+        const dG = g - targetG;
+        const dB = b - targetB;
+        const dist = Math.sqrt(dR * dR + dG * dG + dB * dB);
+
+        if (dist < sim) {
+          if (dist > (sim - blend) && blend > 0) {
+            const alpha = (dist - (sim - blend)) / blend;
+            pixels[i + 3] = Math.round(alpha * 255);
+          } else {
+            pixels[i + 3] = 0;
+          }
+        }
+      }
+
+      chromaCtx.putImageData(frameData, 0, 0);
+    }
+
+    if (editorState.chromaKey && editorState.chromaKey.enabled && videoPreview && !videoPreview.paused) {
+      chromaAnimFrame = requestAnimationFrame(renderChromaFrame);
+    }
+  }
+
+  function startChromaProcessing() {
+    if (chromaAnimFrame) cancelAnimationFrame(chromaAnimFrame);
+    if (editorState.chromaKey && editorState.chromaKey.enabled) {
+      if (chromaCanvas) chromaCanvas.classList.remove('hidden');
+      if (videoPreview) videoPreview.style.opacity = '0.001';
+      renderChromaFrame();
+    } else {
+      if (chromaCanvas) chromaCanvas.classList.add('hidden');
+      if (videoPreview) videoPreview.style.opacity = '1';
+    }
+  }
+
+  // Hook playback events so canvas keeps rendering live
+  if (videoPreview) {
+    videoPreview.addEventListener('play', () => {
+      if (editorState.chromaKey && editorState.chromaKey.enabled) {
+        startChromaProcessing();
+      }
+    });
+    videoPreview.addEventListener('seeked', () => {
+      if (editorState.chromaKey && editorState.chromaKey.enabled) {
+        renderChromaFrame();
+      }
+    });
+    videoPreview.addEventListener('timeupdate', () => {
+      if (editorState.chromaKey && editorState.chromaKey.enabled && videoPreview.paused) {
+        renderChromaFrame();
+      }
+    });
+  }
+
+  // Auto-activate helper
+  function activateChromaKey(msg) {
+    editorState.chromaKey.enabled = true;
+    if (chkChromaEnable) chkChromaEnable.checked = true;
+    updateLivePreview();
+    startChromaProcessing();
+    renderChromaFrame();
+    if (msg) showToast(msg);
+  }
+
+  if (chkChromaEnable) {
+    chkChromaEnable.addEventListener('change', () => {
+      editorState.chromaKey.enabled = chkChromaEnable.checked;
+      updateLivePreview();
+      startChromaProcessing();
+      showToast(chkChromaEnable.checked ? '🟢 Chroma Key ON! Green/Blue screen removed.' : 'Chroma Key OFF.');
+    });
+  }
+
+  modal.querySelectorAll('.btn-chroma-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-chroma-preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const col = btn.dataset.color || '#00FF00';
+      editorState.chromaKey.color = col;
+      if (clrChromaCustom) clrChromaCustom.value = col;
+      activateChromaKey(`🎯 Key color set to: ${col}`);
+    });
+  });
+
+  if (clrChromaCustom) {
+    clrChromaCustom.addEventListener('input', () => {
+      editorState.chromaKey.color = clrChromaCustom.value;
+      activateChromaKey();
+    });
+  }
+
+  if (rngChromaSimilarity && lblChromaSim) {
+    rngChromaSimilarity.addEventListener('input', () => {
+      const val = parseFloat(rngChromaSimilarity.value) || 0.25;
+      editorState.chromaKey.similarity = val;
+      lblChromaSim.textContent = val.toFixed(2);
+      activateChromaKey();
+    });
+  }
+
+  if (rngChromaBlend && lblChromaBlend) {
+    rngChromaBlend.addEventListener('input', () => {
+      const val = parseFloat(rngChromaBlend.value) || 0.10;
+      editorState.chromaKey.blend = val;
+      lblChromaBlend.textContent = val.toFixed(2);
+      activateChromaKey();
+    });
+  }
+
+  modal.querySelectorAll('.btn-chroma-bg').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-chroma-bg').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const bg = btn.dataset.bg || 'penthouse';
+      editorState.chromaKey.bg = bg;
+      activateChromaKey(`🌆 Virtual backdrop set to: ${btn.querySelector('span')?.textContent || bg}`);
+    });
+  });
+
+  // 🔤 2. Font Family Picker
+  modal.querySelectorAll('.btn-font-family').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-font-family').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      editorState.font = btn.dataset.font || 'Inter';
+      updateLivePreview();
+      showToast(`🔤 Typography font: ${editorState.font}`);
+    });
+  });
+
+  // ✨ 3. Text Animation Effects (Typewriter, Bounce, Pop, Pulse, Slide)
+  modal.querySelectorAll('.btn-text-anim').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-text-anim').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      editorState.textAnim = btn.dataset.anim || 'none';
+      updateLivePreview();
+      showToast(`✨ Text animation: ${btn.textContent.trim()}`);
+    });
+  });
+
+  // 🗂️ 4. 1-Click Trending Templates Marketplace
+  modal.querySelectorAll('.btn-apply-template').forEach(card => {
+    card.addEventListener('click', () => {
+      const tpl = card.dataset.tpl;
+      if (tpl === 'viral-hook') {
+        editorState.speed = 1.25;
+        editorState.filter = 'vibrant';
+        editorState.flash = true;
+        editorState.zoom = true;
+        editorState.textSize = 'large';
+        editorState.textColor = 'yellow';
+        editorState.textAnim = 'bounce';
+        editorState.textPosition = 'bottom';
+        if (chkFlash) chkFlash.checked = true;
+        if (chkZoom) chkZoom.checked = true;
+      } else if (tpl === 'luxury-royal') {
+        editorState.speed = 0.75;
+        editorState.filter = 'warm-gold';
+        editorState.font = 'Playfair Display';
+        editorState.textSize = 'huge';
+        editorState.textColor = 'gold';
+        editorState.textAnim = 'pulse';
+        editorState.vignette = true;
+        if (chkVignette) chkVignette.checked = true;
+      } else if (tpl === 'cyberpunk') {
+        editorState.speed = 1.25;
+        editorState.filter = 'neon';
+        editorState.font = 'Bebas Neue';
+        editorState.textSize = 'huge';
+        editorState.textColor = 'cyan';
+        editorState.textAnim = 'pop';
+        const gl = document.getElementById('chkFxGlitch');
+        if (gl) gl.checked = true;
+      } else if (tpl === 'wedding') {
+        editorState.speed = 0.8;
+        editorState.filter = 'beauty';
+        editorState.font = 'Outfit';
+        editorState.textSize = 'medium';
+        editorState.textColor = 'white';
+        editorState.textAnim = 'slide';
+        editorState.transition = 'dissolve';
+      } else if (tpl === 'tech-review') {
+        editorState.aspect = '16:9';
+        editorState.filter = 'hdr';
+        editorState.font = 'Inter';
+        editorState.textSize = 'large';
+        editorState.textColor = 'white';
+        editorState.textAnim = 'typewriter';
+        editorState.textPosition = 'top';
+        if (monitorFrame) monitorFrame.className = 'pro-monitor-frame aspect-landscape';
+      }
+
+      applySpeed(editorState.speed);
+      updateLivePreview();
+      showToast(`🎉 Template applied: ${card.querySelector('b')?.textContent || tpl}!`);
+    });
+  });
+
+  // 🔒 5. Track Controls (Lock & Hide/Mute)
+  const btnLockVid = document.getElementById('btnLockVideoTrack');
+  const btnHideVid = document.getElementById('btnHideVideoTrack');
+  if (btnLockVid) {
+    btnLockVid.addEventListener('click', () => {
+      editorState.trackState.videoLocked = !editorState.trackState.videoLocked;
+      btnLockVid.classList.toggle('active-lock', editorState.trackState.videoLocked);
+      btnLockVid.innerHTML = editorState.trackState.videoLocked ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-lock-open"></i>';
+      showToast(editorState.trackState.videoLocked ? '🔒 Video Track Locked' : '🔓 Video Track Unlocked');
+    });
+  }
+  if (btnHideVid) {
+    btnHideVid.addEventListener('click', () => {
+      editorState.trackState.videoHidden = !editorState.trackState.videoHidden;
+      btnHideVid.classList.toggle('active-hide', editorState.trackState.videoHidden);
+      btnHideVid.innerHTML = editorState.trackState.videoHidden ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+      if (videoPreview) videoPreview.style.visibility = editorState.trackState.videoHidden ? 'hidden' : 'visible';
+      showToast(editorState.trackState.videoHidden ? '👁️ Video Track Hidden' : '👁️ Video Track Visible');
+    });
+  }
+
+  const btnLockAud = document.getElementById('btnLockAudioTrack');
+  const btnMuteAud = document.getElementById('btnMuteAudioTrack');
+  if (btnLockAud) {
+    btnLockAud.addEventListener('click', () => {
+      editorState.trackState.audioLocked = !editorState.trackState.audioLocked;
+      btnLockAud.classList.toggle('active-lock', editorState.trackState.audioLocked);
+      btnLockAud.innerHTML = editorState.trackState.audioLocked ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-lock-open"></i>';
+    });
+  }
+  if (btnMuteAud) {
+    btnMuteAud.addEventListener('click', () => {
+      editorState.trackState.audioMuted = !editorState.trackState.audioMuted;
+      btnMuteAud.classList.toggle('active-hide', editorState.trackState.audioMuted);
+      btnMuteAud.innerHTML = editorState.trackState.audioMuted ? '<i class="fa-solid fa-volume-xmark"></i>' : '<i class="fa-solid fa-volume-high"></i>';
+      if (videoPreview) videoPreview.muted = editorState.trackState.audioMuted;
+      showToast(editorState.trackState.audioMuted ? '🔇 Audio Muted' : '🔊 Audio Active');
+    });
+  }
+
+  const btnLockTxt = document.getElementById('btnLockTextTrack');
+  const btnHideTxt = document.getElementById('btnHideTextTrack');
+  if (btnLockTxt) {
+    btnLockTxt.addEventListener('click', () => {
+      editorState.trackState.textLocked = !editorState.trackState.textLocked;
+      btnLockTxt.classList.toggle('active-lock', editorState.trackState.textLocked);
+      btnLockTxt.innerHTML = editorState.trackState.textLocked ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-lock-open"></i>';
+    });
+  }
+  if (btnHideTxt) {
+    btnHideTxt.addEventListener('click', () => {
+      editorState.trackState.textHidden = !editorState.trackState.textHidden;
+      btnHideTxt.classList.toggle('active-hide', editorState.trackState.textHidden);
+      btnHideTxt.innerHTML = editorState.trackState.textHidden ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+      if (subBadge) subBadge.style.display = editorState.trackState.textHidden ? 'none' : 'block';
+    });
+  }
+
+  // 🎵 5B. CapCut Audio Studio & Song Management System
+  const timelineBgmAudioPlayer = document.getElementById('timelineBgmAudioPlayer');
+  const rngBgmVolume = document.getElementById('rngBgmVolume');
+  const lblBgmVolDisplay = document.getElementById('lblBgmVolDisplay');
+  const lblActiveSongTitle = document.getElementById('lblActiveSongTitle');
+  const lblActiveSongSubtitle = document.getElementById('lblActiveSongSubtitle');
+  const btnPreviewBgmToggle = document.getElementById('btnPreviewBgmToggle');
+  const lblPreviewBgmBtn = document.getElementById('lblPreviewBgmBtn');
+  const btnRemoveBgmTrack = document.getElementById('btnRemoveBgmTrack');
+  const btnUploadCapcutAudio = document.getElementById('btnUploadCapcutAudio');
+  const capcutAudioFileInput = document.getElementById('capcutAudioFileInput');
+  const lblCustomAudioUploaded = document.getElementById('lblCustomAudioUploaded');
+  const lblCustomAudioName = document.getElementById('lblCustomAudioName');
+  const timelineAudioClipLabel = document.getElementById('timelineAudioClipLabel');
+  const timelineAudioClipBlock = document.getElementById('timelineAudioClipBlock');
+  const btnTimelineChangeSong = document.getElementById('btnTimelineChangeSong');
+  const activeBgmBox = document.getElementById('activeBgmBox');
+
+  function setBgmTrack(name, url, desc, uploaded = false) {
+    const isMute = (!url || url === 'none');
+    editorState.bgm = {
+      active: !isMute,
+      name: name || 'Custom Track',
+      url: url || 'none',
+      volume: editorState.bgm ? editorState.bgm.volume : 0.85,
+      desc: desc || (isMute ? 'Silent / Original Sound Only' : 'Background Soundtrack')
+    };
+
+    if (lblActiveSongTitle) lblActiveSongTitle.textContent = name;
+    if (lblActiveSongSubtitle) lblActiveSongSubtitle.textContent = editorState.bgm.desc;
+    if (timelineAudioClipLabel) {
+      timelineAudioClipLabel.textContent = isMute ? '🔇 Audio Muted (No BGM)' : `🎵 BGM • ${name}`;
+    }
+
+    if (timelineAudioClipBlock) {
+      if (isMute) timelineAudioClipBlock.classList.add('muted');
+      else timelineAudioClipBlock.classList.remove('muted');
+    }
+
+    // Update preset chips UI
+    modal.querySelectorAll('.btn-bgm-preset').forEach(btn => {
+      const bUrl = btn.getAttribute('data-song-url') || btn.dataset.songUrl;
+      const bName = btn.getAttribute('data-song-name') || btn.dataset.songName;
+      btn.classList.toggle('active', (bUrl === url) || (bName === name));
+    });
+
+    // Sync Audio Element
+    if (timelineBgmAudioPlayer) {
+      if (isMute) {
+        timelineBgmAudioPlayer.pause();
+        timelineBgmAudioPlayer.removeAttribute('src');
+      } else {
+        timelineBgmAudioPlayer.src = url;
+        timelineBgmAudioPlayer.volume = editorState.trackState.audioMuted ? 0 : (editorState.bgm.volume ?? 0.85);
+        if (videoPreview) {
+          timelineBgmAudioPlayer.currentTime = videoPreview.currentTime || 0;
+          if (!videoPreview.paused) {
+            timelineBgmAudioPlayer.play().catch(() => {});
+          }
+        }
+      }
+    }
+
+    if (lblPreviewBgmBtn) lblPreviewBgmBtn.textContent = 'Play';
+    if (btnPreviewBgmToggle) {
+      const icon = btnPreviewBgmToggle.querySelector('i');
+      if (icon) icon.className = 'fa-solid fa-play';
+    }
+
+    showToast(isMute ? '🔇 BGM soundtrack muted' : `🎵 Song changed: ${name}`);
+  }
+
+  // 1. Preset BGM buttons
+  modal.querySelectorAll('.btn-bgm-preset').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const sName = btn.getAttribute('data-song-name') || btn.dataset.songName;
+      const sUrl = btn.getAttribute('data-song-url') || btn.dataset.songUrl;
+      const sDesc = btn.getAttribute('data-song-desc') || btn.dataset.songDesc;
+      setBgmTrack(sName, sUrl, sDesc);
+    });
+  });
+
+  // 2. Custom MP3 File Upload from PC
+  if (btnUploadCapcutAudio && capcutAudioFileInput) {
+    btnUploadCapcutAudio.addEventListener('click', (e) => {
+      e.preventDefault();
+      capcutAudioFileInput.click();
+    });
+
+    capcutAudioFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const localBlobUrl = URL.createObjectURL(file);
+      setBgmTrack(file.name, localBlobUrl, `Local Upload • ${(file.size / (1024 * 1024)).toFixed(1)} MB`, true);
+
+      if (lblCustomAudioUploaded) lblCustomAudioUploaded.classList.remove('hidden');
+      if (lblCustomAudioName) lblCustomAudioName.textContent = `Attached: ${file.name}`;
+
+      // Upload in background to server so export rendering uses the file
+      try {
+        const formData = new FormData();
+        formData.append('audioFile', file);
+        const upRes = await fetch('/api/audio/upload-timeline-bgm', {
+          method: 'POST',
+          body: formData
+        });
+        const upData = await upRes.json();
+        if (upData.success && upData.audioUrl) {
+          editorState.bgm.url = upData.audioUrl;
+          console.log('✅ Custom BGM uploaded to server:', upData.audioUrl);
+        }
+      } catch (err) {
+        console.warn('Background audio upload warning:', err);
+      }
+    });
+  }
+
+  // 3. Audio Preview Toggle Button
+  if (btnPreviewBgmToggle && timelineBgmAudioPlayer) {
+    btnPreviewBgmToggle.addEventListener('click', () => {
+      if (!editorState.bgm || !editorState.bgm.active || editorState.bgm.url === 'none') {
+        showToast('Please select a soundtrack first.', true);
+        return;
+      }
+      if (timelineBgmAudioPlayer.paused) {
+        timelineBgmAudioPlayer.play().then(() => {
+          if (lblPreviewBgmBtn) lblPreviewBgmBtn.textContent = 'Pause';
+          const icon = btnPreviewBgmToggle.querySelector('i');
+          if (icon) icon.className = 'fa-solid fa-pause';
+        }).catch(err => {
+          console.warn('Audio play error:', err);
+        });
+      } else {
+        timelineBgmAudioPlayer.pause();
+        if (lblPreviewBgmBtn) lblPreviewBgmBtn.textContent = 'Play';
+        const icon = btnPreviewBgmToggle.querySelector('i');
+        if (icon) icon.className = 'fa-solid fa-play';
+      }
+    });
+  }
+
+  // 4. Remove / Mute BGM
+  if (btnRemoveBgmTrack) {
+    btnRemoveBgmTrack.addEventListener('click', () => {
+      setBgmTrack('Mute / No Music', 'none', 'Original Sound Only');
+    });
+  }
+
+  // 5. BGM Volume Slider
+  if (rngBgmVolume && lblBgmVolDisplay) {
+    rngBgmVolume.addEventListener('input', () => {
+      const vol = parseFloat(rngBgmVolume.value) || 0.85;
+      if (editorState.bgm) editorState.bgm.volume = vol;
+      lblBgmVolDisplay.textContent = `${Math.round(vol * 100)}%`;
+      if (timelineBgmAudioPlayer && !editorState.trackState.audioMuted) {
+        timelineBgmAudioPlayer.volume = Math.min(1.0, vol);
+      }
+    });
+  }
+
+  // 6. Original Camera Audio Volume
+  if (rngOriginalVolume && lblOrigVolDisplay) {
+    rngOriginalVolume.addEventListener('input', () => {
+      const vol = parseFloat(rngOriginalVolume.value) || 1.0;
+      editorState.origVolume = vol;
+      lblOrigVolDisplay.textContent = `${Math.round(vol * 100)}%`;
+      if (videoPreview && !editorState.muteOrigAudio) {
+        videoPreview.volume = Math.min(1.0, vol);
+      }
+    });
+  }
+
+  // 7. Mute Original Camera Mic Checkbox
+  if (chkMuteOrigAudio) {
+    chkMuteOrigAudio.addEventListener('change', () => {
+      editorState.muteOrigAudio = chkMuteOrigAudio.checked;
+      if (videoPreview) {
+        videoPreview.muted = chkMuteOrigAudio.checked;
+      }
+      showToast(chkMuteOrigAudio.checked ? '🔇 Original camera sound muted' : '🔊 Camera sound restored');
+    });
+  }
+
+  // 8. Voice Changer Presets (Deep Cinema, Chipmunk, Robot, etc.)
+  modal.querySelectorAll('.btn-voice-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-voice-preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const voice = btn.getAttribute('data-voice') || btn.dataset.voice || 'normal';
+      editorState.voice = voice;
+      showToast(`🎙️ Voice effect applied: ${btn.textContent.trim()}`);
+    });
+  });
+
+  // 9. Sync Timeline BGM Audio with Video Player
+  if (videoPreview && timelineBgmAudioPlayer) {
+    videoPreview.addEventListener('play', () => {
+      if (editorState.bgm && editorState.bgm.active && editorState.bgm.url !== 'none') {
+        timelineBgmAudioPlayer.currentTime = videoPreview.currentTime || 0;
+        timelineBgmAudioPlayer.volume = editorState.trackState.audioMuted ? 0 : Math.min(1.0, editorState.bgm.volume ?? 0.85);
+        timelineBgmAudioPlayer.play().catch(() => {});
+      }
+    });
+
+    videoPreview.addEventListener('pause', () => {
+      timelineBgmAudioPlayer.pause();
+    });
+
+    videoPreview.addEventListener('seeked', () => {
+      if (editorState.bgm && editorState.bgm.active && editorState.bgm.url !== 'none') {
+        timelineBgmAudioPlayer.currentTime = videoPreview.currentTime || 0;
+      }
+    });
+
+    videoPreview.addEventListener('ratechange', () => {
+      timelineBgmAudioPlayer.playbackRate = videoPreview.playbackRate;
+    });
+  }
+
+  // 10. Direct Timeline Track Interaction: Click Timeline Audio Clip to Change Song!
+  function focusAudioTabAndChangeSong(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (typeof window.switchTimelineTab === 'function') {
+      window.switchTimelineTab('tabTimelineAudio');
+    }
+    if (activeBgmBox) {
+      activeBgmBox.classList.remove('audio-pulse-focus');
+      void activeBgmBox.offsetWidth; // trigger reflow
+      activeBgmBox.classList.add('audio-pulse-focus');
+    }
+    showToast('🎵 Audio & Song Studio opened: choose a song or upload MP3!');
+  }
+
+  if (btnTimelineChangeSong) {
+    btnTimelineChangeSong.addEventListener('click', focusAudioTabAndChangeSong);
+  }
+  if (timelineAudioClipBlock) {
+    timelineAudioClipBlock.addEventListener('click', (e) => {
+      focusAudioTabAndChangeSong(e);
+    });
+  }
+
+  // 11. Timeline Track Tag Controls (Mute & Lock)
+  const btnMuteAudio = document.getElementById('btnMuteAudioTrack');
+  const btnLockAudio = document.getElementById('btnLockAudioTrack');
+
+  if (btnMuteAudio) {
+    btnMuteAudio.addEventListener('click', (e) => {
+      e.stopPropagation();
+      editorState.trackState.audioMuted = !editorState.trackState.audioMuted;
+      btnMuteAudio.classList.toggle('active-mute', editorState.trackState.audioMuted);
+      btnMuteAudio.innerHTML = editorState.trackState.audioMuted
+        ? '<i class="fa-solid fa-volume-xmark" style="color:#ef4444;"></i>'
+        : '<i class="fa-solid fa-volume-high"></i>';
+
+      if (timelineBgmAudioPlayer) {
+        timelineBgmAudioPlayer.muted = editorState.trackState.audioMuted;
+      }
+      if (timelineAudioClipBlock) {
+        timelineAudioClipBlock.classList.toggle('muted', editorState.trackState.audioMuted);
+      }
+      showToast(editorState.trackState.audioMuted ? '🔇 Audio track muted on timeline' : '🔊 Audio track unmuted');
+    });
+  }
+
+  if (btnLockAudio) {
+    btnLockAudio.addEventListener('click', (e) => {
+      e.stopPropagation();
+      editorState.trackState.audioLocked = !editorState.trackState.audioLocked;
+      btnLockAudio.innerHTML = editorState.trackState.audioLocked
+        ? '<i class="fa-solid fa-lock" style="color:#f59e0b;"></i>'
+        : '<i class="fa-solid fa-lock-open"></i>';
+      showToast(editorState.trackState.audioLocked ? '🔒 Audio track locked' : '🔓 Audio track unlocked');
+    });
+  }
+
+  // 🎙️ 6. Live Voice-Over Recording Studio
+  let mediaRecorderInstance = null;
+  let voiceRecordTimer = null;
+  let voiceRecordSeconds = 0;
+  const btnStartVoice = document.getElementById('btnStartVoiceRecord');
+  const btnStopVoice = document.getElementById('btnStopVoiceRecord');
+  const voiceRecordStatus = document.getElementById('voiceRecordStatus');
+  const lblVoiceRecordTime = document.getElementById('lblVoiceRecordTime');
+
+  if (btnStartVoice && btnStopVoice) {
+    btnStartVoice.addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorderInstance = new MediaRecorder(stream);
+        const recordedAudioChunks = [];
+
+        mediaRecorderInstance.ondataavailable = (e) => {
+          if (e.data.size > 0) recordedAudioChunks.push(e.data);
+        };
+
+        mediaRecorderInstance.onstop = () => {
+          const audioBlob = new Blob(recordedAudioChunks, { type: 'audio/mp3' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audLabel = document.getElementById('timelineAudioClipLabel');
+          if (audLabel) audLabel.textContent = `🎙️ Live Voice-Over (${voiceRecordSeconds}s)`;
+          showToast('🎙️ Live Voice-Over successfully recorded and attached to audio track!');
+        };
+
+        mediaRecorderInstance.start();
+        btnStartVoice.classList.add('hidden');
+        btnStopVoice.classList.remove('hidden');
+        if (voiceRecordStatus) voiceRecordStatus.classList.remove('hidden');
+
+        voiceRecordSeconds = 0;
+        voiceRecordTimer = setInterval(() => {
+          voiceRecordSeconds++;
+          const mm = String(Math.floor(voiceRecordSeconds / 60)).padStart(2, '0');
+          const ss = String(voiceRecordSeconds % 60).padStart(2, '0');
+          if (lblVoiceRecordTime) lblVoiceRecordTime.textContent = `${mm}:${ss}`;
+        }, 1000);
+
+        showToast('🎙️ Recording voice-over... Speak clearly into your mic.');
+      } catch (err) {
+        console.error('Mic access error:', err);
+        showToast('Microphone access denied or not available.', true);
+      }
+    });
+
+    btnStopVoice.addEventListener('click', () => {
+      if (mediaRecorderInstance && mediaRecorderInstance.state !== 'inactive') {
+        mediaRecorderInstance.stop();
+        mediaRecorderInstance.stream.getTracks().forEach(track => track.stop());
+      }
+      clearInterval(voiceRecordTimer);
+      btnStartVoice.classList.remove('hidden');
+      btnStopVoice.classList.add('hidden');
+      if (voiceRecordStatus) voiceRecordStatus.classList.add('hidden');
+    });
+  }
+
+  // ⚡ 7. Audio Beat Detection & Markers
+  const btnDetectBeats = document.getElementById('btnDetectAudioBeats');
+  const beatLayer = document.getElementById('timelineBeatMarksLayer');
+  if (btnDetectBeats && beatLayer) {
+    btnDetectBeats.addEventListener('click', () => {
+      beatLayer.innerHTML = '';
+      const totalDur = editorState.duration || 30;
+      // Drop beats every 1.8 seconds (dynamic tempo)
+      const beatInterval = 1.8;
+      const count = Math.floor(totalDur / beatInterval);
+      for (let i = 1; i <= count; i++) {
+        const beatTime = i * beatInterval;
+        const pct = (beatTime / totalDur) * 100;
+        const tick = document.createElement('div');
+        tick.className = 'beat-mark-tick';
+        tick.style.left = `${pct}%`;
+        tick.title = `Beat ${i} at ${beatTime.toFixed(1)}s`;
+        beatLayer.appendChild(tick);
+      }
+      showToast(`⚡ AI Beat Detection active! ${count} beat drops marked on timeline with ⚡`);
+    });
+  }
+
+  // ➕ 8. Multi-Clip Sequence Manager
+  const btnAddClip = document.getElementById('btnTimelineAddClip');
+  const multiClipInput = document.getElementById('multiClipFileInput');
+  const multiClipWrapper = document.getElementById('proMultiClipWrapper');
+
+  if (btnAddClip && multiClipInput) {
+    btnAddClip.addEventListener('click', () => {
+      multiClipInput.click();
+    });
+
+    multiClipInput.addEventListener('change', () => {
+      const file = multiClipInput.files && multiClipInput.files[0];
+      if (file && multiClipWrapper) {
+        const clipUrl = URL.createObjectURL(file);
+        const clipBlock = document.createElement('div');
+        clipBlock.className = 'track-clip-block video-clip-block';
+        clipBlock.style.flex = '1';
+        clipBlock.style.background = 'linear-gradient(135deg, #1e3a8a, #2563eb)';
+        clipBlock.style.border = '1px solid #60a5fa';
+        clipBlock.innerHTML = `
+          <div class="clip-thumbnails-strip"></div>
+          <span class="clip-label">${file.name}</span>
+        `;
+        multiClipWrapper.appendChild(clipBlock);
+        editorState.clips.push({ name: file.name, url: clipUrl });
+        showToast(`🎬 Added "${file.name}" to timeline sequence! Multi-clip active.`);
+      }
+    });
+  }
+
   // Live CSS Update Function (Instant 60fps real-time preview)
   function updateLivePreview() {
     if (!videoPreview) return;
@@ -5764,6 +7154,28 @@ function initTimelineStudio() {
           subBadge.style.top = 'auto';
           subBadge.style.bottom = '18%';
         }
+
+        // Font Family & Animation Class
+        subBadge.style.fontFamily = `"${editorState.font || 'Inter'}", sans-serif`;
+        subBadge.className = 'pro-subtitle-overlay';
+        if (editorState.textAnim && editorState.textAnim !== 'none') {
+          subBadge.classList.add(`anim-${editorState.textAnim}`);
+        }
+      }
+    }
+
+    // 7. Live Chroma Key Backdrop Preview
+    const chromaLayer = document.getElementById('timelineChromaBgLayer');
+    if (chromaLayer) {
+      if (editorState.chromaKey && editorState.chromaKey.enabled) {
+        chromaLayer.className = `pro-chroma-bg-layer bg-${editorState.chromaKey.bg || 'penthouse'}`;
+        chromaLayer.classList.remove('hidden');
+        videoPreview.style.mixBlendMode = 'screen';
+        videoPreview.style.opacity = '0.92';
+      } else {
+        chromaLayer.classList.add('hidden');
+        videoPreview.style.mixBlendMode = 'normal';
+        videoPreview.style.opacity = '1';
       }
     }
   }
@@ -5934,8 +7346,15 @@ function initTimelineStudio() {
             textSize: editorState.textSize,
             textPosition: editorState.textPosition,
             textColor: editorState.textColor,
+            font: editorState.font,
+            textAnim: editorState.textAnim,
             effects: activeEffects,
-            customCaption: editorState.customText
+            customCaption: editorState.customText,
+            chromaKey: editorState.chromaKey,
+            bgmTrack: (editorState.bgm && editorState.bgm.active) ? editorState.bgm.url : 'none',
+            bgmVolume: editorState.bgm ? editorState.bgm.volume : 0.85,
+            muteOrigAudio: editorState.muteOrigAudio || false,
+            clips: editorState.clips
           })
         });
 

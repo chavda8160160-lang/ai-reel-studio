@@ -11,7 +11,7 @@
     href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400;1,600&family=Noto+Sans+Gujarati:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=website-royal-v5">
+  <link rel="stylesheet" href="css/style.css?v=website-royal-v10">
 </head>
 
 <body>
@@ -58,6 +58,11 @@
         <button id="navModeAnalytics" class="mode-tab" data-target="analyticsView" type="button">
           <i class="fa-solid fa-chart-simple"></i>
           <span class="mode-tab-label">Analytics</span>
+        </button>
+        <button id="navModeCapCut" class="mode-tab capcut-nav-btn" type="button" title="Open CapCut Pro Video Editor">
+          <i class="fa-solid fa-scissors"></i>
+          <span class="mode-tab-label">CapCut Pro</span>
+          <span class="capcut-pro-tag">PRO</span>
         </button>
       </nav>
 
@@ -156,8 +161,8 @@
         <!-- SUB-VIEW A: Video Upload Box -->
         <div id="videoSourcePanel">
           <div class="studio-upload-card video-dropzone" id="videoDropzone">
-            <input type="file" id="videoFileInput" accept="video/mp4,video/quicktime,video/webm,video/mkv,image/*"
-              multiple class="file-input-hidden">
+            <input type="file" id="videoFileInput" accept=".mp4,.mov,.mkv,.webm,.avi,video/*,image/*"
+              multiple style="display: none !important;">
             <div class="dropzone-circle-icon">
               <i class="fa-solid fa-cloud-arrow-up"></i>
             </div>
@@ -166,9 +171,14 @@
             <button type="button" class="btn-choose-files" id="btnChooseFilesProxy">
               <i class="fa-solid fa-folder-open"></i> Choose Files
             </button>
-            <span class="dropzone-meta-hint">Supports MP4, JPG, PNG • Max 50MB</span>
+            <span class="dropzone-meta-hint">Supports MP4, MKV, MOV, JPG, PNG • Up to 1-Hour HD Videos</span>
             <span class="file-name-badge hidden" id="selectedFileName"></span>
           </div>
+
+          <!-- 1-Click Load from Downloads for Reel Studio -->
+          <button type="button" id="btnLoadDownloadsVideoToStudio" class="btn-choose-files" style="width: 100%; margin-top: 0.65rem; padding: 0.6rem 0.95rem; font-size: 0.82rem; background: #ecfdf5; color: #047857; border: 1.5px solid #10b981; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.45rem;">
+            <i class="fa-solid fa-bolt" style="color: #059669;"></i> <span>🎬 1-Click Load 1-Hour Video from PC Downloads</span>
+          </button>
 
           <!-- Batch Reel Upload Manager (Shows when multiple files selected) -->
           <div id="batchReelsManagerCard" class="hidden"
@@ -234,7 +244,7 @@
         <!-- SUB-VIEW B: Photos-to-Reel Flow -->
         <div id="photosSourcePanel" class="hidden" style="display: none; flex-direction: column; gap: 0.85rem;">
           <div class="studio-upload-card video-dropzone" id="photosDropzone" style="cursor: pointer;">
-            <input type="file" id="photoFilesInput" accept="image/*" multiple class="file-input-hidden">
+            <input type="file" id="photoFilesInput" accept="image/*" multiple style="display: none !important;">
             <div class="dropzone-circle-icon" style="background: rgba(190,24,93,0.12); color: #be185d;">
               <i class="fa-solid fa-images"></i>
             </div>
@@ -303,14 +313,15 @@
           <!-- 1. Video Type -->
           <div class="setting-field-row">
             <label class="setting-field-label" for="studioVideoTypeSelect">
-              <i class="fa-solid fa-expand"></i> Video Type
+              <i class="fa-solid fa-expand"></i> Video Type / Format
             </label>
             <div class="select-wrapper">
               <select id="studioVideoTypeSelect" class="studio-select">
-                <option value="reel" selected>Reel (9:16)</option>
-                <option value="shorts">YouTube Shorts (9:16)</option>
-                <option value="square">Square (1:1)</option>
-                <option value="cinema">Cinematic (16:9)</option>
+                <option value="shorts" selected>⚡ YouTube Shorts & Reels (9:16 Vertical)</option>
+                <option value="youtube_long">🎬 YouTube Long Video (16:9 HD - up to 10 min)</option>
+                <option value="reel">📱 Instagram Reel (9:16 Vertical)</option>
+                <option value="cinema">🎥 Cinematic Film (16:9 Landscape)</option>
+                <option value="square">⬛ Square (1:1)</option>
               </select>
               <i class="fa-solid fa-chevron-down select-chevron"></i>
             </div>
@@ -319,14 +330,17 @@
           <!-- 2. Duration -->
           <div class="setting-field-row">
             <label class="setting-field-label" for="videoDurationSelect">
-              <i class="fa-regular fa-clock"></i> Duration
+              <i class="fa-regular fa-clock"></i> Duration (Shorts & 10-Min Videos)
             </label>
             <div class="select-wrapper">
               <select id="videoDurationSelect" class="studio-select">
-                <option value="30" selected>30 Seconds (Best for Reels)</option>
-                <option value="15">15 Seconds (Quick Hook)</option>
-                <option value="60">60 Seconds (Full Showcase)</option>
-                <option value="original">Full Original Duration</option>
+                <option value="30" selected>30 Seconds (Best for Reels / Shorts)</option>
+                <option value="15">15 Seconds (Quick Hook Shorts)</option>
+                <option value="60">60 Seconds (Full 1-Min Shorts)</option>
+                <option value="180">3 Minutes (Extended Shorts / Mini Video)</option>
+                <option value="300">5 Minutes (YouTube Standard Video)</option>
+                <option value="600">10 Minutes (YouTube Long Video - Full 10 Min)</option>
+                <option value="original">Full Original Duration (Keep 100%)</option>
               </select>
               <i class="fa-solid fa-chevron-down select-chevron"></i>
             </div>
@@ -689,8 +703,8 @@
             <div class="social-card-title-group">
               <i class="fa-brands fa-youtube" style="color: #ef4444; font-size: 1.25rem; margin-top: 2px;"></i>
               <div>
-                <h4>YouTube Shorts Title</h4>
-                <p class="social-card-sub">Keep it short, catchy and engaging</p>
+                <h4 id="ytTitleCardHeading">YouTube Title (Video / Shorts)</h4>
+                <p class="social-card-sub" id="ytTitleCardSub">Optimized for YouTube Shorts & Long Videos</p>
               </div>
             </div>
             <button type="button" class="btn-copy-chip btn-copy" data-target="viralTitleText"
@@ -769,11 +783,11 @@
             </div>
           </div>
           <div class="platform-connect-card" id="btnPublishYouTube" role="button" tabindex="0"
-            title="Publish to YouTube Shorts">
+            title="Publish to YouTube (Shorts & 10-Min Videos)">
             <i class="fa-brands fa-youtube platform-icon yt-icon"></i>
             <div class="platform-card-meta">
-              <span class="platform-name">Upload to YouTube Shorts</span>
-              <span class="platform-account-badge">(Channel Connected) <span class="status-live-dot"></span></span>
+              <span class="platform-name" id="labelPublishYouTube">Upload to YouTube</span>
+              <span class="platform-account-badge" id="sublabelPublishYouTube">(Shorts & 10-Min Videos) <span class="status-live-dot"></span></span>
             </div>
           </div>
         </div>
@@ -786,76 +800,126 @@
     </main>
 
     <!-- VIEW 3: Daily Auto-Pilot Scheduler (Long Video -> Daily 30s Reels) -->
+    <!-- VIEW 3: Daily Auto-Pilot Scheduler (Long Video -> Daily 30s Reels) -->
     <main class="main-container hidden" id="schedulerView">
-      <!-- Left Column: Master Video Setup & Daily Time Config -->
+      <!-- 1. Left Column: Master Video Setup & Daily Time Config -->
       <section class="prompt-panel glass-card">
         <div class="panel-header">
-          <h2><i class="fa-solid fa-clock-rotate-left"></i> Long Video Auto-Pilot Setup</h2>
+          <div class="header-title-group">
+            <i class="fa-solid fa-clock-rotate-left panel-icon" style="color: #6e4f2b;"></i>
+            <div>
+              <h2 style="font-family: var(--font-serif), serif;">Series Auto-Pilot</h2>
+              <p class="panel-sub">Auto-cut long videos into 30s daily viral reels</p>
+            </div>
+          </div>
           <span class="badge badge-accent">Zero-Duplication AI</span>
         </div>
 
-        <p class="text-muted" style="margin-top: -0.5rem; line-height: 1.4;">
-          Upload any long video (e.g. 10 to 30 mins). Every day at your scheduled time (e.g. 8:30 AM), AI will extract a
+        <p class="text-muted" style="margin-top: -0.3rem; line-height: 1.4; font-size: 0.8rem; color: #78716c;">
+          Upload any long video (10m to 1 hour). Every day at your scheduled time, AI will extract a
           <b>fresh 30s reel</b> and auto-post it. <b>Published segments are never repeated!</b>
         </p>
 
-        <!-- Master Video Dropzone (Single or Multiple Queue) -->
-        <div class="video-dropzone" id="schedulerDropzone">
-          <input type="file" id="schedulerFileInput" accept="video/mp4,video/quicktime,video/webm,video/mkv" multiple
-            class="file-input-hidden">
-          <div class="dropzone-content">
-            <i class="fa-solid fa-film drop-icon"></i>
-            <h4>Drag & drop 1 or Multiple Long Videos here</h4>
-            <p class="text-muted">1 or more long master videos (1 Hour, 30m) - processed in queue</p>
-            <span class="file-name-badge hidden" id="schedulerFileNameBadge"></span>
+        <!-- Master Video Dropzone (Single or Multiple Queue) Matching Photo 2 Style -->
+        <div class="dropzone-wrapper" style="margin-top: 0.4rem;">
+          <div class="studio-upload-card" id="schedulerDropzone">
+            <input type="file" id="schedulerFileInput" accept=".mp4,.mov,.mkv,.webm,.avi,video/*" multiple style="display: none !important;">
+            <div class="dropzone-circle-icon">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <h4>Upload Long Master Video(s)</h4>
+            <p class="dropzone-sub">Drag & drop files here or click to browse</p>
+            <button type="button" class="btn-choose-files" id="btnSchedulerChooseFile">
+              <i class="fa-solid fa-folder-open"></i> Choose Files
+            </button>
+            <div class="dropzone-meta-hint">
+              Supports MP4, MKV, MOV, WEBM • 10m to 1 Hour Master Videos
+            </div>
+          </div>
+          <div id="schedulerFileSelectedHint" class="file-selected-badge hidden" style="margin-top: 0.6rem;">
+            <i class="fa-solid fa-file-video"></i>
+            <span id="schedulerFileNameBadge">video.mp4</span>
+            <button type="button" class="btn-remove-file" id="btnSchedulerRemoveFile" title="Remove video">✕</button>
           </div>
         </div>
 
-        <!-- Sample 15-Min Video Actions -->
-        <div
-          style="display: flex; justify-content: space-between; align-items: center; margin-top: -0.4rem; flex-wrap: wrap; gap: 0.5rem;">
-          <button type="button" id="btnLoadSampleVideo" class="btn btn-ghost"
-            style="font-size: 0.8rem; padding: 0.45rem 0.85rem; border-color: #c7d2fe; color: #4338ca; background: #eef2ff;">
-            <i class="fa-solid fa-bolt"></i> ⚡ Load 15-Min Test Sample (Quick Test)
+        <!-- Sample Video & Downloads 1-Hour Video Actions -->
+        <div style="display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.65rem;">
+          <button type="button" id="btnLoadDownloadsVideo" class="btn-choose-files" style="width: 100%; padding: 0.6rem 0.95rem; font-size: 0.82rem; background: #ecfdf5; color: #047857; border: 1.5px solid #10b981; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.45rem;">
+            <i class="fa-solid fa-bolt" style="color: #059669;"></i> <span>🎬 1-Click Load 1-Hour Video from PC Downloads</span>
           </button>
-          <a href="/test-15min-sample.mp4" download="test-15min-sample.mp4" class="btn btn-ghost"
-            style="font-size: 0.8rem; padding: 0.45rem 0.85rem;">
-            <i class="fa-solid fa-download"></i> Download to PC
-          </a>
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <button type="button" id="btnLoadSampleVideo" class="btn-choose-files" style="padding: 0.45rem 0.85rem; font-size: 0.76rem; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; box-shadow: none;">
+              <i class="fa-solid fa-film"></i> <span>Load 15-Min Sample</span>
+            </button>
+            <a href="/test-15min-sample.mp4" download="test-15min-sample.mp4" class="btn-choose-files" style="padding: 0.45rem 0.85rem; font-size: 0.76rem; background: #faf8f5; color: #443f39; border: 1px solid rgba(215,206,192,0.8); text-decoration: none; box-shadow: none;">
+              <i class="fa-solid fa-download"></i> <span>Download to PC</span>
+            </a>
+          </div>
         </div>
 
-        <!-- Schedule Daily Time Picker -->
-        <div class="form-group">
-          <label for="scheduleDailyTime"><i class="fa-solid fa-clock"></i> What time should it post every day?</label>
-          <div style="display: flex; gap: 0.8rem; align-items: center;">
-            <input type="time" id="scheduleDailyTime" value="08:30" class="custom-input"
-              style="font-size: 1.25rem; font-weight: 700; width: 180px; letter-spacing: 0.05em; text-align: center;">
-            <span id="timeDisplayHint" style="font-size: 0.88rem; font-weight: 600; color: var(--accent-cyan);">Daily at
-              08:30 AM</span>
+        <!-- Schedule Daily Time Picker & Frequency -->
+        <div class="studio-ai-settings-group" style="margin-top: 1.1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <div class="settings-title" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 700; font-size: 0.88rem; color: #1c1917; margin: 0;">
+              <i class="fa-solid fa-repeat" style="color: #6e4f2b;"></i> Reels Posting Frequency:
+            </div>
+            <span class="badge" id="schedFreqBadge" style="background: #eff6ff; color: #2563eb; font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 9999px; font-weight: 700;">
+              1 Reel / Day
+            </span>
           </div>
 
-          <!-- 1-Click Quick Time Buttons -->
-          <div style="margin-top: 0.4rem;">
-            <span
-              style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 0.35rem;">Quick
-              Time Presets:</span>
-            <div class="chips">
-              <button type="button" class="chip time-chip" data-time="08:30" data-label="Morning 08:30 AM">🌅 Morning
-                8:30 AM</button>
-              <button type="button" class="chip time-chip" data-time="13:00" data-label="Afternoon 01:00 PM">☀️ Tomorrow
-                1:00 PM</button>
-              <button type="button" class="chip time-chip" data-time="18:30" data-label="Evening 06:30 PM">🌆 Evening
-                6:30 PM</button>
-              <button type="button" class="chip time-chip" data-time="21:00" data-label="Night 09:00 PM">🌙 Today 9:00
-                PM</button>
+          <div class="chips" style="display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.85rem;">
+            <button type="button" class="chip sched-freq-chip active" data-freq="1" id="btnFreq1">📅 1 Reel Daily</button>
+            <button type="button" class="chip sched-freq-chip" data-freq="2" id="btnFreq2" style="background: rgba(184,151,88,0.15); border-color: #b89758; color: #6e4f2b; font-weight: 700;">🔥 2 Reels Daily (Morning + Evening)</button>
+            <button type="button" class="chip sched-freq-chip" data-freq="3" id="btnFreq3">⚡ 3 Reels Daily</button>
+          </div>
+
+          <div class="settings-title" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 700; font-size: 0.88rem; color: #1c1917;">
+            <i class="fa-solid fa-clock" style="color: #6e4f2b;"></i> Scheduled Posting Time(s):
+          </div>
+
+          <!-- Slot 1 Time Picker -->
+          <div style="display: flex; gap: 0.8rem; align-items: center; background: #fff; border: 1px solid rgba(215, 206, 192, 0.65); padding: 0.5rem 0.85rem; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+            <span style="font-size: 0.75rem; font-weight: 700; color: #78716c; min-width: 52px;" id="lblSlot1Name">Slot 1:</span>
+            <input type="time" id="scheduleDailyTime" value="09:00" class="custom-input" style="font-size: 1.15rem; font-weight: 700; width: 130px; letter-spacing: 0.05em; text-align: center; border: none; background: transparent; color: #1c1917;">
+            <span id="timeDisplayHint" style="font-size: 0.82rem; font-weight: 700; color: #b89758; background: #fbf7ee; padding: 0.35rem 0.75rem; border-radius: 9999px; border: 1px solid rgba(184, 151, 88, 0.3);">
+              Morning at 09:00 AM
+            </span>
+          </div>
+
+          <!-- Slot 2 Time Picker (Shown when 2 or 3 reels/day) -->
+          <div id="slot2TimeRow" style="display: none; margin-top: 0.5rem; gap: 0.8rem; align-items: center; background: #fff; border: 1px solid rgba(215, 206, 192, 0.65); padding: 0.5rem 0.85rem; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+            <span style="font-size: 0.75rem; font-weight: 700; color: #78716c; min-width: 52px;">Slot 2:</span>
+            <input type="time" id="scheduleSlot2Time" value="18:00" class="custom-input" style="font-size: 1.15rem; font-weight: 700; width: 130px; letter-spacing: 0.05em; text-align: center; border: none; background: transparent; color: #1c1917;">
+            <span id="timeDisplayHintSlot2" style="font-size: 0.82rem; font-weight: 700; color: #7c3aed; background: #f5f3ff; padding: 0.35rem 0.75rem; border-radius: 9999px; border: 1px solid rgba(124, 58, 237, 0.3);">
+              Evening at 06:00 PM
+            </span>
+          </div>
+
+          <!-- Slot 3 Time Picker (Shown when 3 reels/day) -->
+          <div id="slot3TimeRow" style="display: none; margin-top: 0.5rem; gap: 0.8rem; align-items: center; background: #fff; border: 1px solid rgba(215, 206, 192, 0.65); padding: 0.5rem 0.85rem; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+            <span style="font-size: 0.75rem; font-weight: 700; color: #78716c; min-width: 52px;">Slot 3:</span>
+            <input type="time" id="scheduleSlot3Time" value="21:30" class="custom-input" style="font-size: 1.15rem; font-weight: 700; width: 130px; letter-spacing: 0.05em; text-align: center; border: none; background: transparent; color: #1c1917;">
+            <span id="timeDisplayHintSlot3" style="font-size: 0.82rem; font-weight: 700; color: #0284c7; background: #f0f9ff; padding: 0.35rem 0.75rem; border-radius: 9999px; border: 1px solid rgba(2, 132, 199, 0.3);">
+              Night at 09:30 PM
+            </span>
+          </div>
+
+          <!-- Safe Internal Storage Guarantee Banner -->
+          <div style="margin-top: 0.85rem; padding: 0.65rem 0.85rem; background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; font-size: 0.76rem; color: #065f46; display: flex; align-items: flex-start; gap: 0.5rem;">
+            <i class="fa-solid fa-shield-halved" style="color: #059669; font-size: 1.15rem; margin-top: 0.1rem; flex-shrink: 0;"></i>
+            <div style="line-height: 1.45;">
+              <strong style="color: #047857; display: block; margin-bottom: 0.15rem;">🛡️ Safe App Memory Active:</strong>
+              વિડીયો એપ્લિકેશનની પોતાની અંદર સેવ થઈ જાય છે, એટલે તમે તમારા <b>PC / Downloads માંથી વિડીયો Delete કરી દેશો તો પણ શિડ્યુલ ચાલુ રહેશે!</b> અને જ્યારે બધી રીલ્સ પૂરી થઈ જશે ત્યારે એપમાંથી પણ આપોઆપ Delete થઈ જશે!
             </div>
           </div>
         </div>
 
         <!-- Action Buttons -->
-        <div style="display: flex; gap: 0.8rem; flex-direction: column;">
-          <button id="btnSaveSchedule" class="btn btn-primary btn-large">
-            <i class="fa-solid fa-play"></i>
+        <div style="display: flex; gap: 0.75rem; flex-direction: column; margin-top: 1.1rem;">
+          <button id="btnSaveSchedule" class="btn btn-primary" style="padding: 0.95rem; font-size: 0.95rem; font-weight: 800; border-radius: 14px; background: #1c1917; color: #f7eedb; box-shadow: 0 4px 15px rgba(28,25,23,0.25); display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s;">
+            <i class="fa-solid fa-play" style="color: #b89758;"></i>
             <span>⏰ Activate Scheduler (Auto-Pilot)</span>
           </button>
 
@@ -873,13 +937,18 @@
                 <div class="upload-progress-shimmer"></div>
               </div>
             </div>
-            <div class="upload-progress-details">
+            <div class="upload-progress-details" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.45rem;">
               <span id="schedulerUploadSizeCounter"><i class="fa-solid fa-file-arrow-up"></i> 0.0 MB / 0.0 MB</span>
-              <span id="schedulerUploadSpeedIndicator"><i class="fa-solid fa-gauge-high"></i> Uploading...</span>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span id="schedulerUploadSpeedIndicator"><i class="fa-solid fa-gauge-high"></i> Uploading...</span>
+                <button type="button" id="btnCancelSchedulerUpload" style="background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; border-radius: 6px; padding: 0.22rem 0.6rem; font-size: 0.74rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;" title="Cancel upload">
+                  <i class="fa-solid fa-xmark"></i> Cancel
+                </button>
+              </div>
             </div>
           </div>
 
-          <button id="btnRunNextNow" class="btn btn-success" style="justify-content: center; padding: 0.85rem;"
+          <button id="btnRunNextNow" class="btn btn-success" style="padding: 0.9rem; font-size: 0.9rem; font-weight: 800; border-radius: 14px; background: #047857; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(4,120,87,0.25); transition: all 0.2s;"
             title="Run today's 30-second new reel right now for testing">
             <i class="fa-solid fa-forward-step"></i>
             <span>⚡ Extract & Post Next Part (30s) Now</span>
@@ -887,90 +956,134 @@
         </div>
 
         <!-- Scheduler Status Overview Card -->
-        <div class="status-summary-card" id="schedulerOverviewCard">
-          <h4><i class="fa-solid fa-server"></i> Scheduler Status:</h4>
-          <div class="status-rows">
-            <div class="s-row"><span>Status:</span> <b id="lblSchedStatus" style="color: var(--accent-emerald);">Active
-                ✓</b></div>
-            <div class="s-row"><span>Daily Time:</span> <b id="lblSchedTime">Every day at 08:30 AM</b></div>
-            <div class="s-row"><span>Master Video:</span> <b id="lblSchedVideoName">No video set</b></div>
-            <div class="s-row"><span>Total Duration:</span> <b id="lblSchedTotalDur">0 Seconds</b></div>
-            <div class="s-row"><span>Upcoming Part:</span> <b id="lblSchedNextPart"
-                style="color: var(--accent-cyan);">Part 1</b></div>
+        <div class="status-summary-card" id="schedulerOverviewCard" style="margin-top: 1rem; background: #faf8f5; border: 1px solid rgba(215, 206, 192, 0.7); border-radius: 14px; padding: 0.9rem;">
+          <h4 style="font-family: var(--font-serif), serif; color: #1c1917; font-size: 0.92rem; margin-bottom: 0.5rem;"><i class="fa-solid fa-server" style="color: #6e4f2b;"></i> Scheduler Status:</h4>
+          <div class="status-rows" style="display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.8rem;">
+            <div class="s-row" style="display: flex; justify-content: space-between;"><span>Status:</span> <b id="lblSchedStatus" style="color: #059669;">Active ✓</b></div>
+            <div class="s-row" style="display: flex; justify-content: space-between;"><span>Daily Time:</span> <b id="lblSchedTime">Every day at 08:30 AM</b></div>
+            <div class="s-row" style="display: flex; justify-content: space-between;"><span>Master Video:</span> <b id="lblSchedVideoName">No video set</b></div>
+            <div class="s-row" style="display: flex; justify-content: space-between;"><span>Total Duration:</span> <b id="lblSchedTotalDur">0 Seconds</b></div>
+            <div class="s-row" style="display: flex; justify-content: space-between;"><span>Upcoming Part:</span> <b id="lblSchedNextPart" style="color: #4338ca;">Part 1</b></div>
           </div>
-          <div class="guarantee-badge">
+          <div class="guarantee-badge" style="margin-top: 0.6rem; font-size: 0.74rem; background: #fbf7ee; border: 1px solid rgba(184, 151, 88, 0.35); padding: 0.35rem 0.65rem; border-radius: 8px; color: #7c5a32;">
             <i class="fa-solid fa-shield-halved"></i> 100% Zero-Duplication: Published clips are never repeated!
           </div>
         </div>
 
         <!-- Master Videos Queue / Playlist Card -->
-        <div class="status-summary-card" id="masterVideoQueueCard"
-          style="margin-top: 0.85rem; border-color: rgba(99, 102, 241, 0.35);">
+        <div class="status-summary-card" id="masterVideoQueueCard" style="margin-top: 0.85rem; background: #faf8f5; border: 1px solid rgba(215, 206, 192, 0.7); border-radius: 14px; padding: 0.9rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
-            <h4 style="margin: 0; color: #4338ca; font-size: 0.9rem; font-weight: 700;">
-              <i class="fa-solid fa-list-ol"></i> Master Videos Playlist (Video Queue):
+            <h4 style="margin: 0; color: #4338ca; font-size: 0.88rem; font-weight: 700;">
+              <i class="fa-solid fa-list-ol"></i> Master Videos Playlist:
             </h4>
-            <span id="lblQueueCountBadge" class="badge"
-              style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 0.75rem;">1 Active</span>
+            <span id="lblQueueCountBadge" class="badge" style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 0.75rem;">1 Active</span>
           </div>
           <p style="font-size: 0.74rem; color: #64748b; margin-bottom: 0.6rem; line-height: 1.35;">
             When all parts of active video finish, the next queued video starts automatically.
           </p>
           <div id="masterVideosQueueList" style="display: flex; flex-direction: column; gap: 0.45rem;">
-            <div style="font-size: 0.78rem; color: #94a3b8; font-style: italic;">No additional video in queue. Drag &
-              drop above to add more.</div>
+            <div style="font-size: 0.78rem; color: #94a3b8; font-style: italic;">No additional video in queue. Drag & drop above to add more.</div>
           </div>
         </div>
       </section>
 
-      <!-- Right Column: Series Progress, Latest Part & History -->
+      <!-- 2. Center Column: Live iPhone Device Mockup Player (Matching Photo 2) -->
+      <section class="preview-panel">
+        <div class="panel-header">
+          <div class="header-title-group">
+            <i class="fa-solid fa-eye panel-icon"></i>
+            <div>
+              <h2>Reel Preview</h2>
+              <p class="panel-sub">This is how your reel will look</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="iphone-mockup-wrapper">
+          <!-- Realistic Hardware Mockup Shell -->
+          <div class="iphone-hardware-frame">
+            <!-- Hardware Buttons -->
+            <div class="iphone-btn-silent"></div>
+            <div class="iphone-btn-volume-up"></div>
+            <div class="iphone-btn-volume-down"></div>
+            <div class="iphone-btn-power"></div>
+
+            <!-- Screen Area -->
+            <div class="iphone-screen">
+              <!-- iOS Status Bar -->
+              <div class="iphone-status-bar">
+                <span class="status-time">9:41</span>
+                <div class="dynamic-island"></div>
+                <div class="status-icons">
+                  <i class="fa-solid fa-signal"></i>
+                  <i class="fa-solid fa-wifi"></i>
+                  <i class="fa-solid fa-battery-full"></i>
+                </div>
+              </div>
+
+              <!-- Inside Phone: 9:16 Video Player -->
+              <div class="iphone-video-container" style="position: relative;">
+                <video id="schedLatestPlayer" controls playsinline class="iphone-video-player" style="display: none;">
+                  Your browser does not support HTML5 video.
+                </video>
+
+                <!-- High-End Luxury Editorial Poster Overlay -->
+                <div class="reel-placeholder" id="schedPlayerPlaceholder">
+                  <!-- Floating Glass Center Play Button -->
+                  <div class="center-play-button" id="btnSchedCenterPlayOverlay" title="Play Reel">
+                    <i class="fa-solid fa-play"></i>
+                  </div>
+                  <!-- Bottom Left Duration Pill -->
+                  <span class="time-badge-bottom">0:30</span>
+                </div>
+              </div>
+
+              <!-- iOS Bottom Home Indicator Bar -->
+              <div class="iphone-home-indicator"></div>
+            </div>
+          </div>
+
+          <!-- Bottom Pill Badge under Phone -->
+          <div class="preview-badge-pill">
+            <i class="fa-solid fa-mobile-screen"></i>
+            <span>30 Second Series Preview</span>
+          </div>
+
+          <!-- Download Button -->
+          <a id="btnSchedDownloadLatest" href="#" download="reel-part.mp4" class="btn-choose-files hidden" style="margin-top: 0.5rem; width: 100%; max-width: 290px; justify-content: center; font-size: 0.85rem; font-weight: 700; border-radius: 9999px; padding: 0.65rem 1.1rem; text-decoration: none; box-shadow: 0 4px 15px rgba(110,79,43,0.3); display: none;">
+            <i class="fa-solid fa-download"></i> <span>Download 30s Cut Reel (~5MB)</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- 3. Right Column: Series Progress & Published Parts History (Matching Photo 2) -->
       <section class="output-panel glass-card">
         <div class="output-header">
           <div class="output-meta">
-            <h2>📈 Series Progress & Published Parts</h2>
-            <p class="text-muted" id="schedProgressLabel">0 / 0 Parts Posted (0%)</p>
+            <h2 style="display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-serif), serif;">
+              <i class="fa-solid fa-list-check" style="color: #6e4f2b;"></i> Published Parts History
+            </h2>
+            <p class="text-muted" id="schedProgressLabel" style="font-size: 0.82rem; margin-top: 0.2rem;">0 / 0 Parts Posted (0%)</p>
           </div>
 
-          <button id="btnRefreshSched" class="btn btn-ghost" title="Refresh status">
+          <button id="btnRefreshSched" class="btn btn-ghost" title="Refresh status" style="border: 1px solid rgba(215, 206, 192, 0.7); border-radius: 9999px; padding: 0.35rem 0.85rem; font-size: 0.78rem;">
             <i class="fa-solid fa-rotate"></i> Refresh
           </button>
         </div>
 
         <!-- Progress Bar Container -->
-        <div class="progress-container">
-          <div class="progress-bar-bg">
-            <div class="progress-bar-fill" id="schedProgressBar" style="width: 0%;"></div>
+        <div class="progress-container" style="margin: 0.85rem 0 1rem;">
+          <div class="progress-bar-bg" style="height: 8px; border-radius: 9999px; background: #e7e2d8;">
+            <div class="progress-bar-fill" id="schedProgressBar" style="width: 0%; height: 100%; border-radius: 9999px; background: linear-gradient(90deg, #6e4f2b, #b89758);"></div>
           </div>
         </div>
 
-        <!-- History & Reel Showcase -->
-        <div class="scheduler-grid">
-          <!-- Latest Part Preview Card -->
-          <div class="reel-player-card">
-            <h4>Latest Generated Part (30s 9:16):</h4>
-            <div class="reel-frame" style="max-width: 260px;">
-              <video id="schedLatestPlayer" controls playsinline class="reel-video">
-                Your browser does not support HTML5 video.
-              </video>
-              <div class="reel-placeholder" id="schedPlayerPlaceholder">
-                <i class="fa-solid fa-clapperboard"></i>
-                <p>Generated video part will play here</p>
-              </div>
-            </div>
-            <a id="btnSchedDownloadLatest" href="#" download="reel-part.mp4" class="btn btn-success hidden"
-              style="margin-top: 0.65rem; width: 100%; justify-content: center; font-size: 0.85rem; font-weight: 700; border-radius: 8px;">
-              <i class="fa-solid fa-download"></i> ⬇️ Download 30s Cut Reel (~5MB)
-            </a>
-          </div>
-
-          <!-- History List of Chunks -->
-          <div class="parts-history-card">
-            <h4><i class="fa-solid fa-list-check"></i> Published Parts History (No-Repeat Log):</h4>
-            <div class="parts-list" id="partsHistoryList">
-              <div class="empty-parts-notice">
-                <i class="fa-regular fa-clock"></i>
-                <p>No parts published yet. Click "Extract & Post Next Part Now" to test.</p>
-              </div>
+        <!-- History List of Chunks -->
+        <div class="parts-history-card" style="background: transparent; border: none; padding: 0;">
+          <div class="parts-list" id="partsHistoryList" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 540px; overflow-y: auto;">
+            <div class="empty-parts-notice">
+              <i class="fa-regular fa-clock"></i>
+              <p>No parts published yet. Click "Extract & Post Next Part Now" to test.</p>
             </div>
           </div>
         </div>
@@ -978,8 +1091,7 @@
     </main>
 
     <!-- VIEW 4: Live Social Analytics & Views Tracker -->
-    <main class="main-container hidden" id="analyticsView"
-      style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 1400px; margin: 0 auto; width: 100%;">
+    <main class="main-container hidden" id="analyticsView">
 
       <!-- Top Profile & Live Status Header -->
       <section class="analytics-header-card">
@@ -1868,6 +1980,10 @@
             onclick="switchTimelineTab('tabTimelineFX')">
             <i class="fa-solid fa-wand-magic"></i> <span>Effects</span>
           </button>
+          <button type="button" class="pro-cat-tab" data-tab="tabTimelineChroma"
+            onclick="switchTimelineTab('tabTimelineChroma')">
+            <i class="fa-solid fa-wand-magic-sparkles" style="color: #10b981;"></i> <span>Chroma Key</span>
+          </button>
           <button type="button" class="pro-cat-tab" data-tab="tabTimelineAI"
             onclick="switchTimelineTab('tabTimelineAI')">
             <i class="fa-solid fa-microchip"></i> <span>AI Tools</span>
@@ -1887,6 +2003,10 @@
           <button type="button" class="pro-cat-tab" data-tab="tabTimelineTransitions"
             onclick="switchTimelineTab('tabTimelineTransitions')">
             <i class="fa-solid fa-film"></i> <span>Transitions</span>
+          </button>
+          <button type="button" class="pro-cat-tab" data-tab="tabTimelineTemplates"
+            onclick="switchTimelineTab('tabTimelineTemplates')">
+            <i class="fa-solid fa-table-cells-large" style="color: #f59e0b;"></i> <span>Templates</span>
           </button>
           <button type="button" class="pro-cat-tab" data-tab="tabTimelineCanvas"
             onclick="switchTimelineTab('tabTimelineCanvas')">
@@ -1917,22 +2037,23 @@
                       <span>🟢 Start Trim:</span>
                       <b id="lblTrimStartVal" class="pro-val-highlight">0.0s</b>
                     </div>
-                    <input type="range" id="rngTrimStart" min="0" max="60" step="0.5" value="0" class="pro-slider">
+                    <input type="range" id="rngTrimStart" min="0" max="3600" step="0.5" value="0" class="pro-slider">
                   </div>
                   <div>
                     <div class="pro-slider-meta">
                       <span>🔴 End Trim:</span>
                       <b id="lblTrimEndVal" class="pro-val-highlight">30.0s</b>
                     </div>
-                    <input type="range" id="rngTrimEnd" min="2" max="60" step="0.5" value="30" class="pro-slider">
+                    <input type="range" id="rngTrimEnd" min="2" max="3600" step="0.5" value="30" class="pro-slider">
                   </div>
                 </div>
 
                 <div class="pro-quick-chips-row">
                   <span class="pro-sub-label">⚡ Quick Presets:</span>
-                  <button type="button" class="chip btn-quick-cut" data-start="0" data-end="15">First 15s Hook</button>
-                  <button type="button" class="chip btn-quick-cut" data-start="0" data-end="30">Viral 30s</button>
-                  <button type="button" class="chip btn-quick-cut" data-start="15" data-end="45">Middle 30s</button>
+                  <button type="button" class="chip btn-quick-cut" data-from-here="30" style="background: rgba(0,242,254,0.2); border: 1px solid #00f2fe; color: #00f2fe; font-weight: 600;" title="Make 30s Reel starting right from where you are playing"><i class="fa-solid fa-crosshairs"></i> 30s From Current Point</button>
+                  <button type="button" class="chip btn-quick-cut" data-extend="30" style="background: rgba(168,85,247,0.2); border: 1px solid #a855f7; color: #d8b4fe;" title="Extend End Trim by 30 seconds">+30s More</button>
+                  <button type="button" class="chip btn-quick-cut" data-start="0" data-end="30">First 30s</button>
+                  <button type="button" class="chip btn-quick-cut" data-start="15" data-end="45">15s – 45s</button>
                   <button type="button" class="chip btn-quick-cut" data-start="0" data-end="max">Full Length</button>
                 </div>
               </div>
@@ -2251,6 +2372,73 @@
               </div>
             </div>
 
+            <!-- PANE 5B: 🟢 Chroma Key & Green Screen Background Remover -->
+            <div id="tabTimelineChroma" class="pro-tab-pane hidden">
+              <div class="pro-pane-header">
+                <h4><i class="fa-solid fa-wand-magic-sparkles" style="color: #10b981;"></i> Chroma Key & Green Screen</h4>
+                <span class="pro-pane-sub">1-Click green/blue background removal & replacement</span>
+              </div>
+
+              <div class="pro-group-box">
+                <label class="pro-fx-toggle-card">
+                  <div>
+                    <b>🟢 Enable Chroma Key</b>
+                    <p>Remove selected solid background color in real-time</p>
+                  </div>
+                  <input type="checkbox" id="chkChromaEnable" class="pro-checkbox">
+                </label>
+
+                <div id="chromaSettingsGroup" style="margin-top: 0.75rem;">
+                  <label class="pro-group-label">Key Color Picker:</label>
+                  <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.65rem;">
+                    <button type="button" class="chip btn-chroma-preset active" data-color="#00FF00" style="background: rgba(34,197,94,0.15); border: 1.5px solid #22c55e; color: #22c55e;">🟢 Green Screen</button>
+                    <button type="button" class="chip btn-chroma-preset" data-color="#0000FF" style="background: rgba(59,130,246,0.15); border: 1.5px solid #3b82f6; color: #3b82f6;">🔵 Blue Screen</button>
+                    <input type="color" id="clrChromaCustom" value="#00FF00" style="width: 38px; height: 32px; border-radius: 8px; border: 1px solid #3f3f46; cursor: pointer; background: transparent;" title="Pick custom color">
+                  </div>
+
+                  <div class="pro-adjust-slider-row">
+                    <div class="pro-slider-meta">
+                      <span>🎯 Color Similarity (Tolerance):</span>
+                      <b id="lblChromaSim">0.25</b>
+                    </div>
+                    <input type="range" id="rngChromaSimilarity" min="0.05" max="0.65" step="0.02" value="0.25" class="pro-slider">
+                  </div>
+
+                  <div class="pro-adjust-slider-row">
+                    <div class="pro-slider-meta">
+                      <span>✨ Edge Smoothness / Blend:</span>
+                      <b id="lblChromaBlend">0.10</b>
+                    </div>
+                    <input type="range" id="rngChromaBlend" min="0.0" max="0.35" step="0.02" value="0.10" class="pro-slider">
+                  </div>
+
+                  <div style="margin-top: 0.85rem;">
+                    <label class="pro-group-label">Replace Background With:</label>
+                    <div class="pro-actions-grid-2">
+                      <button type="button" class="btn-pro-tool btn-chroma-bg active" data-bg="penthouse">
+                        <i class="fa-solid fa-building"></i> <span>Luxury Penthouse</span>
+                      </button>
+                      <button type="button" class="btn-pro-tool btn-chroma-bg" data-bg="cyberpunk">
+                        <i class="fa-solid fa-bolt"></i> <span>Neon Cyberpunk</span>
+                      </button>
+                      <button type="button" class="btn-pro-tool btn-chroma-bg" data-bg="studio">
+                        <i class="fa-solid fa-camera"></i> <span>Dark Studio</span>
+                      </button>
+                      <button type="button" class="btn-pro-tool btn-chroma-bg" data-bg="sunset">
+                        <i class="fa-solid fa-sun"></i> <span>Golden Sunset</span>
+                      </button>
+                      <button type="button" class="btn-pro-tool btn-chroma-bg" data-bg="blur">
+                        <i class="fa-solid fa-water"></i> <span>Blurred Backdrop</span>
+                      </button>
+                      <button type="button" class="btn-pro-tool btn-chroma-bg" data-bg="none">
+                        <i class="fa-solid fa-ban"></i> <span>Transparent Black</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- PANE 6: ✨ AI Tools -->
             <div id="tabTimelineAI" class="pro-tab-pane hidden">
               <div class="pro-pane-header">
@@ -2325,6 +2513,29 @@
                 </div>
 
                 <div style="margin-top: 0.65rem;">
+                  <label class="pro-group-label">Font Family:</label>
+                  <div class="pro-chips-grid">
+                    <button type="button" class="chip btn-font-family active" data-font="Inter">Modern (Inter)</button>
+                    <button type="button" class="chip btn-font-family" data-font="Montserrat">Bold (Montserrat)</button>
+                    <button type="button" class="chip btn-font-family" data-font="Bebas Neue">Impact (Bebas)</button>
+                    <button type="button" class="chip btn-font-family" data-font="Outfit">Trendy (Outfit)</button>
+                    <button type="button" class="chip btn-font-family" data-font="Playfair Display">Serif Luxury</button>
+                  </div>
+                </div>
+
+                <div style="margin-top: 0.65rem;">
+                  <label class="pro-group-label">Text Animation Effect:</label>
+                  <div class="pro-chips-grid">
+                    <button type="button" class="chip btn-text-anim active" data-anim="none">None</button>
+                    <button type="button" class="chip btn-text-anim" data-anim="typewriter">⌨️ Typewriter</button>
+                    <button type="button" class="chip btn-text-anim" data-anim="bounce">🏀 Bounce</button>
+                    <button type="button" class="chip btn-text-anim" data-anim="pop">💥 Pop-In</button>
+                    <button type="button" class="chip btn-text-anim" data-anim="pulse">✨ Neon Pulse</button>
+                    <button type="button" class="chip btn-text-anim" data-anim="slide">🚀 Slide Up</button>
+                  </div>
+                </div>
+
+                <div style="margin-top: 0.65rem;">
                   <label class="pro-group-label">Font Size:</label>
                   <div class="pro-chips-grid">
                     <button type="button" class="chip btn-text-size" data-size="small">Small (24px)</button>
@@ -2335,7 +2546,7 @@
                 </div>
 
                 <div style="margin-top: 0.65rem;">
-                  <label class="pro-group-label">Position on 9:16 Screen:</label>
+                  <label class="pro-group-label">Position on Screen:</label>
                   <div class="pro-chips-grid">
                     <button type="button" class="chip btn-text-pos" data-pos="top">🔝 Top Hook (14%)</button>
                     <button type="button" class="chip btn-text-pos" data-pos="center">🎯 Center (45%)</button>
@@ -2383,13 +2594,87 @@
             <!-- PANE 9: 🎵 Audio & Voice -->
             <div id="tabTimelineAudio" class="pro-tab-pane hidden">
               <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-volume-high"></i> Audio Mixer & Voice Studio</h4>
-                <span class="pro-pane-sub">Volume balancing, voice changer, mute & BGM</span>
+                <h4><i class="fa-solid fa-music"></i> Audio Mixer & Song Studio</h4>
+                <span class="pro-pane-sub">Change soundtrack, upload MP3, voice changer & mixer</span>
               </div>
 
+              <!-- 🎵 Active Soundtrack Card -->
+              <div class="pro-group-box" id="activeBgmBox" style="border: 1.5px solid rgba(0, 242, 254, 0.45); background: linear-gradient(135deg, rgba(0, 242, 254, 0.08), rgba(16, 185, 129, 0.08)); border-radius: 12px; padding: 0.9rem;">
+                <div class="pro-flex-between">
+                  <label class="pro-group-label" style="color: #00f2fe; display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0;">
+                    <i class="fa-solid fa-compact-disc fa-spin" style="animation-duration: 4s; font-size: 1rem;"></i> <span>Current Soundtrack:</span>
+                  </label>
+                  <span id="badgeActiveBgmStatus" class="pro-badge-gold">🎵 Active Track</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-top: 0.6rem; background: rgba(0,0,0,0.45); padding: 0.7rem 0.9rem; border-radius: 9px; border: 1px solid rgba(255,255,255,0.08);">
+                  <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
+                    <b id="lblActiveSongTitle" style="color: #fff; font-size: 0.92rem; display: block;">Royal Heritage</b>
+                    <span id="lblActiveSongSubtitle" style="font-size: 0.72rem; color: #94a3b8;">Luxury Saree • Indian Royal Beat</span>
+                  </div>
+                  <div style="display: flex; gap: 0.45rem; flex-shrink: 0;">
+                    <button type="button" id="btnPreviewBgmToggle" class="btn-pro-tool" style="padding: 0.4rem 0.75rem; font-size: 0.78rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;" title="Listen to Song">
+                      <i class="fa-solid fa-play"></i> <span id="lblPreviewBgmBtn">Play</span>
+                    </button>
+                    <button type="button" id="btnRemoveBgmTrack" class="btn-pro-tool" style="padding: 0.4rem 0.65rem; color: #ef4444; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08);" title="Mute / Remove BGM">
+                      <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- BGM Volume Slider -->
+                <div style="margin-top: 0.85rem;">
+                  <div class="pro-flex-between">
+                    <label class="pro-group-label" style="font-size: 0.8rem; margin-bottom: 0.2rem;">🎵 BGM Soundtrack Volume:</label>
+                    <b id="lblBgmVolDisplay" class="pro-badge-gold">85%</b>
+                  </div>
+                  <input type="range" id="rngBgmVolume" min="0" max="2.0" step="0.05" value="0.85" class="pro-slider">
+                </div>
+              </div>
+
+              <!-- 📁 Upload Custom MP3 / Song from PC -->
+              <div class="pro-group-box">
+                <input type="file" id="capcutAudioFileInput" accept="audio/*" style="display: none;">
+                <button type="button" id="btnUploadCapcutAudio" class="btn-pro-tool" style="width: 100%; padding: 0.75rem; border: 1.5px dashed #00f2fe; background: rgba(0,242,254,0.08); color: #00f2fe; font-weight: 700; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 0.6rem; cursor: pointer; transition: all 0.2s ease;">
+                  <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.2rem;"></i>
+                  <span>Upload Any Song from PC (.mp3, .wav)</span>
+                </button>
+                <div id="lblCustomAudioUploaded" class="hidden" style="margin-top: 0.4rem; font-size: 0.78rem; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
+                  <i class="fa-solid fa-circle-check"></i> <span id="lblCustomAudioName">Custom song attached to reel!</span>
+                </div>
+              </div>
+
+              <!-- 🎶 Trending Royalty-Free BGM Library -->
               <div class="pro-group-box">
                 <div class="pro-flex-between">
-                  <label class="pro-group-label">Original Video Volume:</label>
+                  <label class="pro-group-label">🔥 1-Click Viral BGM Library:</label>
+                  <span class="pro-badge-gold">CapCut Pro Audio</span>
+                </div>
+                <div class="pro-chips-grid" style="grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+                  <button type="button" class="chip btn-bgm-preset active" data-song-name="Royal Heritage" data-song-url="/audio/bgm/royal-heritage.mp3" data-song-desc="Luxury Saree • Indian Royal Beat">
+                    🎷 Royal Heritage
+                  </button>
+                  <button type="button" class="chip btn-bgm-preset" data-song-name="Cinematic Ambient" data-song-url="/audio/bgm/cinematic-ambient.mp3" data-song-desc="Dramatic Film • Storytelling">
+                    🎬 Cinematic Ambient
+                  </button>
+                  <button type="button" class="chip btn-bgm-preset" data-song-name="Lo-Fi Aesthetic" data-song-url="/audio/bgm/lofi-aesthetic.mp3" data-song-desc="Chill Chillhop • Vlog Beats">
+                    ☕ Lo-Fi Aesthetic
+                  </button>
+                  <button type="button" class="chip btn-bgm-preset" data-song-name="Luxury Saree" data-song-url="/audio/bgm/luxury-saree.mp3" data-song-desc="Festive Indian Sitar">
+                    💎 Luxury Saree
+                  </button>
+                  <button type="button" class="chip btn-bgm-preset" data-song-name="Cyber Phonk Trap" data-song-url="/audio/bgm/royal-heritage.mp3" data-song-desc="Fast Cuts & High Energy">
+                    ⚡ Phonk Beat
+                  </button>
+                  <button type="button" class="chip btn-bgm-preset" data-song-name="Mute / No Music" data-song-url="none" data-song-desc="Original Sound Only">
+                    🔇 No Music (Silent)
+                  </button>
+                </div>
+              </div>
+
+              <!-- Original Camera Audio Balancing -->
+              <div class="pro-group-box">
+                <div class="pro-flex-between">
+                  <label class="pro-group-label">📹 Original Video Camera Sound:</label>
                   <b id="lblOrigVolDisplay" class="pro-badge-gold">100%</b>
                 </div>
                 <input type="range" id="rngOriginalVolume" min="0" max="2.0" step="0.05" value="1.0" class="pro-slider">
@@ -2414,6 +2699,34 @@
                   <button type="button" class="chip btn-voice-preset" data-voice="echo">📻 Radio Echo</button>
                 </div>
               </div>
+
+              <!-- Live Voice-Over Studio -->
+              <div class="pro-group-box">
+                <label class="pro-group-label">🎙️ Live Voice-Over Recording:</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.4rem;">
+                  <button type="button" id="btnStartVoiceRecord" class="btn-pro-tool" style="flex: 1; background: rgba(239,68,68,0.12); border: 1.5px solid #ef4444; color: #ef4444;">
+                    <i class="fa-solid fa-microphone"></i> <span>Record Voice</span>
+                  </button>
+                  <button type="button" id="btnStopVoiceRecord" class="btn-pro-tool hidden" style="flex: 1; background: rgba(34,197,94,0.12); border: 1.5px solid #22c55e; color: #22c55e;">
+                    <i class="fa-solid fa-stop"></i> <span>Stop & Save</span>
+                  </button>
+                </div>
+                <div id="voiceRecordStatus" class="hidden" style="margin-top: 0.5rem; font-size: 0.8rem; color: #ef4444; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                  <span class="recording-pulse" style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+                  <span>Recording: </span><b id="lblVoiceRecordTime">00:00</b>
+                </div>
+              </div>
+
+              <!-- Beat Detection Marker Tool -->
+              <div class="pro-group-box">
+                <div class="pro-flex-between">
+                  <label class="pro-group-label">⚡ Audio Beat Sync:</label>
+                  <span class="pro-badge-gold">AI Beat Drops</span>
+                </div>
+                <button type="button" id="btnDetectAudioBeats" class="btn-pro-tool" style="width: 100%; margin-top: 0.4rem;">
+                  <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> <span>Auto-Detect & Mark Beats on Timeline</span>
+                </button>
+              </div>
             </div>
 
             <!-- PANE 10: 🎬 Transitions -->
@@ -2431,6 +2744,78 @@
                 <button type="button" class="chip btn-transition-chip" data-transition="dissolve">Cross
                   Dissolve</button>
                 <button type="button" class="chip btn-transition-chip" data-transition="glitch">Glitch Cut</button>
+              </div>
+            </div>
+
+            <!-- PANE 10B: 🗂️ Trending Templates Marketplace (CapCut 1-Click Templates) -->
+            <div id="tabTimelineTemplates" class="pro-tab-pane hidden">
+              <div class="pro-pane-header">
+                <h4><i class="fa-solid fa-table-cells-large" style="color: #f59e0b;"></i> Trending Templates</h4>
+                <span class="pro-pane-sub">1-Click viral editing styles, effects, speed & sound packs</span>
+              </div>
+
+              <div class="pro-group-box">
+                <div class="pro-actions-grid-1">
+                  <!-- Template 1: Viral Hook -->
+                  <div class="template-card-item btn-apply-template" data-tpl="viral-hook" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: all 0.2s;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                      <span style="font-size: 1.6rem;">⚡</span>
+                      <div>
+                        <b style="color: #f59e0b; font-size: 0.88rem;">Viral Beat Hook</b>
+                        <p style="color: #a1a1aa; font-size: 0.72rem; margin: 0.15rem 0 0;">1.25x Speed + White Flash + Punch Zoom + Yellow Subs</p>
+                      </div>
+                    </div>
+                    <span class="pro-badge-saved" style="white-space: nowrap;">⚡ Apply</span>
+                  </div>
+
+                  <!-- Template 2: Luxury Saree / Jewelry Showcase -->
+                  <div class="template-card-item btn-apply-template" data-tpl="luxury-royal" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(217,119,6,0.3); border-radius: 12px; padding: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: all 0.2s; margin-top: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                      <span style="font-size: 1.6rem;">👑</span>
+                      <div>
+                        <b style="color: #fcd34d; font-size: 0.88rem;">Royal Luxury Gold</b>
+                        <p style="color: #a1a1aa; font-size: 0.72rem; margin: 0.15rem 0 0;">Warm Gold LUT + Sparkle + 0.75x Slow-Mo + Serif Title</p>
+                      </div>
+                    </div>
+                    <span class="pro-badge-saved" style="white-space: nowrap;">👑 Apply</span>
+                  </div>
+
+                  <!-- Template 3: Cyberpunk Techno Reel -->
+                  <div class="template-card-item btn-apply-template" data-tpl="cyberpunk" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(6,182,212,0.3); border-radius: 12px; padding: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: all 0.2s; margin-top: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                      <span style="font-size: 1.6rem;">🟣</span>
+                      <div>
+                        <b style="color: #22d3ee; font-size: 0.88rem;">Neon Cyber Glitch</b>
+                        <p style="color: #a1a1aa; font-size: 0.72rem; margin: 0.15rem 0 0;">Cyberpunk Neon + Glitch Pulse + Electric Cyan Text</p>
+                      </div>
+                    </div>
+                    <span class="pro-badge-saved" style="white-space: nowrap;">🟣 Apply</span>
+                  </div>
+
+                  <!-- Template 4: Wedding / Romantic Highlights -->
+                  <div class="template-card-item btn-apply-template" data-tpl="wedding" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(244,114,182,0.3); border-radius: 12px; padding: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: all 0.2s; margin-top: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                      <span style="font-size: 1.6rem;">🌸</span>
+                      <div>
+                        <b style="color: #f472b6; font-size: 0.88rem;">Wedding Highlights</b>
+                        <p style="color: #a1a1aa; font-size: 0.72rem; margin: 0.15rem 0 0;">Beauty Soft Glow + Vignette + Cross Dissolve Fade</p>
+                      </div>
+                    </div>
+                    <span class="pro-badge-saved" style="white-space: nowrap;">🌸 Apply</span>
+                  </div>
+
+                  <!-- Template 5: YouTube Long Video / Tech Review -->
+                  <div class="template-card-item btn-apply-template" data-tpl="tech-review" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(59,130,246,0.3); border-radius: 12px; padding: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: all 0.2s; margin-top: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                      <span style="font-size: 1.6rem;">🎬</span>
+                      <div>
+                        <b style="color: #60a5fa; font-size: 0.88rem;">16:9 YouTube Pro</b>
+                        <p style="color: #a1a1aa; font-size: 0.72rem; margin: 0.15rem 0 0;">16:9 HD + HDR Vivid + Sharp 50% + Top Hook Title</p>
+                      </div>
+                    </div>
+                    <span class="pro-badge-saved" style="white-space: nowrap;">🎬 Apply</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -2505,7 +2890,12 @@
           <main class="pro-preview-viewport">
             <div class="pro-player-stage">
               <div class="pro-monitor-frame" id="proMonitorFrame">
+                <!-- Virtual Chroma Key Background Backdrop Layer -->
+                <div id="timelineChromaBgLayer" class="pro-chroma-bg-layer hidden"></div>
                 <video id="timelinePreviewVideo" playsinline loop class="pro-video-screen"></video>
+                <audio id="timelineBgmAudioPlayer" preload="auto"></audio>
+                <!-- Real-time Pixel Shader Chroma Key Canvas -->
+                <canvas id="chromaPreviewCanvas" class="pro-video-screen hidden" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; object-fit: contain;"></canvas>
 
                 <!-- Dynamic Visual Overlays -->
                 <div id="timelineFlashOverlay" class="pro-overlay-flash"></div>
@@ -2526,7 +2916,7 @@
                 <button type="button" id="btnStepBack" class="btn-transport" title="Step Back 1s"><i
                     class="fa-solid fa-backward-step"></i></button>
                 <button type="button" id="btnTimelineTogglePlay" class="btn-transport btn-play-main"
-                  title="Play / Pause">
+                  title="Play / Pause (Spacebar)">
                   <i class="fa-solid fa-play" id="timelinePlayIcon"></i>
                 </button>
                 <button type="button" id="btnStepForward" class="btn-transport" title="Step Forward 1s"><i
@@ -2536,10 +2926,27 @@
                   <span id="lblTimelineCurrentTime">00:00.00</span> / <span id="lblTimelineClipDuration">30s</span>
                 </div>
 
+                <div class="pro-v-divider" style="height: 18px; width: 1px; background: #272732; margin: 0 4px;"></div>
+
+                <!-- Quick Canvas Aspect Ratio Switcher -->
+                <div class="pro-quick-aspect-group" style="display: flex; gap: 4px; align-items: center;">
+                  <button type="button" class="btn-quick-ratio" id="btnRatio16x9" data-ratio="16:9" title="16:9 Landscape (YouTube)">
+                    <i class="fa-solid fa-desktop"></i> 16:9
+                  </button>
+                  <button type="button" class="btn-quick-ratio active" id="btnRatio9x16" data-ratio="9:16" title="9:16 Vertical (Reels/Shorts)">
+                    <i class="fa-solid fa-mobile-screen"></i> 9:16
+                  </button>
+                  <button type="button" class="btn-quick-ratio" id="btnToggleVideoFit" title="Toggle Fit to Screen / Fill Canvas">
+                    <i class="fa-solid fa-expand"></i> <span id="lblVideoFitMode">Fit</span>
+                  </button>
+                </div>
+
+                <div class="pro-v-divider" style="height: 18px; width: 1px; background: #272732; margin: 0 4px;"></div>
+
                 <button type="button" id="btnToggleLoop" class="btn-transport active" title="Toggle Loop Playback"><i
                     class="fa-solid fa-repeat"></i></button>
                 <button type="button" id="btnToggleFullscreen" class="btn-transport"
-                  title="Toggle Fullscreen Preview"><i class="fa-solid fa-expand"></i></button>
+                  title="Toggle Fullscreen Preview"><i class="fa-solid fa-maximize"></i></button>
               </div>
             </div>
           </main>
@@ -2594,6 +3001,10 @@
           <!-- Timeline Toolbar -->
           <div class="pro-timeline-toolbar">
             <div class="timeline-tools-left">
+              <button type="button" id="btnTimelineAddClip" class="btn-timeline-action" title="Add another video clip to sequence" style="background: rgba(16,185,129,0.18); border-color: #10b981; color: #10b981;">
+                <i class="fa-solid fa-plus"></i> Add Clip
+              </button>
+              <input type="file" id="multiClipFileInput" accept="video/mp4,video/quicktime,video/webm" style="display: none;">
               <button type="button" id="btnTimelineSplit" class="btn-timeline-action" title="Split clip at playhead"><i
                   class="fa-solid fa-scissors"></i> Split</button>
               <button type="button" id="btnTimelineSpeedRampQuick" class="btn-timeline-action"><i
@@ -2605,14 +3016,15 @@
               <span id="lblTimelineRangeDisplay" class="timeline-range-badge">0.0s – 30.0s (30s)</span>
             </div>
             <div class="timeline-tools-right">
+              <span class="timeline-zoom-chip" id="btnTimelineSnapToggle" title="Magnetic Snapping"><i class="fa-solid fa-magnet"></i> Snap ON</span>
               <span class="timeline-zoom-chip"><i class="fa-solid fa-magnifying-glass-plus"></i> Timeline Fit</span>
             </div>
           </div>
 
           <!-- Multi-Track Stack -->
           <div class="pro-timeline-tracks" id="proTimelineTracks">
-            <!-- Time Ruler with Second Markers -->
-            <div class="pro-time-ruler">
+            <!-- Time Ruler with Second Markers & Beat Markers -->
+            <div class="pro-time-ruler" id="proTimeRulerWithBeats">
               <span>00:00</span>
               <span>00:05</span>
               <span>00:10</span>
@@ -2620,34 +3032,54 @@
               <span>00:20</span>
               <span>00:25</span>
               <span>00:30</span>
+              <div id="timelineBeatMarksLayer" class="pro-beat-marks-layer"></div>
             </div>
 
-            <!-- TRACK 1: 🎬 Video Track with Dual Slider Handles -->
-            <div class="pro-track-lane video-lane">
-              <div class="track-tag"><i class="fa-solid fa-video"></i> Video</div>
+            <!-- TRACK 1: 🎬 Video Track with Dual Slider Handles & Track Controls -->
+            <div class="pro-track-lane video-lane" id="trackLaneVideo">
+              <div class="track-tag">
+                <button type="button" class="btn-track-ctl btn-track-lock" id="btnLockVideoTrack" title="Lock Video Track"><i class="fa-solid fa-lock-open"></i></button>
+                <button type="button" class="btn-track-ctl btn-track-eye" id="btnHideVideoTrack" title="Hide/Unhide Video"><i class="fa-solid fa-eye"></i></button>
+                <span><i class="fa-solid fa-video"></i> Video</span>
+              </div>
               <div class="track-content-lane">
-                <div class="track-clip-block video-clip-block" id="timelineVideoClipBlock">
-                  <div class="clip-thumbnails-strip"></div>
-                  <span class="clip-label" id="timelineVideoClipLabel">Main_Video_Clip.mp4</span>
+                <div class="pro-multi-clip-wrapper" id="proMultiClipWrapper" style="display: flex; gap: 4px; width: 100%; height: 100%;">
+                  <div class="track-clip-block video-clip-block" id="timelineVideoClipBlock" style="flex: 1; position: relative; cursor: pointer;">
+                    <div class="clip-trim-handle handle-left" id="handleTrimLeft" title="Drag to trim start"></div>
+                    <div class="clip-thumbnails-strip"></div>
+                    <span class="clip-label" id="timelineVideoClipLabel">reel-demo.mp4</span>
+                    <div class="clip-trim-handle handle-right" id="handleTrimRight" title="Drag to trim end"></div>
+                  </div>
                 </div>
                 <div class="pro-playhead-needle" id="timelinePlayheadNeedle"></div>
               </div>
             </div>
 
             <!-- TRACK 2: 🎵 Audio Waveform Track -->
-            <div class="pro-track-lane audio-lane">
-              <div class="track-tag"><i class="fa-solid fa-music"></i> Audio</div>
+            <div class="pro-track-lane audio-lane" id="trackLaneAudio">
+              <div class="track-tag">
+                <button type="button" class="btn-track-ctl btn-track-lock" id="btnLockAudioTrack" title="Lock Audio Track"><i class="fa-solid fa-lock-open"></i></button>
+                <button type="button" class="btn-track-ctl btn-track-mute" id="btnMuteAudioTrack" title="Mute Audio Track"><i class="fa-solid fa-volume-high"></i></button>
+                <span><i class="fa-solid fa-music"></i> Audio</span>
+              </div>
               <div class="track-content-lane">
-                <div class="track-clip-block audio-clip-block">
+                <div class="track-clip-block audio-clip-block" id="timelineAudioClipBlock" title="Click to Change Song / Open Audio Studio" style="cursor: pointer;">
                   <div class="waveform-graphic"></div>
-                  <span class="clip-label" id="timelineAudioClipLabel">BGM • Audio Soundtrack</span>
+                  <span class="clip-label" id="timelineAudioClipLabel">🎵 BGM • Royal Heritage</span>
+                  <button type="button" class="btn-track-change-song" id="btnTimelineChangeSong" title="Click to Change Song">
+                    <i class="fa-solid fa-arrows-rotate"></i> Change Song
+                  </button>
                 </div>
               </div>
             </div>
 
             <!-- TRACK 3: 💬 Subtitle & Effects Track -->
-            <div class="pro-track-lane text-lane">
-              <div class="track-tag"><i class="fa-solid fa-font"></i> Text</div>
+            <div class="pro-track-lane text-lane" id="trackLaneText">
+              <div class="track-tag">
+                <button type="button" class="btn-track-ctl btn-track-lock" id="btnLockTextTrack" title="Lock Text Track"><i class="fa-solid fa-lock-open"></i></button>
+                <button type="button" class="btn-track-ctl btn-track-eye" id="btnHideTextTrack" title="Hide/Unhide Text"><i class="fa-solid fa-eye"></i></button>
+                <span><i class="fa-solid fa-font"></i> Text</span>
+              </div>
               <div class="track-content-lane">
                 <div class="track-clip-block text-clip-block">
                   <span class="clip-label" id="timelineTrackSubLabel">💬 Text & Subtitles Layer</span>
@@ -3127,7 +3559,7 @@
 
     <div id="toast" class="toast hidden"></div>
 
-    <script src="js/app.js?v=capcut-tabs-full-v8"></script>
+    <script src="js/app.js?v=capcut-autopilot-freq-v15"></script>
 </body>
 
 </html>
