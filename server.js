@@ -763,23 +763,26 @@ async function publishReelDirectToInstagram(videoPath, caption, customToken, cus
   }
 
   // Step 3: Wait for Meta to process the video
+  // Step 3: Wait for Meta to process the video (up to 4 minutes)
   let isReady = false;
-  for (let attempt = 1; attempt <= 25; attempt++) {
-    await new Promise(r => setTimeout(r, 3000));
+  const maxAttempts = 60;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    await new Promise(r => setTimeout(r, 4000));
     const statusRes = await fetch(`https://graph.facebook.com/v20.0/${containerId}?fields=status_code,status&access_token=${token}`).then(r => r.json());
-    console.log(`⏳ [Instagram Direct] Poll attempt ${attempt}/25: ${statusRes.status_code}`);
+    console.log(`⏳ [Instagram Direct] Poll attempt ${attempt}/${maxAttempts}: ${statusRes.status_code || 'CHECKING'}`);
 
     if (statusRes.status_code === 'FINISHED') {
       isReady = true;
       break;
     }
     if (statusRes.status_code === 'ERROR') {
-      throw new Error('Error processing Meta Reel.');
+      const errorMsg = statusRes.status?.error_message || statusRes.error?.message || 'Error processing Meta Reel on server.';
+      throw new Error(`Meta Processing Error: ${errorMsg}`);
     }
   }
 
   if (!isReady) {
-    throw new Error('Meta video processing timed out.');
+    throw new Error('Meta video processing timed out (waited 4 minutes).');
   }
 
   // Step 4: Publish Reel
