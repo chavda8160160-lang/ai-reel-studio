@@ -3528,6 +3528,19 @@ app.get('/api/scheduler/status', (req, res) => {
   res.json({ success: true, state });
 });
 
+app.get('/api/scheduler/mangalvar-schedule', (req, res) => {
+  const file = path.join(__dirname, 'data', 'mangalvar-schedule-ready.json');
+  if (fs.existsSync(file)) {
+    try {
+      const items = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return res.json({ success: true, items });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+  res.json({ success: true, items: [] });
+});
+
 app.post('/api/scheduler/load-sample', async (req, res) => {
   try {
     const samplePath = path.join(__dirname, 'public', 'test-15min-sample.mp4');

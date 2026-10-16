@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>મંગળવાર સુધીનું Advance Schedule (Part 5 થી 13) | AI Reel Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Gujarati:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090e;
+      --card-bg: rgba(18, 24, 38, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.35);
+      --accent: #06b6d4;
+      --accent-glow: rgba(6, 182, 212, 0.3);
+      --success: #10b981;
+      --gold: #f59e0b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans Gujarati', sans-serif;
+      background: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(244, 63, 94, 0.06) 0px, transparent 50%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1.5rem 4rem;
+    }
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #818cf8;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1.2;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.75rem;
+    }
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .quick-actions {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.4rem;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #fff;
+      box-shadow: 0 4px 18px var(--primary-glow);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
+    }
+    .btn-meta {
+      background: linear-gradient(135deg, #0081fb, #0064e0);
+      color: #fff;
+      box-shadow: 0 4px 18px rgba(0, 129, 251, 0.35);
+    }
+    .btn-meta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 129, 251, 0.5);
+    }
+    .btn-yt {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+      box-shadow: 0 4px 18px rgba(239, 68, 68, 0.35);
+    }
+    .btn-yt:hover {
+      transform: translateY(-2px);
+    }
+    .guide-banner {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8));
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 20px;
+      padding: 1.5rem 2rem;
+      margin-bottom: 2.5rem;
+      backdrop-filter: blur(12px);
+    }
+    .guide-banner h3 {
+      font-size: 1.15rem;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .guide-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+    .step-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+      padding: 1rem;
+    }
+    .step-num {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .step-text {
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 1.75rem;
+    }
+    .reel-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(16px);
+      transition: all 0.25s ease;
+    }
+    .reel-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(99, 102, 241, 0.4);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+    .card-slot-header {
+      background: linear-gradient(90deg, rgba(99, 102, 241, 0.2), rgba(6, 182, 212, 0.15));
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .slot-badge {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .part-tag {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .video-preview-wrapper {
+      position: relative;
+      background: #000;
+      width: 100%;
+      height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .video-preview-wrapper video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .card-body {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      flex: 1;
+    }
+    .meta-field label {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+      font-weight: 600;
+    }
+    .copy-box {
+      position: relative;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      padding-right: 5rem;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      max-height: 85px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .btn-copy-inline {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.75rem;
+      background: rgba(99, 102, 241, 0.25);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: #a5b4fc;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .btn-copy-inline:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+    .card-footer-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: auto;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .btn-action-sm {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 10px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-download {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+    .btn-download:hover {
+      background: #10b981;
+      color: #fff;
+    }
+    .btn-cover {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+    }
+    .btn-cover:hover {
+      background: #f59e0b;
+      color: #fff;
+    }
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #10b981;
+      color: #fff;
+      padding: 0.8rem 1.4rem;
+      border-radius: 12px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 9999;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge-pill">
+        <span>⚡ 4-Day Auto-Pilot Ready</span>
+      </div>
+      <h1>મંગળવાર સુધીનું Advance Schedule (Part 5 થી 13)</h1>
+      <p class="subtitle">તમારું કમ્પ્યુટર બંધ હોય ત્યારે પણ Instagram અને YouTube પર રોજ નિયત સમયે રીલ્સ પબ્લિશ થાય તે માટે ૯ એ ૯ રીલ્સ તૈયાર છે!</p>
+      
+      <div class="quick-actions">
+        <a href="https://business.facebook.com/latest/content_calendar" target="_blank" class="btn btn-meta">
+          <span>📅 Open Meta Business Suite (Schedule)</span>
+        </a>
+        <a href="https://studio.youtube.com" target="_blank" class="btn btn-yt">
+          <span>🔴 Open YouTube Studio (Schedule)</span>
+        </a>
+        <a href="/" class="btn btn-primary">
+          <span>🏠 Return to AI Studio</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="guide-banner">
+      <h3>💡 Meta Business Suite માં ૨ મિનિટમાં કઈ રીતે Schedule કરવું?</h3>
+      <div class="guide-steps">
+        <div class="step-box">
+          <div class="step-num">1</div>
+          <div class="step-text">ઉપરના <strong>"Open Meta Business Suite"</strong> બટન પર ક્લિક કરી તમારા Instagram એકાઉન્ટ સાથે લોગિન કરો.</div>
+        </div>
+        <div class="step-box">
+          <div class="step-num">2</div>
+          <div class="step-text"><strong>"Create Reel"</strong> પસંદ કરો અને નીચે આપેલા વિડીયો માંથી <strong>"Download Video"</strong> કરી ત્યાં અપલોડ કરો.</div>
+        </div>
+        <div class="step-box">
+          <div class="step-num">3</div>
+          <div class="step-text">નીચેનું <strong>"Copy Caption"</strong> બટન દબાવી કેપ્શન પેસ્ટ કરો અને નીચે <strong>"Schedule"</strong> માં દર્શાવેલ તારીખ અને સમય સેટ કરી દો!</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards-grid" id="cardsGrid">
+      <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #94a3b8;">
+        ⏳ રીલ્સ લોડ થઈ રહી છે... કૃપા કરીને થોડીવાર રાહ જુઓ.
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">કૉપી થઈ ગયું! ✓</div>
+
+  <script>
+    function copyText(text, label) {
+      navigator.clipboard.writeText(text).then(() => {
+        const toast = document.getElementById('toast');
+        toast.textContent = (label || 'ટેક્સ્ટ') + ' કૉપી થઈ ગયું! ✓';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+      });
+    }
+
+    async function loadSchedule() {
+      try {
+        const res = await fetch('/api/scheduler/mangalvar-schedule');
+        const data = await res.json();
+        const grid = document.getElementById('cardsGrid');
+
+        if (!data.items || data.items.length === 0) {
+          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #94a3b8;">વિડીયો પ્રોસેસ થઈ રહ્યા છે. થોડીક સેકન્ડોમાં રીફ્રેશ કરો...</div>';
+          return;
+        }
+
+        grid.innerHTML = data.items.map(item => `
+          <div class="reel-card">
+            <div class="card-slot-header">
+              <div class="slot-badge">
+                <span>⏰</span> ${item.slotLabel}
+              </div>
+              <span class="part-tag">PART ${item.part}</span>
+            </div>
+
+            <div class="video-preview-wrapper">
+              <video src="${item.videoUrl}" poster="${item.thumbnailUrl}" controls preload="metadata"></video>
+            </div>
+
+            <div class="card-body">
+              <div class="meta-field">
+                <label>📌 VIRAL TITLE</label>
+                <div class="copy-box">
+                  ${item.viralTitle}
+                  <button class="btn-copy-inline" onclick="copyText('${item.viralTitle.replace(/'/g, "\\'")}', 'ટાઇટલ')">Copy</button>
+                </div>
+              </div>
+
+              <div class="meta-field">
+                <label>📝 CAPTION & HASHTAGS</label>
+                <div class="copy-box">
+                  ${item.viralCaption}
+                  <button class="btn-copy-inline" onclick="copyText('${(item.viralCaption + "\\n\\n" + (item.viralHashtags || '')).replace(/'/g, "\\'").replace(/\n/g, "\\n")}', 'કેપ્શન')">Copy</button>
+                </div>
+              </div>
+
+              <div class="card-footer-actions">
+                <a href="${item.downloadUrl}" download="${item.fileName}" class="btn-action-sm btn-download">
+                  <span>⬇️</span> Download Reel
+                </a>
+                <a href="${item.thumbnailUrl}" download="${item.coverFileName}" class="btn-action-sm btn-cover">
+                  <span>🖼️</span> Cover Photo
+                </a>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    loadSchedule();
+    // Auto-refresh every 6 seconds while generating
+    setInterval(loadSchedule, 6000);
+  </script>
+</body>
+</html>
