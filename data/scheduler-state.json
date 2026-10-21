@@ -13,9 +13,39 @@
     "totalParts": 54,
     "addedAt": "2026-10-14T12:39:35.300Z"
   },
-  "currentPart": 14,
-  "lastPostedSeconds": 390,
+  "currentPart": 20,
+  "lastPostedSeconds": 570,
   "history": [
+    {
+      "part": 15,
+      "startSeconds": 420,
+      "endSeconds": 450,
+      "duration": "30s",
+      "renderedReelUrl": "/rendered-reels/daily-part15-1792565126650.mp4",
+      "thumbnailUrl": "/rendered-reels/daily-part15-1792565126650-cover.jpg",
+      "fileName": "daily-part15-1792565126650.mp4",
+      "displayTime": "આજે બુધવાર (21 Oct) સાંજે 06:30 PM",
+      "viralTitle": "🎮 GTAVI An - Part 15: Intense Moment! 🔥 #Shorts",
+      "viralCaption": "🎮 GTAVI An Part 15 | Intense gameplay continuation! Follow for Part 16 next. ✨\n\n#GTAVIAn #Part15 #Gaming #GTA6 #GTA6Clips #TrendingReels #Shorts #DailyVideo #ViralVideo",
+      "viralHashtags": "#GTAVIAn #Part15 #Gaming #GTA6 #Shorts #Viral #TrendingReels",
+      "status": "Scheduled for 06:30 PM"
+    },
+    {
+      "part": 14,
+      "startSeconds": 390,
+      "endSeconds": 420,
+      "duration": "30s",
+      "renderedReelUrl": "/rendered-reels/daily-part14-1792564810662.mp4",
+      "thumbnailUrl": "/rendered-reels/daily-part14-1792564810662-cover.jpg",
+      "fileName": "daily-part14-1792564810662.mp4",
+      "postedAt": "2026-10-21T06:40:38.689Z",
+      "displayTime": "આજે બુધવાર (21 Oct) બપોરે 11:30 AM",
+      "viralTitle": "🎮 GTAVI An - Part 14: What Happens Next?! 🔥 #Shorts",
+      "viralCaption": "🎮 GTAVI An Part 14 | The action continues! Follow for Part 15 next. ✨\n\n#GTAVIAn #Part14 #Gaming #GTA6 #GTA6Clips #TrendingReels #Shorts #DailyVideo #ViralVideo #GameWalkthrough",
+      "viralHashtags": "#GTAVIAn #Part14 #Gaming #GTA6 #Shorts #Viral #TrendingReels",
+      "status": "Posted to Instagram ✓",
+      "postUrl": "https://www.instagram.com/p/17974042056177877/"
+    },
     {
       "part": 5,
       "startSeconds": 120,

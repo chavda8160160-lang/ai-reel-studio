@@ -5042,6 +5042,11 @@ function initTimelineStudio() {
     voice: 'normal',
     transition: 'none',
     sticker: 'none',
+    blurCanvas: true,
+    canvasBg: 'blur',
+    sfxTrack: 'none',
+    sfxVolume: 1.0,
+    subStyle: 'hormozi',
     aspect: '9:16',
     res: '1080p',
     fps: '30',
@@ -5307,14 +5312,16 @@ function initTimelineStudio() {
         needle.style.left = `${Math.min(100, Math.max(0, pct))}%`;
       }
 
-      // Loop within trim range
-      if (cur < editorState.trimStart) {
-        videoPreview.currentTime = editorState.trimStart;
-      } else if (cur > editorState.trimEnd) {
-        videoPreview.currentTime = editorState.trimStart;
-        if (editorState.flash && flashOverlay) {
-          flashOverlay.style.opacity = '0.9';
-          setTimeout(() => { flashOverlay.style.opacity = '0'; }, 320);
+      // Loop within trim range only during natural playback (do not lock scrubbing)
+      const btnLoopEl = document.getElementById('btnToggleLoop');
+      const isLoopOn = btnLoopEl ? btnLoopEl.classList.contains('active') : true;
+      if (!videoPreview.paused && !isScrubbingTimeline && !isDraggingTrimLeft && !isDraggingTrimRight && isLoopOn) {
+        if (cur > editorState.trimEnd) {
+          videoPreview.currentTime = editorState.trimStart;
+          if (editorState.flash && flashOverlay) {
+            flashOverlay.style.opacity = '0.9';
+            setTimeout(() => { flashOverlay.style.opacity = '0'; }, 320);
+          }
         }
       }
     };
@@ -5533,7 +5540,21 @@ function initTimelineStudio() {
     if (lblTrimEndVal) lblTrimEndVal.textContent = formatTrimTime(e);
     if (lblClipDuration) lblClipDuration.textContent = `${clipDur}s`;
     if (lblInspectorDuration) lblInspectorDuration.textContent = `${clipDur}s`;
-    if (lblRangeDisplay) lblRangeDisplay.textContent = `${formatTrimTime(s)} – ${formatTrimTime(e)} (${clipDur}s)`;
+    if (lblRangeDisplay) {
+      lblRangeDisplay.textContent = `${formatTrimTime(s)} – ${formatTrimTime(e)} (${clipDur}s)`;
+      lblRangeDisplay.style.cursor = 'pointer';
+      lblRangeDisplay.title = 'Click to Reset to Full Video Length';
+    }
+
+    // 🎬 Visually Position and Scale the Clip Block on the Timeline
+    const mainClipBlock = document.getElementById('timelineVideoClipBlock');
+    if (mainClipBlock && maxDur > 0) {
+      const leftPct = Math.max(0, Math.min(96, (s / maxDur) * 100));
+      const widthPct = Math.max(4, Math.min(100 - leftPct, ((e - s) / maxDur) * 100));
+      mainClipBlock.style.marginLeft = `${leftPct.toFixed(2)}%`;
+      mainClipBlock.style.width = `${widthPct.toFixed(2)}%`;
+      mainClipBlock.style.flex = 'none';
+    }
   }
 
   if (rngTrimStart) {
@@ -5608,46 +5629,74 @@ function initTimelineStudio() {
   function handleSplitAtPlayhead() {
     if (!videoPreview) return;
     const cur = videoPreview.currentTime;
-    if (cur > (editorState.trimStart + 0.5) && cur < (editorState.trimEnd - 0.5)) {
+    const dur = editorState.duration || 30;
+    if (cur > 0.5 && cur < (dur - 0.5)) {
       const splitTime = cur.toFixed(1);
       const multiWrapper = document.getElementById('proMultiClipWrapper');
       if (multiWrapper) {
-        const baseName = (selectedVideoFile && selectedVideoFile.name) || 'Main_Clip.mp4';
-        const p1Ratio = Math.max(0.2, cur - editorState.trimStart);
-        const p2Ratio = Math.max(0.2, editorState.trimEnd - cur);
+        const p1Ratio = Math.max(0.2, cur);
+        const p2Ratio = Math.max(0.2, dur - cur);
         multiWrapper.innerHTML = `
-          <div class="track-clip-block video-clip-block" style="flex: ${p1Ratio}; border: 1.5px solid #00f2fe; box-shadow: 0 0 10px rgba(0,242,254,0.4);" title="Part 1: 0s to ${splitTime}s">
-            <div class="clip-thumbnails-strip"></div>
-            <span class="clip-label">✂️ Part 1 (${editorState.trimStart}s - ${splitTime}s)</span>
+          <div class="track-clip-block video-clip-block selected" id="splitPart1" style="flex: ${p1Ratio}; border: 2px solid #00f2fe; cursor: pointer;" title="Click to use Part 1">
+            <span class="clip-label">✂️ Part 1 (0s - ${splitTime}s)</span>
           </div>
-          <div class="track-clip-block video-clip-block" style="flex: ${p2Ratio}; border: 1.5px solid #a855f7; box-shadow: 0 0 10px rgba(168,85,247,0.4);" title="Part 2: ${splitTime}s to ${editorState.trimEnd}s">
-            <div class="clip-thumbnails-strip"></div>
-            <span class="clip-label">✂️ Part 2 (${splitTime}s - ${editorState.trimEnd}s)</span>
+          <div class="track-clip-block video-clip-block" id="splitPart2" style="flex: ${p2Ratio}; border: 1.5px solid #a855f7; cursor: pointer;" title="Click to use Part 2">
+            <span class="clip-label">✂️ Part 2 (${splitTime}s - ${dur}s)</span>
           </div>
         `;
+        const p1 = document.getElementById('splitPart1');
+        const p2 = document.getElementById('splitPart2');
+        if (p1) p1.onclick = () => {
+          p1.classList.add('selected'); if (p2) p2.classList.remove('selected');
+          if (rngTrimStart) rngTrimStart.value = 0;
+          if (rngTrimEnd) rngTrimEnd.value = cur;
+          updateTrimDisplay();
+          videoPreview.currentTime = 0;
+          showToast(`✂️ Active: Part 1 (0s - ${splitTime}s)`);
+        };
+        if (p2) p2.onclick = () => {
+          p2.classList.add('selected'); if (p1) p1.classList.remove('selected');
+          if (rngTrimStart) rngTrimStart.value = cur;
+          if (rngTrimEnd) rngTrimEnd.value = dur;
+          updateTrimDisplay();
+          videoPreview.currentTime = cur;
+          showToast(`✂️ Active: Part 2 (${splitTime}s - ${dur}s)`);
+        };
       }
-      showToast(`✂️ Clip split into 2 distinct timeline clips at ${splitTime}s (Ctrl+B)!`);
+      showToast(`✂️ Clip split into 2 parts at ${splitTime}s! Click Part 1 or Part 2 to use.`);
     } else {
-      showToast('Position playhead between 0.5s and end to split clip.', true);
+      showToast('Position playhead between 0.5s and video end to split.', true);
     }
   }
   if (btnTimelineSplit) btnTimelineSplit.addEventListener('click', handleSplitAtPlayhead);
   if (btnTimelineSplitTool) btnTimelineSplitTool.addEventListener('click', handleSplitAtPlayhead);
+
+  // 🗑️ Reset Clip Bounds to Full Video
+  function resetClipToFullVideo() {
+    const maxDur = editorState.duration || 30;
+    if (rngTrimStart) rngTrimStart.value = 0;
+    if (rngTrimEnd) rngTrimEnd.value = maxDur;
+    editorState.trimStart = 0;
+    editorState.trimEnd = maxDur;
+    updateTrimDisplay();
+    if (videoPreview) videoPreview.currentTime = 0;
+    showToast(`↩️ Full Video Clip selected: 0.0s – ${maxDur.toFixed(1)}s`);
+  }
 
   const btnTimelineDelete = document.getElementById('btnTimelineDelete');
   if (btnTimelineDelete) {
     btnTimelineDelete.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const removeBtn = document.getElementById('btnCapCutRemoveVideo');
-      if (removeBtn) {
-        removeBtn.click();
-      } else {
-        if (rngTrimStart) rngTrimStart.value = 0;
-        if (rngTrimEnd) rngTrimEnd.value = editorState.duration;
-        updateTrimDisplay();
-        showToast('↩️ Clip bounds restored to full length');
-      }
+      resetClipToFullVideo();
+    });
+  }
+
+  if (lblRangeDisplay) {
+    lblRangeDisplay.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resetClipToFullVideo();
     });
   }
 
@@ -6026,6 +6075,19 @@ function initTimelineStudio() {
     });
   }
 
+  // ✨ CapCut Canvas Background Mode (Blur vs Black)
+  const canvasBgBtns = modal.querySelectorAll('.btn-canvas-bg');
+  canvasBgBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      canvasBgBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const bg = btn.dataset.bg || 'blur';
+      editorState.canvasBg = bg;
+      editorState.blurCanvas = (bg === 'blur');
+      showToast(bg === 'blur' ? '✨ Canvas Background: CapCut Video Blur ON' : '⬛ Canvas Background: Classic Black Bars');
+    });
+  });
+
   // 😀 Stickers Picker
   const stickerBtns = modal.querySelectorAll('.pro-sticker-btn');
   stickerBtns.forEach(btn => {
@@ -6045,6 +6107,31 @@ function initTimelineStudio() {
         }
         if (stickerOverlay) stickerOverlay.classList.remove('hidden');
         showToast(`Sticker added: ${btn.querySelector('.sticker-name')?.textContent || stk}`);
+      }
+    });
+  });
+
+  // 🔔 CapCut Sound Effects (SFX) Picker
+  const sfxChips = modal.querySelectorAll('.btn-sfx-chip');
+  const badgeActiveSfxStatus = document.getElementById('badgeActiveSfxStatus');
+  sfxChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      sfxChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const sfx = chip.dataset.sfx || 'none';
+      editorState.sfxTrack = sfx;
+      if (badgeActiveSfxStatus) {
+        badgeActiveSfxStatus.textContent = sfx.toUpperCase();
+      }
+      if (sfx !== 'none') {
+        try {
+          const snd = new Audio(`/audio/sfx/${sfx}.wav`);
+          snd.volume = 0.9;
+          snd.play().catch(() => {});
+        } catch (_) {}
+        showToast(`🔔 SFX Selected: ${chip.textContent.trim()}`);
+      } else {
+        showToast('SFX removed');
       }
     });
   });
@@ -7354,7 +7441,13 @@ function initTimelineStudio() {
             bgmTrack: (editorState.bgm && editorState.bgm.active) ? editorState.bgm.url : 'none',
             bgmVolume: editorState.bgm ? editorState.bgm.volume : 0.85,
             muteOrigAudio: editorState.muteOrigAudio || false,
-            clips: editorState.clips
+            clips: editorState.clips,
+            blurCanvas: editorState.blurCanvas,
+            canvasBg: editorState.canvasBg || 'blur',
+            sticker: editorState.sticker || 'none',
+            sfxTrack: editorState.sfxTrack || 'none',
+            sfxVolume: editorState.sfxVolume || 1.0,
+            subStyle: editorState.textColor === 'yellow' ? 'hormozi' : (editorState.textColor || 'hormozi')
           })
         });
 

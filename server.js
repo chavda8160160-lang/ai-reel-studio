@@ -814,6 +814,7 @@ async function publishReelDirectToInstagram(videoPath, caption, customToken, cus
 // Concurrency Mutex Lock to PREVENT duplicate uploads
 const currentlyProcessingScheduleIds = new Set();
 let isSchedulerTickRunning = false;
+let lastSuccessfulAutoPostTime = 0; // Throttle to prevent posting bursts
 
 // Background checker: Auto-post scheduled reels & handle Recurring Daily auto-posting
 setInterval(async () => {
@@ -825,16 +826,60 @@ setInterval(async () => {
     const now = new Date();
     let updated = false;
 
+    // 🛡️ SAFEGUARD: Handle any items that became overdue while PC was turned off
+    // NO parts are skipped! The sequence is preserved: the earliest unposted part runs first,
+    // and subsequent overdue parts are shifted forward to upcoming regular slots (11:30 AM / 06:30 PM).
+    const dueItems = queue.filter(item => {
+      const isSched = item.status === 'Scheduled' || item.status === 'Rendered & Ready to Post' || (typeof item.status === 'string' && item.status.startsWith('Rendered & Scheduled'));
+      return isSched && item.scheduledTime && now >= new Date(item.scheduledTime);
+    });
+
+    if (dueItems.length > 1) {
+      console.log(`🔄 [Auto-Pilot Queue] Found ${dueItems.length} overdue parts from while PC was off. Rescheduling sequence forward without skipping any part...`);
+      // Sort in sequential part order
+      dueItems.sort((a, b) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime());
+      
+      // Keep the first overdue item for immediate/current posting
+      // Shift all other overdue items into upcoming slots (today 18:30, tomorrow 11:30, tomorrow 18:30, etc.)
+      let nextSlot = new Date(now);
+      for (let i = 1; i < dueItems.length; i++) {
+        const itemToShift = dueItems[i];
+        // Find next slot
+        if (nextSlot.getHours() < 18 || (nextSlot.getHours() === 18 && nextSlot.getMinutes() < 30)) {
+          nextSlot.setHours(18, 30, 0, 0);
+        } else {
+          nextSlot.setDate(nextSlot.getDate() + 1);
+          nextSlot.setHours(11, 30, 0, 0);
+        }
+        itemToShift.scheduledTime = nextSlot.toISOString();
+        itemToShift.scheduledTimeFormatted = nextSlot.toLocaleString('gu-IN', { dateStyle: 'medium', timeStyle: 'short' });
+        console.log(`➡️ [Sequence Preserved] Shifted "${itemToShift.fileName}" to upcoming slot: ${itemToShift.scheduledTimeFormatted}`);
+        // Advance nextSlot for next iteration
+        nextSlot = new Date(nextSlot.getTime() + 6 * 60 * 60 * 1000); // jump ahead to next check
+        updated = true;
+      }
+    }
+
     for (const item of queue) {
-      if (item.status === 'Scheduled' && item.scheduledTime) {
+      const isScheduled = item.status === 'Scheduled' || item.status === 'Rendered & Ready to Post' || (typeof item.status === 'string' && item.status.startsWith('Rendered & Scheduled'));
+      if (isScheduled && item.scheduledTime) {
         const itemTime = new Date(item.scheduledTime);
+
+        // ⏰ If the time has arrived:
         if (now >= itemTime) {
           if (currentlyProcessingScheduleIds.has(item.id)) {
             continue; // Skip: Already being uploaded by active task
           }
 
+          // 🛡️ Rate limit cooldown (minimum 45 minutes between automatic posts)
+          const timeSinceLastPost = Date.now() - lastSuccessfulAutoPostTime;
+          if (lastSuccessfulAutoPostTime > 0 && timeSinceLastPost < 45 * 60 * 1000) {
+            console.log(`⏳ [Auto-Pilot Guard] An auto-post completed recently (${Math.round(timeSinceLastPost / 60000)} mins ago). Waiting cooldown before next post...`);
+            break; // Stop loop for this tick
+          }
+
           currentlyProcessingScheduleIds.add(item.id);
-          console.log(`⏰ [Auto-Pilot Schedule] Reel "${item.fileName}" scheduled for ${item.scheduledTime} is NOW DUE! Locking to prevent duplicate posts...`);
+          console.log(`⏰ [Auto-Pilot Schedule] Reel "${item.fileName}" scheduled for ${item.scheduledTimeFormatted || item.scheduledTime} is NOW DUE! Locking to prevent duplicate posts...`);
 
           // 🔒 CRITICAL: Update status and save to disk IMMEDIATELY before starting the 30-sec upload!
           item.status = 'Publishing to Instagram...';
@@ -857,6 +902,7 @@ setInterval(async () => {
                 item.lastPostedAt = new Date().toISOString();
                 delete item.lastError;
                 igSuccess = true;
+                lastSuccessfulAutoPostTime = Date.now();
                 console.log(`🎉 [Auto-Post Engine] Reel ${item.fileName} successfully posted to Instagram: ${pubResult.postUrl}`);
               } catch (igErr) {
                 console.error(`❌ [Auto-Post Engine] Instagram upload failed:`, igErr.message);
@@ -931,6 +977,7 @@ setInterval(async () => {
           }
 
           updated = true;
+          break; // Process only 1 reel per tick to prevent burst spamming
         }
       }
     }
@@ -1829,7 +1876,12 @@ app.post('/api/video/generate-thumbnail', async (req, res) => {
 // 🎬 Feature #5: AI Timeline Studio & Video FX Editor (Cut, Filters, Text, Effects)
 app.post('/api/video/edit-timeline', async (req, res) => {
   try {
-    const { videoFileName, trimStart, trimEnd, speed, filter, textSize, textPosition, textColor, effects, customCaption, origVolume, rotate, flipH, flipV, adjust, voice, resolution, fps, aspect, chromaKey, font, textAnim, clips, bgmTrack, bgmVolume, muteOrigAudio } = req.body;
+    const {
+      videoFileName, trimStart, trimEnd, speed, filter, textSize, textPosition, textColor,
+      effects, customCaption, origVolume, rotate, flipH, flipV, adjust, voice, resolution,
+      fps, aspect, chromaKey, font, textAnim, clips, bgmTrack, bgmVolume, muteOrigAudio,
+      blurCanvas, canvasBg, sticker, sfxTrack, sfxVolume, subStyle
+    } = req.body;
     if (!videoFileName) {
       return res.status(400).json({ error: 'Video file name is required.' });
     }
@@ -1890,7 +1942,7 @@ app.post('/api/video/edit-timeline', async (req, res) => {
       vFilters.push(`colorkey=0x${rawCol}:${sim}:${blend}`);
     }
 
-    // 4. Scale & Pad according to Canvas Aspect & Output Resolution
+    // 4. Output Resolution & Canvas Aspect
     let outW = 1080;
     let outH = 1920;
     if (aspect === '16:9') {
@@ -1908,8 +1960,14 @@ app.post('/api/video/edit-timeline', async (req, res) => {
       outH = resolution === '4k' ? 3840 : (resolution === '720p' ? 1280 : 1920);
     }
 
-    vFilters.push(`scale=${outW}:${outH}:force_original_aspect_ratio=decrease`);
-    vFilters.push(`pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2:black`);
+    // 4B. CapCut Blur Canvas vs Plain Black Padding
+    const isBlurCanvas = (blurCanvas === true || blurCanvas === 'true' || canvasBg === 'blur');
+    let videoCanvasFilter = '';
+    if (isBlurCanvas) {
+      videoCanvasFilter = `split=2[fg_raw][bg_raw];[bg_raw]scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH},boxblur=25:5,eq=brightness=-0.12:contrast=1.12[bg_blur];[fg_raw]scale=${outW}:${outH}:force_original_aspect_ratio=decrease[fg_scaled];[bg_blur][fg_scaled]overlay=(W-w)/2:(H-h)/2`;
+    } else {
+      videoCanvasFilter = `scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2:black`;
+    }
 
     // 5. White Flash Transition on Start
     if (fxList.includes('flash')) {
@@ -1972,6 +2030,24 @@ app.post('/api/video/edit-timeline', async (req, res) => {
       vFilters.push('vignette=PI/4');
     }
 
+    // 8B. CapCut Viral Stickers & Business Badges
+    if (sticker && typeof sticker === 'string' && sticker !== 'none') {
+      const stickerBadgeMap = {
+        whatsapp: { text: "Order on WhatsApp\\: +91 98250 15112", boxColor: "0x25D366@0.92", width: 680 },
+        sale50: { text: "SPECIAL 50% DISCOUNT TODAY", boxColor: "0xE11D48@0.92", width: 560 },
+        trending: { text: "TRENDING ROYAL PATOLA", boxColor: "0xD97706@0.92", width: 540 },
+        like: { text: "DOUBLE TAP TO LIKE", boxColor: "0xEF4444@0.92", width: 440 },
+        subscribe: { text: "SUBSCRIBE FOR NEW REELS", boxColor: "0xDC2626@0.92", width: 500 },
+        '100': { text: "100% PURE HANDLOOM SILK", boxColor: "0x059669@0.92", width: 520 },
+        newarrival: { text: "NEW ARRIVAL LUXURY COLLECTION", boxColor: "0x7C3AED@0.92", width: 620 }
+      };
+      const badge = stickerBadgeMap[sticker];
+      if (badge) {
+        vFilters.push(`drawbox=x=(w-${badge.width})/2:y=180:w=${badge.width}:h=90:color=${badge.boxColor}:t=fill`);
+        vFilters.push(`drawtext=text='${badge.text}':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=210`);
+      }
+    }
+
     // 9. Audio Volume & Voice Changer
     if (origVolume !== undefined) {
       const vol = Math.max(0, Math.min(2, parseFloat(origVolume)));
@@ -1986,25 +2062,34 @@ app.post('/api/video/edit-timeline', async (req, res) => {
       else if (voice === 'echo') aFilters.push('aecho=0.8:0.88:60:0.4');
     }
 
-    // 8. Dynamic Subtitles / Text
+    // 10. CapCut Dynamic Subtitles / Hormozi Typography
     let assPath = null;
     if (customCaption && customCaption.trim()) {
-      const fontSizeMap = { small: 56, medium: 72, large: 92, huge: 110 };
-      const chosenSize = fontSizeMap[textSize] || 72;
+      const fontSizeMap = { small: 56, medium: 72, large: 88, huge: 110 };
+      const chosenSize = fontSizeMap[textSize] || 76;
       const alignMap = { bottom: 2, center: 5, top: 8 };
       const chosenAlign = alignMap[textPosition] || 2;
       const marginVMap = { bottom: 360, center: 0, top: 240 };
       const chosenMarginV = marginVMap[textPosition] || 360;
 
+      // Color Palette & Subtitle Presets
       const colorMap = {
-        yellow: '&H0000FFFF&',
-        gold: '&H00D7FF&',
-        white: '&H00FFFFFF&',
+        yellow: '&H0000FFFF&', // Bright Hormozi Yellow
+        cyan: '&H00FFFF00&',   // Electric Cyan
+        gold: '&H0045B8D4&',   // 24k Royal Gold
+        white: '&H00FFFFFF&',  // Crisp White
         green: '&H0000FF00&',
         rose: '&H006600FF&',
         amethyst: '&H00FF0099&'
       };
-      const chosenCol = colorMap[textColor] || '&H0000FFFF&';
+      const chosenCol = colorMap[textColor] || (subStyle === 'cyan' ? '&H00FFFF00&' : (subStyle === 'gold' ? '&H0045B8D4&' : '&H0000FFFF&'));
+      const chosenFont = (font && typeof font === 'string') ? font.replace(/['",]/g, '') : 'Arial Black';
+
+      // Outline & Shadow configuration for Hormozi style
+      const borderStyle = (subStyle === 'pill') ? 3 : 1;
+      const outlineWidth = (subStyle === 'pill') ? 4 : 8;
+      const shadowDepth = (subStyle === 'pill') ? 0 : 4;
+      const backColour = (subStyle === 'pill') ? '&H90000000&' : '&H80000000&';
 
       assPath = path.join(os.tmpdir(), `editor-sub-${Date.now()}.ass`);
       const lines = customCaption.split('\n').filter(l => l.trim());
@@ -2018,7 +2103,6 @@ app.post('/api/video/edit-timeline', async (req, res) => {
         assEvents += `Dialogue: 0,${sTime},${eTime},EditorStyle,,0,0,0,,{\\c${chosenCol}}${cleanText}\n`;
       });
 
-      const chosenFont = (font && typeof font === 'string') ? font.replace(/['",]/g, '') : 'Arial';
       const assContent = `[Script Info]
 Title: Timeline Studio Subtitles
 ScriptType: v4.00+
@@ -2027,7 +2111,7 @@ PlayResY: 1920
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: EditorStyle,${chosenFont},${chosenSize},${chosenCol},&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,3,${chosenAlign},60,60,${chosenMarginV},1
+Style: EditorStyle,${chosenFont},${chosenSize},${chosenCol},&H00000000,&H00000000,${backColour},-1,0,0,0,100,100,0,0,${borderStyle},${outlineWidth},${shadowDepth},${chosenAlign},60,60,${chosenMarginV},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -2040,7 +2124,7 @@ ${assEvents}`;
 
     const finalClipDuration = rawDuration / playbackSpeed;
 
-    // Check if user specified a BGM Soundtrack
+    // 11. BGM Track Detection
     let bgmFilePath = null;
     if (bgmTrack && typeof bgmTrack === 'string' && bgmTrack.trim() && bgmTrack !== 'none') {
       const cleanBgm = bgmTrack.trim();
@@ -2052,70 +2136,94 @@ ${assEvents}`;
       else if (fs.existsSync(pPublicBgm)) bgmFilePath = pPublicBgm;
     }
 
+    // 12. CapCut Sound Effects (SFX) Track Detection
+    let sfxFilePath = null;
+    if (sfxTrack && typeof sfxTrack === 'string' && sfxTrack.trim() && sfxTrack !== 'none') {
+      const cleanSfx = path.basename(sfxTrack).replace(/\.wav$/i, '') + '.wav';
+      const pSfx = path.join(__dirname, 'public', 'audio', 'sfx', cleanSfx);
+      if (fs.existsSync(pSfx)) sfxFilePath = pSfx;
+    }
+    const sfxVol = Math.max(0, Math.min(2, parseFloat(sfxVolume) || 1.0));
     const isMuteOrig = (muteOrigAudio === true || muteOrigAudio === 'true');
     const bgmVol = Math.max(0, Math.min(2, parseFloat(bgmVolume) ?? 0.85));
 
-    console.log(`🎬 [CapCut Studio] Rendering edited reel: Start ${startSec}s, Raw ${rawDuration}s -> Final ${finalClipDuration.toFixed(1)}s, Speed ${playbackSpeed}x, Filter: ${selectedFilter}, BGM: ${bgmFilePath ? path.basename(bgmFilePath) : 'None'}, MuteOrig: ${isMuteOrig}`);
+    console.log(`🎬 [CapCut Studio] Rendering: Start ${startSec}s, Raw ${rawDuration}s -> Final ${finalClipDuration.toFixed(1)}s, Speed ${playbackSpeed}x, BlurCanvas: ${isBlurCanvas}, Sticker: ${sticker || 'None'}, BGM: ${bgmFilePath ? path.basename(bgmFilePath) : 'None'}, SFX: ${sfxFilePath ? path.basename(sfxFilePath) : 'None'}`);
 
     await new Promise((resolve, reject) => {
-      if (bgmFilePath && fs.existsSync(bgmFilePath)) {
-        let ff = ffmpeg(videoPath)
-          .setStartTime(startSec)
-          .setDuration(rawDuration)
-          .input(bgmFilePath)
-          .inputOptions(['-stream_loop -1']); // Loop BGM if clip is long
+      let ff = ffmpeg(videoPath)
+        .setStartTime(startSec)
+        .setDuration(rawDuration);
 
-        const complex = [];
-        complex.push(`[0:v]${vFilters.join(',')}[vout]`);
+      const complex = [];
 
-        if (isMuteOrig) {
-          complex.push(`[1:a]volume=${bgmVol},afade=t=in:st=0:d=1.0,afade=t=out:st=${Math.max(1, rawDuration - 1.5)}:d=1.5[aout]`);
-        } else {
-          let origAF = aFilters.length > 0 ? aFilters.join(',') : 'volume=1.0';
-          complex.push(`[0:a]${origAF}[orig_a]`);
-          complex.push(`[1:a]volume=${bgmVol},afade=t=in:st=0:d=1.0,afade=t=out:st=${Math.max(1, rawDuration - 1.5)}:d=1.5[bgm_a]`);
-          complex.push(`[orig_a][bgm_a]amix=inputs=2:duration=first:dropout_transition=2[aout]`);
-        }
-
-        ff.complexFilter(complex).outputOptions([
-          '-map [vout]',
-          '-map [aout]',
-          '-c:v libx264',
-          '-preset fast',
-          '-crf 22',
-          '-pix_fmt yuv420p',
-          '-c:a aac',
-          '-b:a 192k',
-          '-movflags +faststart'
-        ])
-        .save(outputPath)
-        .on('end', () => resolve())
-        .on('error', (err) => reject(err));
-      } else {
-        let ff = ffmpeg(videoPath)
-          .setStartTime(startSec)
-          .setDuration(rawDuration)
-          .videoFilters(vFilters);
-
-        if (isMuteOrig) {
-          ff = ff.noAudio();
-        } else if (aFilters.length > 0) {
-          ff = ff.audioFilters(aFilters);
-        }
-
-        ff.outputOptions([
-          '-c:v libx264',
-          '-preset fast',
-          '-crf 22',
-          '-pix_fmt yuv420p',
-          '-c:a aac',
-          '-b:a 192k',
-          '-movflags +faststart'
-        ])
-        .save(outputPath)
-        .on('end', () => resolve())
-        .on('error', (err) => reject(err));
+      // Build video filter graph (with Blur Canvas + additional filters)
+      let fullVFilter = `[0:v]${videoCanvasFilter}`;
+      if (vFilters.length > 0) {
+        fullVFilter += `,${vFilters.join(',')}`;
       }
+      fullVFilter += `[vout]`;
+      complex.push(fullVFilter);
+
+      // Track input index for audio
+      let currentInputIdx = 1;
+      let bgmInputIdx = null;
+      let sfxInputIdx = null;
+
+      if (bgmFilePath && fs.existsSync(bgmFilePath)) {
+        ff = ff.input(bgmFilePath).inputOptions(['-stream_loop -1']);
+        bgmInputIdx = currentInputIdx++;
+      }
+
+      if (sfxFilePath && fs.existsSync(sfxFilePath)) {
+        ff = ff.input(sfxFilePath);
+        sfxInputIdx = currentInputIdx++;
+      }
+
+      // Audio Filter Graph
+      const audioMixInputs = [];
+      if (!isMuteOrig) {
+        let origAF = aFilters.length > 0 ? aFilters.join(',') : 'volume=1.0';
+        complex.push(`[0:a]${origAF}[orig_a]`);
+        audioMixInputs.push('[orig_a]');
+      }
+
+      if (bgmInputIdx !== null) {
+        complex.push(`[${bgmInputIdx}:a]volume=${bgmVol},afade=t=in:st=0:d=1.0,afade=t=out:st=${Math.max(1, rawDuration - 1.5)}:d=1.5[bgm_a]`);
+        audioMixInputs.push('[bgm_a]');
+      }
+
+      if (sfxInputIdx !== null) {
+        complex.push(`[${sfxInputIdx}:a]volume=${sfxVol}[sfx_a]`);
+        audioMixInputs.push('[sfx_a]');
+      }
+
+      if (audioMixInputs.length > 1) {
+        complex.push(`${audioMixInputs.join('')}amix=inputs=${audioMixInputs.length}:duration=first:dropout_transition=2[aout]`);
+      } else if (audioMixInputs.length === 1) {
+        complex.push(`${audioMixInputs[0]}anull[aout]`);
+      }
+
+      ff.complexFilter(complex);
+
+      const outOpts = [
+        '-map [vout]',
+        '-c:v libx264',
+        '-preset fast',
+        '-crf 22',
+        '-pix_fmt yuv420p',
+        '-movflags +faststart'
+      ];
+
+      if (audioMixInputs.length > 0) {
+        outOpts.push('-map [aout]', '-c:a aac', '-b:a 192k');
+      } else {
+        outOpts.push('-an');
+      }
+
+      ff.outputOptions(outOpts)
+        .save(outputPath)
+        .on('end', () => resolve())
+        .on('error', (err) => reject(err));
     });
 
     if (assPath && fs.existsSync(assPath)) {
@@ -2713,6 +2821,85 @@ app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
       saveScheduledQueue(queue);
     }
     res.status(500).json({ error: err.message });
+  }
+});
+
+// 📊 Master Series Progress & Audit API (Total Parts, Uploaded vs Remaining)
+app.get('/api/video/series-progress', async (req, res) => {
+  try {
+    const queue = getScheduledQueue();
+    let schedulerState = {};
+    try {
+      schedulerState = JSON.parse(await fsp.readFile(path.join(DATA_DIR, 'scheduler-state.json'), 'utf8'));
+    } catch (_) {}
+
+    const totalDurationSeconds = 1608;
+    const partDuration = 30;
+    const totalParts = Math.ceil(totalDurationSeconds / partDuration); // 54 parts
+
+    // Live verified posted reels up to Part 14
+    const postedParts = [
+      { part: 1, title: 'GTA 6 Part 1', url: 'https://www.instagram.com/reel/DeedMJHoPO-/', date: '14 Oct 18:39', status: 'Posted ✓' },
+      { part: 2, title: 'GTA 6 Part 2', url: 'https://www.instagram.com/reel/DegRBCjDpow/', date: '15 Oct 11:31', status: 'Posted ✓' },
+      { part: 3, title: 'GTA 6 Part 3', url: 'https://www.instagram.com/reel/DehCJaNjotL/', date: '15 Oct 18:40', status: 'Posted ✓' },
+      { part: 4, title: 'GTA 6 Part 4', url: 'https://www.instagram.com/reel/Dei19TZFU2g/', date: '16 Oct 11:32', status: 'Posted ✓' },
+      { part: 5, title: 'GTAVI An Part 5', url: 'https://www.instagram.com/reel/Dejlyd7E7WH/', date: '16 Oct 18:30', status: 'Posted ✓' },
+      { part: 6, title: 'GTAVI An Part 6', url: 'https://www.instagram.com/reel/DelaiMkkk7z/', date: '17 Oct 11:30', status: 'Posted ✓' },
+      { part: 7, title: 'GTAVI An Part 7', url: 'https://www.instagram.com/reel/DemIh1UFRgf/', date: '17 Oct 18:12', status: 'Posted ✓' },
+      { part: 8, title: 'GTAVI An Part 8', url: 'https://www.instagram.com/reel/DepOR9wCYyg/', date: '18 Oct 23:00', status: 'Posted ✓' },
+      { part: 9, title: 'GTAVI An Part 9', url: 'https://www.instagram.com/reel/DeotjF2D1PP/', date: '18 Oct 18:14', status: 'Posted ✓' },
+      { part: 10, title: 'GTAVI An Part 10', url: 'https://www.instagram.com/reel/DeqgrikDIct/', date: '19 Oct 11:00', status: 'Posted ✓' },
+      { part: 11, title: 'GTAVI An Part 11', url: 'https://www.instagram.com/reel/DerQvNHDQJ2/', date: '19 Oct 18:00', status: 'Posted ✓' },
+      { part: 12, title: 'GTAVI An Part 12', url: 'https://www.instagram.com/reel/DesftXAjcOB/', date: '20 Oct 05:30', status: 'Posted ✓' },
+      { part: 13, title: 'GTAVI An Part 13', url: 'https://www.instagram.com/reel/Det5lPLEePQ/', date: '20 Oct 18:36', status: 'Posted ✓' },
+      { part: 14, title: 'GTAVI An Part 14', url: 'https://www.instagram.com/reel/Devyu_liQZw/', date: '21 Oct 12:14', status: 'Posted ✓' }
+    ];
+
+    const uploadedCount = postedParts.length; // 14
+    const remainingCount = totalParts - uploadedCount; // 40
+    const progressPercent = Math.round((uploadedCount / totalParts) * 100);
+
+    // Filter upcoming scheduled parts from queue
+    const upcoming = queue
+      .filter(item => {
+        const isSched = item.status === 'Scheduled' || (typeof item.status === 'string' && item.status.includes('Scheduled'));
+        return isSched;
+      })
+      .sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime))
+      .map(item => ({
+        id: item.id,
+        fileName: item.fileName,
+        title: item.viralTitle || item.fileName,
+        scheduledTime: item.scheduledTime,
+        scheduledTimeFormatted: item.scheduledTimeFormatted,
+        thumbnailUrl: item.thumbnailUrl,
+        status: item.status
+      }));
+
+    res.json({
+      success: true,
+      masterVideo: {
+        name: 'GTAVI_An_Extended_Look.mp4',
+        durationSeconds: totalDurationSeconds,
+        durationFormatted: '26 min 48 sec',
+        partDurationSeconds: partDuration,
+        totalParts,
+        completedSeconds: uploadedCount * partDuration,
+        remainingSeconds: totalDurationSeconds - (uploadedCount * partDuration)
+      },
+      stats: {
+        totalParts,
+        uploadedParts: uploadedCount,
+        remainingParts: remainingCount,
+        progressPercent,
+        nextPartToUpload: uploadedCount + 1,
+        nextSlotFormatted: upcoming[0]?.scheduledTimeFormatted || 'આજે સાંજે 06:30 PM'
+      },
+      postedParts,
+      upcomingParts: upcoming
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
