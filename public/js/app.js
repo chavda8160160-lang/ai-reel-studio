@@ -5086,6 +5086,10 @@ function initTimelineStudio() {
     beats: []
   };
 
+  let isScrubbingTimeline = false;
+  let isDraggingTrimLeft = false;
+  let isDraggingTrimRight = false;
+
   function openTimelineStudio() {
     let sourceVideo = '';
     let fileName = 'Main_Video_Clip.mp4';
@@ -5125,6 +5129,7 @@ function initTimelineStudio() {
         videoPreview.volume = Math.min(1.0, editorState.origVolume ?? 1.0);
         videoPreview.load();
       }
+      videoPreview.currentTime = editorState.trimStart || 0;
       videoPreview.play().catch(() => {});
     }
     modal.classList.remove('hidden');
@@ -5253,6 +5258,10 @@ function initTimelineStudio() {
   if (btnTogglePlay && videoPreview) {
     btnTogglePlay.addEventListener('click', () => {
       if (videoPreview.paused) {
+        // Enforce trim boundary before playing
+        if (videoPreview.currentTime < editorState.trimStart || videoPreview.currentTime >= editorState.trimEnd) {
+          videoPreview.currentTime = editorState.trimStart;
+        }
         videoPreview.play();
         if (playIcon) playIcon.className = 'fa-solid fa-pause';
       } else {
@@ -5300,23 +5309,23 @@ function initTimelineStudio() {
     videoPreview.ontimeupdate = () => {
       const cur = videoPreview.currentTime;
       if (lblCurrentTime) {
-        const mins = Math.floor(cur / 60);
-        const secs = Math.floor(cur % 60);
-        const frac = Math.floor((cur % 1) * 100);
+        // Show relative playback time from trimStart so it starts at 00:00.00
+        const relCur = Math.max(0, cur - editorState.trimStart);
+        const mins = Math.floor(relCur / 60);
+        const secs = Math.floor(relCur % 60);
+        const frac = Math.floor((relCur % 1) * 100);
         lblCurrentTime.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${frac.toString().padStart(2, '0')}`;
       }
 
-      // Move needle across timeline
-      if (needle && editorState.duration > 0) {
+      // Move needle across timeline (only during playback when user is not manually scrubbing/trimming)
+      if (needle && editorState.duration > 0 && !isScrubbingTimeline && !isDraggingTrimLeft && !isDraggingTrimRight) {
         const pct = (cur / editorState.duration) * 100;
         needle.style.left = `${Math.min(100, Math.max(0, pct))}%`;
       }
 
-      // Loop within trim range only during natural playback (do not lock scrubbing)
-      const btnLoopEl = document.getElementById('btnToggleLoop');
-      const isLoopOn = btnLoopEl ? btnLoopEl.classList.contains('active') : true;
-      if (!videoPreview.paused && !isScrubbingTimeline && !isDraggingTrimLeft && !isDraggingTrimRight && isLoopOn) {
-        if (cur > editorState.trimEnd) {
+      // Strictly enforce trim boundaries during playback (loop within trim range)
+      if (!videoPreview.paused && !isScrubbingTimeline && !isDraggingTrimLeft && !isDraggingTrimRight) {
+        if (cur < editorState.trimStart - 0.1 || cur >= editorState.trimEnd) {
           videoPreview.currentTime = editorState.trimStart;
           if (editorState.flash && flashOverlay) {
             flashOverlay.style.opacity = '0.9';
@@ -5326,101 +5335,277 @@ function initTimelineStudio() {
       }
     };
 
-    // 🎯 Interactive Timeline Scrubbing & Seeking (Click & Drag on Ruler or Tracks)
-    let isScrubbingTimeline = false;
-    function handleTimelineScrub(e) {
-      if (!videoPreview || !editorState.duration) return;
-      const ruler = document.getElementById('proTimeRulerWithBeats');
-      if (!ruler) return;
-      const rect = ruler.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const pct = Math.max(0, Math.min(1, clickX / rect.width));
-      const seekTime = pct * editorState.duration;
-      videoPreview.currentTime = seekTime;
-      if (needle) needle.style.left = `${pct * 100}%`;
+    // =========================================================================
+    // 🎯 HIGH-PERFORMANCE 60FPS TIMELINE SCRUBBING & TRIM HANDLE DRAGGING ENGINE
+    // =========================================================================
+    isScrubbingTimeline = false;
+    isDraggingTrimLeft = false;
+    isDraggingTrimRight = false;
+
+    let pendingSeekTime = null;
+    let seekRafPending = false;
+    let lastSeekTimestamp = 0;
+
+    // High-performance smooth seek scheduler (avoids flooding HTML5 video decoder)
+    function smoothVideoSeek(targetTime, forceImmediate = false) {
+      pendingSeekTime = targetTime;
+      if (forceImmediate) {
+        if (videoPreview && pendingSeekTime !== null) {
+          try {
+            if (typeof videoPreview.fastSeek === 'function') {
+              videoPreview.fastSeek(pendingSeekTime);
+            } else {
+              videoPreview.currentTime = pendingSeekTime;
+            }
+          } catch (err) {}
+        }
+        return;
+      }
+
+      if (!seekRafPending) {
+        seekRafPending = true;
+        requestAnimationFrame(() => {
+          seekRafPending = false;
+          const now = performance.now();
+          // Throttle video decoder seeking to at most once every ~28ms for buttery 60fps interaction
+          if (now - lastSeekTimestamp >= 28) {
+            lastSeekTimestamp = now;
+            if (videoPreview && pendingSeekTime !== null) {
+              try {
+                if (typeof videoPreview.fastSeek === 'function') {
+                  videoPreview.fastSeek(pendingSeekTime);
+                } else {
+                  videoPreview.currentTime = pendingSeekTime;
+                }
+              } catch (err) {}
+            }
+          } else {
+            // Re-schedule for next tick if still needed
+            if (!seekRafPending && (isScrubbingTimeline || isDraggingTrimLeft || isDraggingTrimRight)) {
+              seekRafPending = true;
+              setTimeout(() => {
+                seekRafPending = false;
+                if (videoPreview && pendingSeekTime !== null) {
+                  try {
+                    if (typeof videoPreview.fastSeek === 'function') videoPreview.fastSeek(pendingSeekTime);
+                    else videoPreview.currentTime = pendingSeekTime;
+                  } catch (e) {}
+                }
+              }, 28);
+            }
+          }
+        });
+      }
     }
 
+    // Helper: calculate time and percentage from any mouse/touch X coordinate
+    function getTimeFromPointer(e) {
+      const ruler = document.getElementById('proTimeRulerWithBeats');
+      if (!ruler || !editorState.duration) return { pct: 0, time: 0 };
+      const rect = ruler.getBoundingClientRect();
+      const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+      const clickX = clientX - rect.left;
+      const pct = Math.max(0, Math.min(1, clickX / rect.width));
+      const time = pct * editorState.duration;
+      return { pct, time };
+    }
+
+    // 1. TIMELINE NEEDLE SCRUBBING
+    function handleTimelineScrub(e) {
+      if (!videoPreview || !editorState.duration) return;
+      const { pct, time } = getTimeFromPointer(e);
+
+      // Instant 60fps needle visual tracking (Zero Lag)
+      if (needle) {
+        needle.style.left = `${(pct * 100).toFixed(3)}%`;
+      }
+
+      // Instant relative playback timer display
+      if (lblCurrentTime) {
+        const relCur = Math.max(0, time - editorState.trimStart);
+        const mins = Math.floor(relCur / 60);
+        const secs = Math.floor(relCur % 60);
+        const frac = Math.floor((relCur % 1) * 100);
+        lblCurrentTime.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${frac.toString().padStart(2, '0')}`;
+      }
+
+      // Smooth throttled seek on video preview
+      smoothVideoSeek(time);
+    }
+
+    // 2. TIMELINE TRIM HANDLES DRAGGING
+    function handleTrimDrag(e) {
+      if (!isDraggingTrimLeft && !isDraggingTrimRight) return;
+      if (!editorState.duration) return;
+      const { time } = getTimeFromPointer(e);
+      const maxDur = editorState.duration;
+      const mainClipBlock = document.getElementById('timelineVideoClipBlock');
+
+      if (isDraggingTrimLeft) {
+        const newStart = Math.max(0, Math.min(editorState.trimEnd - 1.0, parseFloat(time.toFixed(1))));
+        editorState.trimStart = newStart;
+        if (rngTrimStart) rngTrimStart.value = newStart;
+
+        // Instant visual update on clip block
+        if (mainClipBlock && maxDur > 0) {
+          const leftPct = Math.max(0, Math.min(96, (newStart / maxDur) * 100));
+          const widthPct = Math.max(4, Math.min(100 - leftPct, ((editorState.trimEnd - newStart) / maxDur) * 100));
+          mainClipBlock.style.marginLeft = `${leftPct.toFixed(2)}%`;
+          mainClipBlock.style.width = `${widthPct.toFixed(2)}%`;
+        }
+
+        const clipDur = Math.max(0.5, editorState.trimEnd - newStart).toFixed(1);
+        if (lblTrimStartVal) lblTrimStartVal.textContent = formatTrimTime(newStart);
+        if (lblClipDuration) lblClipDuration.textContent = `${clipDur}s`;
+        if (lblInspectorDuration) lblInspectorDuration.textContent = `${clipDur}s`;
+        if (lblRangeDisplay) lblRangeDisplay.textContent = `${formatTrimTime(newStart)} – ${formatTrimTime(editorState.trimEnd)} (${clipDur}s)`;
+
+        // Move needle & seek to newStart smoothly
+        if (needle) needle.style.left = `${((newStart / maxDur) * 100).toFixed(3)}%`;
+        smoothVideoSeek(newStart);
+
+      } else if (isDraggingTrimRight) {
+        const newEnd = Math.min(maxDur, Math.max(editorState.trimStart + 1.0, parseFloat(time.toFixed(1))));
+        editorState.trimEnd = newEnd;
+        if (rngTrimEnd) rngTrimEnd.value = newEnd;
+
+        // Instant visual update on clip block
+        if (mainClipBlock && maxDur > 0) {
+          const leftPct = Math.max(0, Math.min(96, (editorState.trimStart / maxDur) * 100));
+          const widthPct = Math.max(4, Math.min(100 - leftPct, ((newEnd - editorState.trimStart) / maxDur) * 100));
+          mainClipBlock.style.marginLeft = `${leftPct.toFixed(2)}%`;
+          mainClipBlock.style.width = `${widthPct.toFixed(2)}%`;
+        }
+
+        const clipDur = Math.max(0.5, newEnd - editorState.trimStart).toFixed(1);
+        if (lblTrimEndVal) lblTrimEndVal.textContent = formatTrimTime(newEnd);
+        if (lblClipDuration) lblClipDuration.textContent = `${clipDur}s`;
+        if (lblInspectorDuration) lblInspectorDuration.textContent = `${clipDur}s`;
+        if (lblRangeDisplay) lblRangeDisplay.textContent = `${formatTrimTime(editorState.trimStart)} – ${formatTrimTime(newEnd)} (${clipDur}s)`;
+
+        // Move needle & seek to newEnd smoothly
+        if (needle) needle.style.left = `${((newEnd / maxDur) * 100).toFixed(3)}%`;
+        smoothVideoSeek(newEnd);
+      }
+    }
+
+    // 3. STOP DRAG / CLEANUP
+    function stopAllTimelineDrag() {
+      if (isScrubbingTimeline || isDraggingTrimLeft || isDraggingTrimRight) {
+        const wasTrim = isDraggingTrimLeft || isDraggingTrimRight;
+        isScrubbingTimeline = false;
+        isDraggingTrimLeft = false;
+        isDraggingTrimRight = false;
+        document.body.classList.remove('timeline-dragging');
+        if (handleLeft) handleLeft.classList.remove('active');
+        if (handleRight) handleRight.classList.remove('active');
+
+        // Apply final exact frame position without throttle
+        if (pendingSeekTime !== null && videoPreview) {
+          try { videoPreview.currentTime = pendingSeekTime; } catch (e) {}
+        }
+
+        // Full UI sync on release
+        if (wasTrim) {
+          updateTrimDisplay();
+        }
+      }
+    }
+
+    // Event Bindings for Ruler and Tracks
     const timeRuler = document.getElementById('proTimeRulerWithBeats');
     if (timeRuler) {
       timeRuler.style.cursor = 'pointer';
       timeRuler.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
         isScrubbingTimeline = true;
+        document.body.classList.add('timeline-dragging');
         handleTimelineScrub(e);
       });
+      timeRuler.addEventListener('touchstart', (e) => {
+        isScrubbingTimeline = true;
+        document.body.classList.add('timeline-dragging');
+        handleTimelineScrub(e);
+      }, { passive: true });
     }
 
     const allTrackLanes = modal.querySelectorAll('.track-content-lane');
     allTrackLanes.forEach(lane => {
       lane.style.cursor = 'pointer';
       lane.addEventListener('mousedown', (e) => {
-        // Only scrub if not clicking a trim handle
+        if (e.button !== 0) return;
         if (!e.target.classList.contains('clip-trim-handle')) {
+          e.preventDefault();
           isScrubbingTimeline = true;
+          document.body.classList.add('timeline-dragging');
           handleTimelineScrub(e);
         }
       });
+      lane.addEventListener('touchstart', (e) => {
+        if (!e.target.classList.contains('clip-trim-handle')) {
+          isScrubbingTimeline = true;
+          document.body.classList.add('timeline-dragging');
+          handleTimelineScrub(e);
+        }
+      }, { passive: true });
     });
 
-    window.addEventListener('mousemove', (e) => {
-      if (isScrubbingTimeline) {
-        handleTimelineScrub(e);
-      }
-    });
-
-    window.addEventListener('mouseup', () => {
-      isScrubbingTimeline = false;
-    });
-
-    // ✂️ Interactive Clip Trim Drag Handles (Left & Right)
-    let isDraggingTrimLeft = false;
-    let isDraggingTrimRight = false;
     const handleLeft = document.getElementById('handleTrimLeft');
     const handleRight = document.getElementById('handleTrimRight');
 
     if (handleLeft) {
       handleLeft.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
         e.stopPropagation();
         isDraggingTrimLeft = true;
+        handleLeft.classList.add('active');
+        document.body.classList.add('timeline-dragging');
       });
+      handleLeft.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        isDraggingTrimLeft = true;
+        handleLeft.classList.add('active');
+        document.body.classList.add('timeline-dragging');
+      }, { passive: true });
     }
+
     if (handleRight) {
       handleRight.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
         e.stopPropagation();
         isDraggingTrimRight = true;
+        handleRight.classList.add('active');
+        document.body.classList.add('timeline-dragging');
       });
+      handleRight.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        isDraggingTrimRight = true;
+        handleRight.classList.add('active');
+        document.body.classList.add('timeline-dragging');
+      }, { passive: true });
     }
 
     window.addEventListener('mousemove', (e) => {
-      if (!isDraggingTrimLeft && !isDraggingTrimRight) return;
-      const ruler = document.getElementById('proTimeRulerWithBeats');
-      if (!ruler || !editorState.duration) return;
-      const rect = ruler.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const pct = Math.max(0, Math.min(1, clickX / rect.width));
-      const curTime = parseFloat((pct * editorState.duration).toFixed(1));
-
-      if (isDraggingTrimLeft) {
-        const newStart = Math.min(editorState.trimEnd - 1.0, Math.max(0, curTime));
-        if (rngTrimStart) rngTrimStart.value = newStart;
-        editorState.trimStart = newStart;
-        if (videoPreview) videoPreview.currentTime = newStart;
-        updateTrimDisplay();
-      } else if (isDraggingTrimRight) {
-        const newEnd = Math.max(editorState.trimStart + 1.0, Math.min(editorState.duration, curTime));
-        if (rngTrimEnd) rngTrimEnd.value = newEnd;
-        editorState.trimEnd = newEnd;
-        if (videoPreview) videoPreview.currentTime = newEnd;
-        updateTrimDisplay();
+      if (isScrubbingTimeline) {
+        handleTimelineScrub(e);
+      } else if (isDraggingTrimLeft || isDraggingTrimRight) {
+        handleTrimDrag(e);
       }
-    });
+    }, { passive: true });
 
-    window.addEventListener('mouseup', () => {
-      if (isDraggingTrimLeft || isDraggingTrimRight) {
-        isDraggingTrimLeft = false;
-        isDraggingTrimRight = false;
-        showToast(`✂️ Clip trim updated: ${editorState.trimStart}s - ${editorState.trimEnd}s`);
+    window.addEventListener('touchmove', (e) => {
+      if (isScrubbingTimeline) {
+        handleTimelineScrub(e);
+      } else if (isDraggingTrimLeft || isDraggingTrimRight) {
+        handleTrimDrag(e);
       }
-    });
+    }, { passive: true });
+
+    window.addEventListener('mouseup', stopAllTimelineDrag);
+    window.addEventListener('touchend', stopAllTimelineDrag);
 
     // 🎬 Clip Selection Highlight
     const mainClipBlock = document.getElementById('timelineVideoClipBlock');
@@ -5554,6 +5739,13 @@ function initTimelineStudio() {
       mainClipBlock.style.marginLeft = `${leftPct.toFixed(2)}%`;
       mainClipBlock.style.width = `${widthPct.toFixed(2)}%`;
       mainClipBlock.style.flex = 'none';
+    }
+
+    // Ensure preview video playhead stays within the trim bounds
+    if (videoPreview && !isScrubbingTimeline && !isDraggingTrimRight && !isDraggingTrimLeft) {
+      if (videoPreview.currentTime < s || videoPreview.currentTime >= e) {
+        videoPreview.currentTime = s;
+      }
     }
   }
 
@@ -6088,6 +6280,24 @@ function initTimelineStudio() {
     });
   });
 
+  // 😀 Stickers Category Switcher
+  const stickerCatBtns = modal.querySelectorAll('.sticker-cat-btn');
+  const stickerCatGrids = modal.querySelectorAll('.sticker-cat-grid');
+  stickerCatBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      stickerCatBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const targetCat = btn.dataset.cat;
+      stickerCatGrids.forEach(grid => {
+        if (grid.dataset.catGrid === targetCat) {
+          grid.classList.remove('hidden');
+        } else {
+          grid.classList.add('hidden');
+        }
+      });
+    });
+  });
+
   // 😀 Stickers Picker
   const stickerBtns = modal.querySelectorAll('.pro-sticker-btn');
   stickerBtns.forEach(btn => {
@@ -6097,17 +6307,194 @@ function initTimelineStudio() {
       const stk = btn.dataset.sticker || 'none';
       editorState.sticker = stk;
 
+      const overlayEl = document.getElementById('timelineStickerOverlay');
+      const iconEl = document.getElementById('stickerIconContent');
+      const textEl = document.getElementById('stickerTextContent');
+
       if (stk === 'none') {
-        if (stickerOverlay) stickerOverlay.classList.add('hidden');
-        showToast('Sticker removed');
+        if (overlayEl) {
+          overlayEl.classList.add('hidden');
+          overlayEl.style.display = 'none';
+        }
+        editorState.stickerText = '';
+        showToast('🚫 Sticker removed');
       } else {
         const emojiEl = btn.querySelector('.sticker-emoji');
-        if (stickerIconContent && emojiEl) {
-          stickerIconContent.textContent = emojiEl.textContent;
+        const nameEl = btn.querySelector('.sticker-name');
+        const stickerTitle = nameEl ? nameEl.textContent.trim() : stk;
+        const stickerEmoji = emojiEl ? emojiEl.textContent.trim() : '✨';
+
+        if (iconEl) iconEl.textContent = stickerEmoji;
+        if (textEl) textEl.textContent = stickerTitle;
+
+        if (overlayEl) {
+          overlayEl.classList.remove('hidden');
+          overlayEl.style.display = 'block';
         }
-        if (stickerOverlay) stickerOverlay.classList.remove('hidden');
-        showToast(`Sticker added: ${btn.querySelector('.sticker-name')?.textContent || stk}`);
+
+        editorState.stickerText = `${stickerEmoji} ${stickerTitle}`;
+        showToast(`✨ Sticker added: ${stickerTitle}`);
       }
+    });
+  });
+
+  // ✋ Sticker Interactive Drag & Drop on Video Screen
+  const stickerOverlayEl = document.getElementById('timelineStickerOverlay');
+  let isDraggingSticker = false;
+  let stickerDragStartX = 0;
+  let stickerDragStartY = 0;
+  let stickerInitialLeft = 0;
+  let stickerInitialTop = 0;
+
+  if (stickerOverlayEl && monitorFrame) {
+    function startStickerDrag(clientX, clientY) {
+      if (stickerOverlayEl.classList.contains('hidden')) return;
+      isDraggingSticker = true;
+      stickerOverlayEl.classList.add('is-dragging');
+
+      const frameRect = monitorFrame.getBoundingClientRect();
+      const stickerRect = stickerOverlayEl.getBoundingClientRect();
+
+      stickerDragStartX = clientX;
+      stickerDragStartY = clientY;
+      stickerInitialLeft = stickerRect.left - frameRect.left;
+      stickerInitialTop = stickerRect.top - frameRect.top;
+    }
+
+    function doStickerDrag(clientX, clientY) {
+      if (!isDraggingSticker) return;
+      const frameRect = monitorFrame.getBoundingClientRect();
+      const stickerRect = stickerOverlayEl.getBoundingClientRect();
+
+      const dx = clientX - stickerDragStartX;
+      const dy = clientY - stickerDragStartY;
+
+      let newLeft = stickerInitialLeft + dx;
+      let newTop = stickerInitialTop + dy;
+
+      // Clamp within frame bounds
+      newLeft = Math.max(5, Math.min(frameRect.width - stickerRect.width - 5, newLeft));
+      newTop = Math.max(5, Math.min(frameRect.height - stickerRect.height - 5, newTop));
+
+      const leftPct = ((newLeft / frameRect.width) * 100).toFixed(1);
+      const topPct = ((newTop / frameRect.height) * 100).toFixed(1);
+
+      stickerOverlayEl.style.left = `${leftPct}%`;
+      stickerOverlayEl.style.top = `${topPct}%`;
+      stickerOverlayEl.style.right = 'auto';
+      stickerOverlayEl.style.bottom = 'auto';
+      stickerOverlayEl.style.transform = 'none';
+
+      editorState.stickerPos = {
+        type: 'custom',
+        xPct: parseFloat(leftPct),
+        yPct: parseFloat(topPct)
+      };
+
+      // Reset preset active states to custom
+      modal.querySelectorAll('.btn-sticker-pos').forEach(b => b.classList.remove('active'));
+    }
+
+    function stopStickerDrag() {
+      if (isDraggingSticker) {
+        isDraggingSticker = false;
+        stickerOverlayEl.classList.remove('is-dragging');
+        showToast('📍 Sticker position saved');
+      }
+    }
+
+    stickerOverlayEl.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      startStickerDrag(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDraggingSticker) {
+        e.preventDefault();
+        doStickerDrag(e.clientX, e.clientY);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      stopStickerDrag();
+    });
+
+    // Touch support for mobile / touchscreens
+    stickerOverlayEl.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        e.stopPropagation();
+        startStickerDrag(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+      if (isDraggingSticker && e.touches.length === 1) {
+        doStickerDrag(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+      stopStickerDrag();
+    });
+  }
+
+  // 📍 9-Grid Position Preset Buttons
+  const stickerPosBtns = modal.querySelectorAll('.btn-sticker-pos');
+  const posConfig = {
+    'top-left':      { top: '10%', left: '8%', right: 'auto', bottom: 'auto', transform: 'none', xPct: 8, yPct: 10, align: 7 },
+    'top-center':    { top: '10%', left: '50%', right: 'auto', bottom: 'auto', transform: 'translateX(-50%)', xPct: 50, yPct: 10, align: 8 },
+    'top-right':     { top: '10%', right: '8%', left: 'auto', bottom: 'auto', transform: 'none', xPct: 85, yPct: 10, align: 9 },
+    'mid-left':      { top: '50%', left: '8%', right: 'auto', bottom: 'auto', transform: 'translateY(-50%)', xPct: 8, yPct: 50, align: 4 },
+    'center':        { top: '50%', left: '50%', right: 'auto', bottom: 'auto', transform: 'translate(-50%, -50%)', xPct: 50, yPct: 50, align: 5 },
+    'mid-right':     { top: '50%', right: '8%', left: 'auto', bottom: 'auto', transform: 'translateY(-50%)', xPct: 85, yPct: 50, align: 6 },
+    'bottom-left':   { bottom: '15%', left: '8%', top: 'auto', right: 'auto', transform: 'none', xPct: 8, yPct: 82, align: 1 },
+    'bottom-center': { bottom: '15%', left: '50%', right: 'auto', top: 'auto', transform: 'translateX(-50%)', xPct: 50, yPct: 82, align: 2 },
+    'bottom-right':  { bottom: '15%', right: '8%', top: 'auto', left: 'auto', transform: 'none', xPct: 85, yPct: 82, align: 3 }
+  };
+
+  stickerPosBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      stickerPosBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const posKey = btn.dataset.pos || 'top-right';
+      const conf = posConfig[posKey] || posConfig['top-right'];
+
+      if (stickerOverlayEl) {
+        stickerOverlayEl.style.top = conf.top;
+        stickerOverlayEl.style.left = conf.left;
+        stickerOverlayEl.style.right = conf.right;
+        stickerOverlayEl.style.bottom = conf.bottom;
+        stickerOverlayEl.style.transform = conf.transform;
+      }
+
+      editorState.stickerPos = {
+        type: posKey,
+        xPct: conf.xPct,
+        yPct: conf.yPct,
+        align: conf.align
+      };
+
+      showToast(`📍 Sticker Position: ${btn.textContent.trim()}`);
+    });
+  });
+
+  // 🔍 Sticker Scale Buttons
+  const stickerScaleBtns = modal.querySelectorAll('.btn-sticker-scale');
+  stickerScaleBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      stickerScaleBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const scale = btn.dataset.scale || 'normal';
+
+      if (stickerOverlayEl) {
+        stickerOverlayEl.classList.remove('size-small', 'size-large');
+        if (scale === 'small') stickerOverlayEl.classList.add('size-small');
+        if (scale === 'large') stickerOverlayEl.classList.add('size-large');
+      }
+
+      editorState.stickerScale = scale;
+      showToast(`🔍 Sticker Size: ${scale.toUpperCase()}`);
     });
   });
 
@@ -7445,6 +7832,9 @@ function initTimelineStudio() {
             blurCanvas: editorState.blurCanvas,
             canvasBg: editorState.canvasBg || 'blur',
             sticker: editorState.sticker || 'none',
+            stickerText: editorState.stickerText || '',
+            stickerPos: editorState.stickerPos || { xPct: 85, yPct: 10, align: 9 },
+            stickerScale: editorState.stickerScale || 'normal',
             sfxTrack: editorState.sfxTrack || 'none',
             sfxVolume: editorState.sfxVolume || 1.0,
             subStyle: editorState.textColor === 'yellow' ? 'hormozi' : (editorState.textColor || 'hormozi')

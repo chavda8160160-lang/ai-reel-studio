@@ -5739,6 +5739,36 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   grid-template-columns: 1fr 1fr;
   gap: 0.55rem;
 }
+.sticker-cat-tabs {
+  scrollbar-width: thin;
+}
+
+.sticker-cat-btn {
+  padding: 0.38rem 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  border: 1px solid rgba(215, 206, 192, 0.9);
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.sticker-cat-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.sticker-cat-btn.active {
+  background: linear-gradient(135deg, #0f172a, #334155) !important;
+  color: #ffffff !important;
+  border-color: #0f172a !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25) !important;
+}
 
 .pro-sticker-btn {
   display: flex;
@@ -5954,17 +5984,82 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
 
 .pro-sticker-overlay {
   position: absolute;
-  top: 15%;
-  right: 12%;
-  font-size: 2.2rem;
-  pointer-events: none;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
-  animation: stickerBounce 1.5s ease-in-out infinite alternate;
+  top: 12%;
+  right: 7%;
+  z-index: 50 !important;
+  pointer-events: auto !important;
+  cursor: grab;
+  user-select: none;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.7));
+  touch-action: none;
+}
+
+.pro-sticker-overlay:active,
+.pro-sticker-overlay.is-dragging {
+  cursor: grabbing !important;
+  transform: scale(1.05);
+}
+
+.pro-sticker-overlay.hidden {
+  display: none !important;
+}
+
+.pro-sticker-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 242, 254, 0.35);
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  color: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pro-sticker-pill:hover {
+  border-color: #00f2fe;
+  box-shadow: 0 4px 18px rgba(0, 242, 254, 0.6);
+}
+
+.pro-sticker-overlay.size-small .pro-sticker-pill {
+  padding: 0.28rem 0.65rem;
+}
+.pro-sticker-overlay.size-small .sticker-pill-emoji {
+  font-size: 1.05rem;
+}
+.pro-sticker-overlay.size-small .sticker-pill-text {
+  font-size: 0.68rem;
+}
+
+.pro-sticker-overlay.size-large .pro-sticker-pill {
+  padding: 0.55rem 1.15rem;
+}
+.pro-sticker-overlay.size-large .sticker-pill-emoji {
+  font-size: 1.7rem;
+}
+.pro-sticker-overlay.size-large .sticker-pill-text {
+  font-size: 0.98rem;
+}
+
+.sticker-pill-emoji {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.sticker-pill-text {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffffff;
+  white-space: nowrap;
 }
 
 @keyframes stickerBounce {
-  0% { transform: scale(1) rotate(0deg); }
-  100% { transform: scale(1.1) rotate(6deg); }
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.06) translateY(-4px); }
 }
 
 .pro-transport-bar {
@@ -6211,7 +6306,8 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   background: #dc2626;
   box-shadow: 0 0 8px rgba(220, 38, 38, 0.8);
   pointer-events: none;
-  transition: left 0.1s linear;
+  transition: none;
+  will-change: left;
   z-index: 10;
 }
 
@@ -6885,50 +6981,76 @@ textarea:focus, .custom-input:focus, .custom-select:focus {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 12px;
-  background: rgba(255, 255, 255, 0.25);
-  cursor: ew-resize;
+  width: 16px;
+  background: rgba(0, 242, 254, 0.35);
+  cursor: ew-resize !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 15;
-  transition: all 0.2s ease;
+  z-index: 25;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
-#timelineStudioModal .clip-trim-handle:hover {
+#timelineStudioModal .clip-trim-handle::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: -8px;
+  right: -8px;
+  cursor: ew-resize !important;
+}
+#timelineStudioModal .clip-trim-handle:hover,
+#timelineStudioModal .clip-trim-handle.active {
   background: #00f2fe;
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.9);
 }
 #timelineStudioModal .clip-trim-handle.handle-left {
   left: 0;
-  border-top-left-radius: 4px;
-  border-bottom-left-radius: 4px;
-  border-right: 1.5px solid rgba(0, 0, 0, 0.6);
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  border-right: 2px solid rgba(0, 0, 0, 0.75);
 }
 #timelineStudioModal .clip-trim-handle.handle-right {
   right: 0;
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
-  border-left: 1.5px solid rgba(0, 0, 0, 0.6);
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+  border-left: 2px solid rgba(0, 0, 0, 0.75);
 }
 #timelineStudioModal .clip-trim-handle::after {
   content: '';
-  width: 2px;
-  height: 16px;
-  background: rgba(255, 255, 255, 0.85);
-  border-radius: 1px;
+  width: 3px;
+  height: 18px;
+  background: #ffffff;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
-#timelineStudioModal .clip-trim-handle:hover::after {
+#timelineStudioModal .clip-trim-handle:hover::after,
+#timelineStudioModal .clip-trim-handle.active::after {
   background: #09090b;
 }
 
 #timelineStudioModal .pro-playhead-needle {
   background: #00f2fe !important;
-  box-shadow: 0 0 12px rgba(0, 242, 254, 0.95) !important;
+  box-shadow: 0 0 14px rgba(0, 242, 254, 1) !important;
+  transition: none !important;
+  will-change: left;
 }
 
 #timelineStudioModal .pro-playhead-needle::after {
   background: #00f2fe !important;
   border: 2px solid #ffffff !important;
-  box-shadow: 0 0 8px rgba(0, 242, 254, 0.8) !important;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.9) !important;
+}
+
+/* Global timeline drag active helper */
+body.timeline-dragging,
+body.timeline-dragging * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  cursor: ew-resize !important;
 }
 
 #timelineStudioModal .pro-adjust-slider-row {

@@ -1880,7 +1880,7 @@ app.post('/api/video/edit-timeline', async (req, res) => {
       videoFileName, trimStart, trimEnd, speed, filter, textSize, textPosition, textColor,
       effects, customCaption, origVolume, rotate, flipH, flipV, adjust, voice, resolution,
       fps, aspect, chromaKey, font, textAnim, clips, bgmTrack, bgmVolume, muteOrigAudio,
-      blurCanvas, canvasBg, sticker, sfxTrack, sfxVolume, subStyle
+      blurCanvas, canvasBg, sticker, stickerText, stickerPos, stickerScale, sfxTrack, sfxVolume, subStyle
     } = req.body;
     if (!videoFileName) {
       return res.status(400).json({ error: 'Video file name is required.' });
@@ -1902,6 +1902,10 @@ app.post('/api/video/edit-timeline', async (req, res) => {
 
     const vFilters = [];
     const aFilters = [];
+
+    // Ensure trimmed video starts cleanly at PTS 0
+    vFilters.push('setpts=PTS-STARTPTS');
+    aFilters.push('asetpts=PTS-STARTPTS');
 
     // 1. CapCut Speed Control (0.1x to 10.0x)
     const playbackSpeed = Math.min(10.0, Math.max(0.1, parseFloat(speed) || 1.0));
@@ -2063,8 +2067,12 @@ app.post('/api/video/edit-timeline', async (req, res) => {
     }
 
     // 10. CapCut Dynamic Subtitles / Hormozi Typography
+    // 10. CapCut Dynamic Subtitles & Sticker Pill Overlay
     let assPath = null;
-    if (customCaption && customCaption.trim()) {
+    const hasCaptions = !!(customCaption && customCaption.trim());
+    const hasSticker = !!(sticker && sticker !== 'none');
+
+    if (hasCaptions || hasSticker) {
       const fontSizeMap = { small: 56, medium: 72, large: 88, huge: 110 };
       const chosenSize = fontSizeMap[textSize] || 76;
       const alignMap = { bottom: 2, center: 5, top: 8 };
@@ -2091,20 +2099,46 @@ app.post('/api/video/edit-timeline', async (req, res) => {
       const shadowDepth = (subStyle === 'pill') ? 0 : 4;
       const backColour = (subStyle === 'pill') ? '&H90000000&' : '&H80000000&';
 
-      assPath = path.join(os.tmpdir(), `editor-sub-${Date.now()}.ass`);
-      const lines = customCaption.split('\n').filter(l => l.trim());
       let assEvents = '';
-      const step = rawDuration / Math.max(1, lines.length);
 
-      lines.forEach((line, idx) => {
-        const sTime = formatAssTime(idx * step);
-        const eTime = formatAssTime((idx + 1) * step);
-        const cleanText = line.toUpperCase().replace(/[{}]/g, '').trim();
-        assEvents += `Dialogue: 0,${sTime},${eTime},EditorStyle,,0,0,0,,{\\c${chosenCol}}${cleanText}\n`;
-      });
+      if (hasCaptions) {
+        const lines = customCaption.split('\n').filter(l => l.trim());
+        const step = rawDuration / Math.max(1, lines.length);
+        lines.forEach((line, idx) => {
+          const sTime = formatAssTime(idx * step);
+          const eTime = formatAssTime((idx + 1) * step);
+          const cleanText = line.toUpperCase().replace(/[{}]/g, '').trim();
+          assEvents += `Dialogue: 0,${sTime},${eTime},EditorStyle,,0,0,0,,{\\c${chosenCol}}${cleanText}\n`;
+        });
+      }
+
+      const stkFontSize = stickerScale === 'small' ? 32 : (stickerScale === 'large' ? 52 : 40);
+      let stkAlign = 9;
+      let isCustomPos = false;
+      let posX = 850;
+      let posY = 150;
+
+      if (hasSticker && stickerPos && typeof stickerPos === 'object') {
+        if (stickerPos.type === 'custom' || (stickerPos.xPct !== undefined && stickerPos.yPct !== undefined)) {
+          isCustomPos = true;
+          posX = Math.round(1080 * (Math.max(5, Math.min(90, parseFloat(stickerPos.xPct) || 80)) / 100));
+          posY = Math.round(1920 * (Math.max(5, Math.min(90, parseFloat(stickerPos.yPct) || 10)) / 100));
+        } else if (stickerPos.align) {
+          stkAlign = parseInt(stickerPos.align, 10) || 9;
+        }
+      }
+
+      if (hasSticker) {
+        const cleanStk = (stickerText || sticker).toUpperCase().replace(/[{}]/g, '').trim();
+        if (isCustomPos) {
+          assEvents += `Dialogue: 1,0:00:00.00,${formatAssTime(rawDuration)},StickerStyle,,0,0,0,,{\\an7\\pos(${posX},${posY})}${cleanStk}\n`;
+        } else {
+          assEvents += `Dialogue: 1,0:00:00.00,${formatAssTime(rawDuration)},StickerStyle,,0,0,0,,${cleanStk}\n`;
+        }
+      }
 
       const assContent = `[Script Info]
-Title: Timeline Studio Subtitles
+Title: Timeline Studio Subtitles & Sticker
 ScriptType: v4.00+
 PlayResX: 1080
 PlayResY: 1920
@@ -2112,11 +2146,13 @@ PlayResY: 1920
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: EditorStyle,${chosenFont},${chosenSize},${chosenCol},&H00000000,&H00000000,${backColour},-1,0,0,0,100,100,0,0,${borderStyle},${outlineWidth},${shadowDepth},${chosenAlign},60,60,${chosenMarginV},1
+Style: StickerStyle,Arial Black,${stkFontSize},&H00FFFFFF,&H00000000,&H00000000,&HA00F172A,-1,0,0,0,100,100,0,0,3,10,0,${stkAlign},50,50,150,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 ${assEvents}`;
 
+      assPath = path.join(os.tmpdir(), `editor-sub-${Date.now()}.ass`);
       fs.writeFileSync(assPath, assContent, 'utf8');
       const escapedAss = path.resolve(assPath).replace(/\\/g, '/').replace(/:/g, '\\:');
       vFilters.push(`subtitles='${escapedAss}'`);

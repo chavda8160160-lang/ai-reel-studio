@@ -11,7 +11,7 @@
     href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400;1,600&family=Noto+Sans+Gujarati:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=website-royal-v10">
+  <link rel="stylesheet" href="css/style.css?v=website-royal-v11">
 </head>
 
 <body>
@@ -64,10 +64,7 @@
           <span class="mode-tab-label">CapCut Pro</span>
           <span class="capcut-pro-tag">PRO</span>
         </button>
-        <a href="mangalvar-schedule.html" class="mode-tab" style="background: rgba(99, 102, 241, 0.18); border: 1px solid rgba(99, 102, 241, 0.45); color: #818cf8; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;" title="મંગળવાર સુધીનું Advance Schedule">
-          <i class="fa-solid fa-calendar-check" style="color: #38bdf8;"></i>
-          <span class="mode-tab-label">મંગળવાર Schedule (Part 5-13)</span>
-        </a>
+
       </nav>
 
       <!-- Status Chips -->
@@ -2564,10 +2561,99 @@
             <div id="tabTimelineStickers" class="pro-tab-pane hidden">
               <div class="pro-pane-header">
                 <h4><i class="fa-solid fa-icons"></i> Stickers & Call-to-Actions</h4>
-                <span class="pro-pane-sub">Animated social badges, like, subscribe & emojis</span>
+                <span class="pro-pane-sub">વિડિયો મુજબ સ્ટીકર્સ અને સોશિયલ બેજીસ</span>
               </div>
 
-              <div class="pro-stickers-grid">
+              <!-- Sticker Category Switcher Tabs -->
+              <div class="sticker-cat-tabs" style="display: flex; gap: 0.35rem; margin-bottom: 0.75rem; overflow-x: auto; padding-bottom: 0.2rem;">
+                <button type="button" class="sticker-cat-btn active" data-cat="gaming">🎮 Gaming & Action</button>
+                <button type="button" class="sticker-cat-btn" data-cat="viral">🚀 Viral / Shorts</button>
+                <button type="button" class="sticker-cat-btn" data-cat="shopping">🛍️ Patola / Saree</button>
+              </div>
+
+              <!-- Remove Sticker Action -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.03); border: 1px dashed rgba(215, 206, 192, 0.9); border-radius: 8px;">
+                <span style="font-size: 0.75rem; font-weight: 600; color: #64748b;">સ્ટીકર પસંદ કરો અથવા હટાવો:</span>
+                <button type="button" class="pro-sticker-btn" data-sticker="none" style="flex-direction: row; gap: 0.35rem; padding: 0.3rem 0.65rem; border-radius: 6px; background: #fff;">
+                  <span class="sticker-emoji" style="font-size: 0.95rem; margin-bottom: 0;">🚫</span>
+                  <span class="sticker-name" style="font-size: 0.75rem;">Remove Sticker</span>
+                </button>
+              </div>
+
+              <!-- 1. Gaming Category Grid -->
+              <div class="pro-stickers-grid sticker-cat-grid" data-cat-grid="gaming">
+                <button type="button" class="pro-sticker-btn" data-sticker="progamer">
+                  <span class="sticker-emoji">🎮</span>
+                  <span class="sticker-name">Pro Gamer</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="epic">
+                  <span class="sticker-emoji">🔥</span>
+                  <span class="sticker-name">Epic Moment</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="headshot">
+                  <span class="sticker-emoji">💥</span>
+                  <span class="sticker-name">Action KO</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="ultrafast">
+                  <span class="sticker-emoji">⚡</span>
+                  <span class="sticker-name">Ultra Fast</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="victory">
+                  <span class="sticker-emoji">👑</span>
+                  <span class="sticker-name">Victory Royale</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="danger">
+                  <span class="sticker-emoji">💣</span>
+                  <span class="sticker-name">Danger Zone</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="nextlevel">
+                  <span class="sticker-emoji">🚀</span>
+                  <span class="sticker-name">Next Level</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="mission">
+                  <span class="sticker-emoji">🎯</span>
+                  <span class="sticker-name">Mission Passed</span>
+                </button>
+              </div>
+
+              <!-- 2. Viral / Shorts Category Grid -->
+              <div class="pro-stickers-grid sticker-cat-grid hidden" data-cat-grid="viral">
+                <button type="button" class="pro-sticker-btn" data-sticker="subscribe">
+                  <span class="sticker-emoji">🔔</span>
+                  <span class="sticker-name">Subscribe Now</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="like">
+                  <span class="sticker-emoji">❤️</span>
+                  <span class="sticker-name">Double Tap Like</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="watchtillend">
+                  <span class="sticker-emoji">😱</span>
+                  <span class="sticker-name">Watch Till End</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="comment">
+                  <span class="sticker-emoji">💬</span>
+                  <span class="sticker-name">Drop Comment</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="share">
+                  <span class="sticker-emoji">🔁</span>
+                  <span class="sticker-name">Share Reel</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="mindblown">
+                  <span class="sticker-emoji">🤯</span>
+                  <span class="sticker-name">Mind Blown</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="plottwist">
+                  <span class="sticker-emoji">🤫</span>
+                  <span class="sticker-name">Plot Twist</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="viraltrend">
+                  <span class="sticker-emoji">✨</span>
+                  <span class="sticker-name">Viral Trend</span>
+                </button>
+              </div>
+
+              <!-- 3. Shopping / Saree Category Grid -->
+              <div class="pro-stickers-grid sticker-cat-grid hidden" data-cat-grid="shopping">
                 <button type="button" class="pro-sticker-btn" data-sticker="whatsapp">
                   <span class="sticker-emoji">💬</span>
                   <span class="sticker-name">Order WhatsApp</span>
@@ -2584,22 +2670,55 @@
                   <span class="sticker-emoji">👗</span>
                   <span class="sticker-name">New Arrival</span>
                 </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="like">
-                  <span class="sticker-emoji">❤️</span>
-                  <span class="sticker-name">Double Tap Like</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="subscribe">
-                  <span class="sticker-emoji">🔔</span>
-                  <span class="sticker-name">Subscribe Now</span>
-                </button>
                 <button type="button" class="pro-sticker-btn" data-sticker="100">
                   <span class="sticker-emoji">💯</span>
                   <span class="sticker-name">100% Pure Silk</span>
                 </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="none">
-                  <span class="sticker-emoji">🚫</span>
-                  <span class="sticker-name">Remove Sticker</span>
+                <button type="button" class="pro-sticker-btn" data-sticker="freeshipping">
+                  <span class="sticker-emoji">📦</span>
+                  <span class="sticker-name">Free Delivery</span>
                 </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="bestseller">
+                  <span class="sticker-emoji">⭐</span>
+                  <span class="sticker-name">Best Seller</span>
+                </button>
+                <button type="button" class="pro-sticker-btn" data-sticker="royal">
+                  <span class="sticker-emoji">👑</span>
+                  <span class="sticker-name">Royal Heritage</span>
+                </button>
+              </div>
+
+              <!-- 📍 Sticker Custom Position & Drag Settings -->
+              <div class="pro-group-box" style="margin-top: 0.9rem; padding: 0.8rem; background: rgba(0,0,0,0.03); border: 1.5px solid rgba(215, 206, 192, 0.7); border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.55rem;">
+                  <label class="pro-group-label" style="margin-bottom: 0; font-size: 0.82rem; font-weight: 700; color: #1e293b;">
+                    <i class="fa-solid fa-arrows-up-down-left-right" style="color: #6366f1;"></i> Sticker Position:
+                  </label>
+                  <span style="font-size: 0.7rem; color: #64748b; font-weight: 600;">(વિડીયો પર સીધું ખેંચી શકો છો ✋)</span>
+                </div>
+
+                <!-- 9-Grid Position Presets -->
+                <div class="pro-chips-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem;">
+                  <button type="button" class="chip btn-sticker-pos" data-pos="top-left">↖️ Top Left</button>
+                  <button type="button" class="chip btn-sticker-pos" data-pos="top-center">🔝 Top Mid</button>
+                  <button type="button" class="chip btn-sticker-pos active" data-pos="top-right">↗️ Top Right</button>
+                  <button type="button" class="chip btn-sticker-pos" data-pos="mid-left">⬅️ Mid Left</button>
+                  <button type="button" class="chip btn-sticker-pos" data-pos="center">🎯 Center</button>
+                  <button type="button" class="chip btn-sticker-pos" data-pos="mid-right">➡️ Mid Right</button>
+                  <button type="button" class="chip btn-sticker-pos" data-pos="bottom-left">↙️ Bottom Left</button>
+                  <button type="button" class="chip btn-sticker-pos" data-pos="bottom-center">🔽 Bottom Mid</button>
+                  <button type="button" class="chip btn-sticker-pos" data-pos="bottom-right">↘️ Bottom Right</button>
+                </div>
+
+                <!-- Sticker Size Selector -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.65rem; padding-top: 0.55rem; border-top: 1px dashed rgba(215, 206, 192, 0.6);">
+                  <span style="font-size: 0.75rem; font-weight: 600; color: #475569;">Sticker Size:</span>
+                  <div style="display: flex; gap: 0.35rem;">
+                    <button type="button" class="chip btn-sticker-scale" data-scale="small" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Small</button>
+                    <button type="button" class="chip btn-sticker-scale active" data-scale="normal" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Normal</button>
+                    <button type="button" class="chip btn-sticker-scale" data-scale="large" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Large</button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -2945,9 +3064,12 @@
                 <!-- Interactive Live Subtitle Overlay -->
                 <div id="timelineLiveSubBadge" class="pro-subtitle-overlay hidden"></div>
 
-                <!-- Live Sticker Overlay -->
-                <div id="timelineStickerOverlay" class="pro-sticker-overlay hidden">
-                  <span id="stickerIconContent">🔥</span>
+                <!-- Live Sticker Overlay (Top-Right Floating Badge) -->
+                <div id="timelineStickerOverlay" class="pro-sticker-overlay hidden" style="position: absolute; top: 12%; right: 7%; z-index: 45; pointer-events: none;">
+                  <div class="pro-sticker-pill">
+                    <span id="stickerIconContent" class="sticker-pill-emoji">🎮</span>
+                    <span id="stickerTextContent" class="sticker-pill-text">Pro Gamer</span>
+                  </div>
                 </div>
               </div>
 
@@ -3599,7 +3721,7 @@
 
     <div id="toast" class="toast hidden"></div>
 
-    <script src="js/app.js?v=capcut-pro-timeline-v16"></script>
+    <script src="js/app.js?v=capcut-pro-timeline-v18-smooth"></script>
 </body>
 
 </html>
