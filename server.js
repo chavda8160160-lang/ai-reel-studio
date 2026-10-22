@@ -763,13 +763,15 @@ async function publishReelDirectToInstagram(videoPath, caption, customToken, cus
   }
 
   // Step 3: Wait for Meta to process the video
-  // Step 3: Wait for Meta to process the video (up to 4 minutes)
+  // Step 3: Wait for Meta to process the video (up to 8 minutes for high-traffic peak hours)
   let isReady = false;
-  const maxAttempts = 60;
+  const maxAttempts = 120;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     await new Promise(r => setTimeout(r, 4000));
     const statusRes = await fetch(`https://graph.facebook.com/v20.0/${containerId}?fields=status_code,status&access_token=${token}`).then(r => r.json());
-    console.log(`⏳ [Instagram Direct] Poll attempt ${attempt}/${maxAttempts}: ${statusRes.status_code || 'CHECKING'}`);
+    if (attempt % 5 === 0 || attempt === 1) {
+      console.log(`⏳ [Instagram Direct] Poll attempt ${attempt}/${maxAttempts}: ${statusRes.status_code || 'CHECKING'}`);
+    }
 
     if (statusRes.status_code === 'FINISHED') {
       isReady = true;
@@ -782,7 +784,7 @@ async function publishReelDirectToInstagram(videoPath, caption, customToken, cus
   }
 
   if (!isReady) {
-    throw new Error('Meta video processing timed out (waited 4 minutes).');
+    throw new Error('Meta video processing timed out (waited 8 minutes during peak server load).');
   }
 
   // Step 4: Publish Reel
@@ -862,7 +864,13 @@ setInterval(async () => {
 
     for (const item of queue) {
       const isScheduled = item.status === 'Scheduled' || item.status === 'Rendered & Ready to Post' || (typeof item.status === 'string' && item.status.startsWith('Rendered & Scheduled'));
-      if (isScheduled && item.scheduledTime) {
+      
+      // 🛡️ Auto-Retry Engine: Automatically retry failed posts (up to 3 attempts, 5 mins cooldown after failure)
+      const isFailedEligibleForRetry = item.status === 'Post Failed (Ready to retry)' &&
+        (!item.retryCount || item.retryCount < 3) &&
+        (!item.startedPublishingAt || (Date.now() - new Date(item.startedPublishingAt).getTime() >= 5 * 60 * 1000));
+
+      if ((isScheduled || isFailedEligibleForRetry) && item.scheduledTime) {
         const itemTime = new Date(item.scheduledTime);
 
         // ⏰ If the time has arrived:
@@ -879,10 +887,15 @@ setInterval(async () => {
           }
 
           currentlyProcessingScheduleIds.add(item.id);
-          console.log(`⏰ [Auto-Pilot Schedule] Reel "${item.fileName}" scheduled for ${item.scheduledTimeFormatted || item.scheduledTime} is NOW DUE! Locking to prevent duplicate posts...`);
+          if (isFailedEligibleForRetry) {
+            item.retryCount = (item.retryCount || 0) + 1;
+            console.log(`🔄 [Auto-Retry Engine] Automatically retrying failed reel "${item.fileName}" (Attempt ${item.retryCount}/3)...`);
+          } else {
+            console.log(`⏰ [Auto-Pilot Schedule] Reel "${item.fileName}" scheduled for ${item.scheduledTimeFormatted || item.scheduledTime} is NOW DUE! Locking to prevent duplicate posts...`);
+          }
 
-          // 🔒 CRITICAL: Update status and save to disk IMMEDIATELY before starting the 30-sec upload!
-          item.status = 'Publishing to Instagram...';
+          // 🔒 CRITICAL: Update status and save to disk IMMEDIATELY before starting upload!
+          item.status = 'Publishing to Social Media...';
           item.startedPublishingAt = now.toISOString();
           saveScheduledQueue(queue);
 
@@ -910,8 +923,8 @@ setInterval(async () => {
               }
             }
 
-            // Direct Auto-Publish to YouTube Shorts if configured
-            if (process.env.YOUTUBE_ACCESS_TOKEN) {
+            // Direct Auto-Publish to YouTube Shorts if configured (checks access token OR auto-refresh token)
+            if (process.env.YOUTUBE_ACCESS_TOKEN || (process.env.YOUTUBE_REFRESH_TOKEN && process.env.YOUTUBE_CLIENT_ID)) {
               try {
                 console.log(`🚀 [Auto-Post Engine] Auto-uploading due Reel to YouTube Shorts...`);
                 const ytTitle = (item.viralTitle || item.title || 'Viral AI Reel #Shorts').substring(0, 100);
@@ -2791,8 +2804,8 @@ app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
       }
     }
 
-    // YouTube Shorts
-    if (process.env.YOUTUBE_ACCESS_TOKEN) {
+    // YouTube Shorts (checks access token OR auto-refresh token)
+    if (process.env.YOUTUBE_ACCESS_TOKEN || (process.env.YOUTUBE_REFRESH_TOKEN && process.env.YOUTUBE_CLIENT_ID)) {
       try {
         console.log(`🚀 [Manual Run Now] Uploading to YouTube Shorts...`);
         const ytTitle = (item.viralTitle || item.title || 'Viral AI Reel #Shorts').substring(0, 100);
