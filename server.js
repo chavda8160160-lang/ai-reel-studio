@@ -2677,6 +2677,222 @@ app.post('/api/facebook/publish-direct', async (req, res) => {
   }
 });
 
+// Dedicated Endpoint: Upload ONLY 5-Minute Long Video to Facebook Page
+app.post('/api/facebook/publish-5min', async (req, res) => {
+  try {
+    const { videoFileName, title, description, customToken, customPageId } = req.body;
+    const token = customToken || process.env.META_INSTAGRAM_TOKEN;
+    const pageId = customPageId || process.env.META_INSTAGRAM_PAGE_ID || '1320416261160842';
+
+    if (!token) {
+      return res.status(400).json({ error: 'Facebook Page Token not found in settings.' });
+    }
+
+    const state = getSchedulerState();
+    let sourceVideo = null;
+
+    if (videoFileName) {
+      const candidates = [
+        path.join(REELS_DIR, path.basename(videoFileName)),
+        path.join(UPLOADS_DIR, path.basename(videoFileName)),
+        path.join(UPLOADS_DIR, 'videos', path.basename(videoFileName))
+      ];
+      for (const p of candidates) {
+        if (fs.existsSync(p)) { sourceVideo = p; break; }
+      }
+    }
+
+    if (!sourceVideo && state.masterVideo && state.masterVideo.path && fs.existsSync(state.masterVideo.path)) {
+      sourceVideo = state.masterVideo.path;
+    }
+
+    if (!sourceVideo) {
+      const dirs = [REELS_DIR, path.join(UPLOADS_DIR, 'videos'), UPLOADS_DIR];
+      for (const d of dirs) {
+        if (fs.existsSync(d)) {
+          const files = fs.readdirSync(d).filter(f => f.endsWith('.mp4'));
+          if (files.length > 0) {
+            files.sort((a, b) => fs.statSync(path.join(d, b)).mtimeMs - fs.statSync(path.join(d, a)).mtimeMs);
+            sourceVideo = path.join(d, files[0]);
+            break;
+          }
+        }
+      }
+    }
+
+    if (!sourceVideo || !fs.existsSync(sourceVideo)) {
+      return res.status(404).json({ error: 'કોઈ વિડીયો ફાઈલ મળી નથી.' });
+    }
+
+    const longFileName = `facebook-5min-${Date.now()}.mp4`;
+    const longOutPath = path.join(REELS_DIR, longFileName);
+    let finalPath = sourceVideo;
+
+    // Check duration; if video is longer than 5 mins, cut 5 mins (300s)
+    console.log(`🎬 [Facebook 5-Min Engine] Preparing 5-Minute video from "${path.basename(sourceVideo)}"...`);
+    try {
+      await new Promise((resolve, reject) => {
+        ffmpeg(sourceVideo)
+          .setStartTime(state.lastPostedSeconds || 0)
+          .duration(300)
+          .videoFilters([
+            'scale=1080:1920:force_original_aspect_ratio=decrease',
+            'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
+            'eq=saturation=1.2:contrast=1.12:brightness=0.02'
+          ])
+          .outputOptions([
+            '-c:v libx264',
+            '-preset fast',
+            '-crf 22',
+            '-pix_fmt yuv420p',
+            '-c:a aac',
+            '-b:a 192k',
+            '-movflags +faststart'
+          ])
+          .save(longOutPath)
+          .on('end', () => resolve())
+          .on('error', (err) => reject(err));
+      });
+      if (fs.existsSync(longOutPath)) {
+        finalPath = longOutPath;
+      }
+    } catch (e) {
+      console.warn('5-min cut fallback:', e.message);
+      finalPath = sourceVideo;
+    }
+
+    const baseTitle = title || 'Royal Heritage Patola Handloom Saree | 5-Minute Masterpiece';
+    const baseDesc = description || 'Authentic Double Ikat Patola Handloom Saree Crafted by Master Artisans in Patan, Gujarat.\n\n🌐 Visit Vault: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750\n\n#patola #handloom #saree #craftsmanship #heritage';
+
+    const result = await publishVideoDirectToFacebookPage({
+      videoPath: finalPath,
+      title: baseTitle,
+      description: baseDesc,
+      customToken: token,
+      customPageId: pageId
+    });
+
+    res.json({
+      success: true,
+      message: '🎉 5 મિનિટનો વિડીયો Facebook Page પર સફળતાપૂર્વક અપલોડ થઈ ગયો!',
+      result,
+      postUrl: result.postUrl
+    });
+  } catch (err) {
+    console.error('Facebook 5-Min Upload Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Dedicated Endpoint: 1-Click Upload Facebook Reel (30s) + 5-Minute Long Video
+app.post('/api/facebook/publish-reel-and-long', async (req, res) => {
+  try {
+    const { videoFileName, title, description, customToken, customPageId } = req.body;
+    const token = customToken || process.env.META_INSTAGRAM_TOKEN;
+    const pageId = customPageId || process.env.META_INSTAGRAM_PAGE_ID || '1320416261160842';
+
+    if (!token) {
+      return res.status(400).json({ error: 'Facebook Page Token not found in settings.' });
+    }
+
+    const state = getSchedulerState();
+    let reelPath = null;
+    let longPath = null;
+
+    // 1. Locate 30s reel
+    if (videoFileName) {
+      const p1 = path.join(REELS_DIR, path.basename(videoFileName));
+      if (fs.existsSync(p1)) reelPath = p1;
+    }
+    if (!reelPath) {
+      const files = fs.readdirSync(REELS_DIR).filter(f => f.endsWith('.mp4') && !f.includes('-fb-') && !f.includes('5min'));
+      if (files.length > 0) {
+        files.sort((a, b) => fs.statSync(path.join(REELS_DIR, b)).mtimeMs - fs.statSync(path.join(REELS_DIR, a)).mtimeMs);
+        reelPath = path.join(REELS_DIR, files[0]);
+      }
+    }
+
+    // 2. Locate or cut 5-Minute Video from master video
+    let sourceMaster = state.masterVideo && state.masterVideo.path && fs.existsSync(state.masterVideo.path) ? state.masterVideo.path : null;
+    if (!sourceMaster && reelPath) sourceMaster = reelPath;
+
+    if (sourceMaster) {
+      const longFileName = `facebook-5min-${Date.now()}.mp4`;
+      const longOutPath = path.join(REELS_DIR, longFileName);
+      console.log(`🎬 [Facebook Dual Engine] Cutting 5-minute video from "${path.basename(sourceMaster)}"...`);
+      try {
+        await new Promise((resolve, reject) => {
+          ffmpeg(sourceMaster)
+            .setStartTime(state.lastPostedSeconds || 0)
+            .duration(300)
+            .videoFilters([
+              'scale=1080:1920:force_original_aspect_ratio=decrease',
+              'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
+              'eq=saturation=1.2:contrast=1.12:brightness=0.02'
+            ])
+            .outputOptions([
+              '-c:v libx264',
+              '-preset fast',
+              '-crf 22',
+              '-pix_fmt yuv420p',
+              '-c:a aac',
+              '-b:a 192k',
+              '-movflags +faststart'
+            ])
+            .save(longOutPath)
+            .on('end', () => resolve())
+            .on('error', (err) => reject(err));
+        });
+        if (fs.existsSync(longOutPath)) {
+          longPath = longOutPath;
+        }
+      } catch (cutErr) {
+        console.warn('5-min cut warning:', cutErr.message);
+        longPath = sourceMaster;
+      }
+    }
+
+    const results = {};
+    const baseTitle = title || 'Royal Heritage Patola Handloom Saree';
+    const baseDesc = description || 'Authentic Double Ikat Patola Handloom Saree Crafted by Master Artisans in Patan, Gujarat.\n\n🌐 Visit Vault: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750\n\n#patola #handloom #saree #craftsmanship #heritage';
+
+    // 1. Upload 30s Reel
+    if (reelPath && fs.existsSync(reelPath)) {
+      console.log(`🚀 [Facebook Dual Engine] Uploading 30s Reel (${path.basename(reelPath)})...`);
+      results.reel = await publishVideoDirectToFacebookPage({
+        videoPath: reelPath,
+        title: `${baseTitle} | 30s Viral Reel`,
+        description: baseDesc,
+        customToken: token,
+        customPageId: pageId
+      });
+    }
+
+    // 2. Upload 5-Minute Long Video
+    if (longPath && fs.existsSync(longPath)) {
+      console.log(`🚀 [Facebook Dual Engine] Uploading 5-Minute Long Video (${path.basename(longPath)})...`);
+      results.longVideo = await publishVideoDirectToFacebookPage({
+        videoPath: longPath,
+        title: `${baseTitle} | 5-Minute Masterpiece Showcase`,
+        description: `${baseDesc}\n\n🎬 Watch full 5-minute showcase. Follow for more royal heritage episodes!`,
+        customToken: token,
+        customPageId: pageId
+      });
+    }
+
+    res.json({
+      success: true,
+      message: '🎉 Facebook 30s Reel અને 5 મિનિટનો વિડીયો બંને સફળતાપૂર્વક અપલોડ થઈ ગયા!',
+      results,
+      reelUrl: results.reel?.postUrl,
+      longVideoUrl: results.longVideo?.postUrl
+    });
+  } catch (err) {
+    console.error('Facebook Dual Upload Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Map to prevent duplicate double-posts within 3 minutes
 const recentPublishMap = new Map();
 

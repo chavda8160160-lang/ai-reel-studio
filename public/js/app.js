@@ -3135,6 +3135,100 @@ function initVideoStudio() {
     });
   }
 
+  // Dedicated Button: Upload Facebook 30s Reel Only
+  const btnPublishFbReelOnly = document.getElementById('btnPublishFbReelOnly');
+  if (btnPublishFbReelOnly) {
+    btnPublishFbReelOnly.addEventListener('click', async () => {
+      btnPublishFbReelOnly.disabled = true;
+      btnPublishFbReelOnly.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading Reel...';
+      showToast('🚀 Uploading 30s Reel to Facebook Page...');
+      try {
+        const fullDesc = `${viralCaptionText?.textContent || ''}\n\n${viralHashtagsText?.textContent || ''}\n\n🌐 Authentic Handloom Patola: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750`;
+        const res = await fetch('/api/facebook/publish-direct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoFileName: currentRenderedReel ? currentRenderedReel.fileName : undefined,
+            title: (viralTitleText?.textContent || 'Royal Heritage Patola Handloom Saree') + ' | 30s Viral Reel',
+            description: fullDesc
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Failed to upload reel to Facebook.');
+        showToast('🎉 Facebook 30s Reel published successfully!');
+        if (data.postUrl) window.open(data.postUrl, '_blank');
+      } catch (err) {
+        showToast(`Facebook Error: ${err.message}`, true);
+      } finally {
+        btnPublishFbReelOnly.disabled = false;
+        btnPublishFbReelOnly.innerHTML = '<i class="fa-solid fa-play" style="color: #2563eb;"></i> <span>Upload 30s Reel</span>';
+      }
+    });
+  }
+
+  // Dedicated Button: Upload Facebook 5-Minute Video Only
+  const btnPublishFb5MinOnly = document.getElementById('btnPublishFb5MinOnly');
+  if (btnPublishFb5MinOnly) {
+    btnPublishFb5MinOnly.addEventListener('click', async () => {
+      btnPublishFb5MinOnly.disabled = true;
+      btnPublishFb5MinOnly.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading 5-Min...';
+      showToast('🎬 Cutting & Uploading 5-Minute Video to Facebook Page...');
+      try {
+        const fullDesc = `${viralCaptionText?.textContent || ''}\n\n${viralHashtagsText?.textContent || ''}\n\n🌐 Authentic Double Ikat Patola: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750\n\n#patola #handloom #saree #heritage`;
+        const res = await fetch('/api/facebook/publish-5min', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoFileName: currentRenderedReel ? currentRenderedReel.fileName : undefined,
+            title: (viralTitleText?.textContent || 'Royal Heritage Patola Handloom Saree') + ' | 5-Minute Masterpiece',
+            description: fullDesc
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Failed to upload 5-min video to Facebook.');
+        showToast('🎉 Facebook 5-Minute Video published successfully!');
+        if (data.postUrl) window.open(data.postUrl, '_blank');
+      } catch (err) {
+        showToast(`Facebook Error: ${err.message}`, true);
+      } finally {
+        btnPublishFb5MinOnly.disabled = false;
+        btnPublishFb5MinOnly.innerHTML = '<i class="fa-solid fa-film" style="color: #2563eb;"></i> <span>Upload 5-Min Video</span>';
+      }
+    });
+  }
+
+  // Master Dedicated Button: 1-Click Upload BOTH Reel + 5-Min Video to Facebook
+  const btnPublishFbBothReelAndLong = document.getElementById('btnPublishFbBothReelAndLong');
+  if (btnPublishFbBothReelAndLong) {
+    btnPublishFbBothReelAndLong.addEventListener('click', async () => {
+      btnPublishFbBothReelAndLong.disabled = true;
+      btnPublishFbBothReelAndLong.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading BOTH Reel + 5-Min Video...';
+      showToast('🚀 Uploading BOTH 30s Reel and 5-Minute Video to Facebook Page...');
+      try {
+        const fullDesc = `${viralCaptionText?.textContent || ''}\n\n${viralHashtagsText?.textContent || ''}\n\n🌐 Authentic Patola Handloom: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750`;
+        const res = await fetch('/api/facebook/publish-reel-and-long', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoFileName: currentRenderedReel ? currentRenderedReel.fileName : undefined,
+            title: viralTitleText?.textContent || 'Royal Heritage Patola Handloom Saree',
+            description: fullDesc
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Failed to upload videos to Facebook.');
+        showToast('🎉 Facebook Reel અને 5 મિનિટનો વિડીયો બંને સફળતાપૂર્વક અપલોડ થઈ ગયા!');
+        if (data.reelUrl) window.open(data.reelUrl, '_blank');
+        if (data.longVideoUrl) setTimeout(() => window.open(data.longVideoUrl, '_blank'), 1500);
+      } catch (err) {
+        showToast(`Facebook Error: ${err.message}`, true);
+      } finally {
+        btnPublishFbBothReelAndLong.disabled = false;
+        btnPublishFbBothReelAndLong.innerHTML = '<i class="fa-solid fa-bolt"></i> <span>⚡ 1-Click Upload BOTH (30s Reel + 5-Min Video) to Facebook</span>';
+      }
+    });
+  }
+
   // 1-Click Publish to ALL (Instagram Reels + Facebook Page + YouTube Shorts)
   const btnPublishBoth = document.getElementById('btnPublishBoth');
   if (btnPublishBoth) {
@@ -4088,6 +4182,34 @@ function initSchedulerView() {
       btnRunNextNow.innerHTML = '<i class="fa-solid fa-forward-step"></i> <span>⚡ Extract & Post Next Part (30s) Now</span>';
     }
   });
+
+  // Dedicated Button in View 3: 1-Click Facebook Upload 30s Reel + 5-Min Video Now
+  const btnPostFbBothNow = document.getElementById('btnPostFbBothNow');
+  if (btnPostFbBothNow) {
+    btnPostFbBothNow.addEventListener('click', async () => {
+      btnPostFbBothNow.disabled = true;
+      btnPostFbBothNow.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading 30s Reel & 5-Min Video...';
+      showToast('🚀 Uploading BOTH 30s Reel and 5-Minute Video to Facebook Page...');
+      try {
+        const res = await fetch('/api/facebook/publish-reel-and-long', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Facebook publishing failed.');
+        showToast('🎉 Facebook 30s Reel અને 5 મિનિટનો વિડીયો બંને સફળતાપૂર્વક અપલોડ થઈ ગયા!');
+        fetchSchedulerStatus();
+        if (data.reelUrl) window.open(data.reelUrl, '_blank');
+        if (data.longVideoUrl) setTimeout(() => window.open(data.longVideoUrl, '_blank'), 1500);
+      } catch (err) {
+        showToast(`Facebook Error: ${err.message}`, true);
+      } finally {
+        btnPostFbBothNow.disabled = false;
+        btnPostFbBothNow.innerHTML = '<i class="fa-brands fa-facebook"></i> <span>📘 1-Click Facebook: Upload 30s Reel + 5-Min Video Now</span>';
+      }
+    });
+  }
 
   const btnLoadSampleVideo = document.getElementById('btnLoadSampleVideo');
   if (btnLoadSampleVideo) {

@@ -4,7 +4,7 @@
   "publishFacebook": true,
   "facebookPageId": "1320416261160842",
   "facebookPageName": "Reel creator ",
-  "facebookLongVideoMode": false,
+  "facebookLongVideoMode": true,
   "facebookDuration": 300,
   "masterVideo": {
     "id": "mv-1791981575299-7713",
