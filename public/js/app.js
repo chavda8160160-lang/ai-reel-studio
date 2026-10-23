@@ -3097,18 +3097,56 @@ function initVideoStudio() {
     triggerGuidedYouTubeFlow();
   });
 
-  // 1-Click Publish to BOTH (Instagram Reels + YouTube Shorts)
+  // Upload to Facebook Page (Supports 5-Min Long Videos & In-Stream Ads)
+  const btnPublishFacebook = document.getElementById('btnPublishFacebook');
+  if (btnPublishFacebook) {
+    btnPublishFacebook.addEventListener('click', async () => {
+      if (!currentRenderedReel) return;
+
+      btnPublishFacebook.style.opacity = '0.6';
+      btnPublishFacebook.style.pointerEvents = 'none';
+      showToast('🚀 Uploading 5-Min Video to Facebook Page...');
+
+      try {
+        const fullDesc = `${viralCaptionText.textContent}\n\n${viralHashtagsText.textContent}\n\n🌐 Visit Vault: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750`;
+        const res = await fetch('/api/facebook/publish-direct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoFileName: currentRenderedReel.fileName,
+            title: viralTitleText.textContent || 'Royal Heritage Patola Handloom Saree | 5-Minute Masterpiece',
+            description: fullDesc
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Facebook publishing failed.');
+        }
+
+        showToast('🎉 Video successfully published to Facebook Page!');
+        if (data.postUrl) window.open(data.postUrl, '_blank');
+      } catch (err) {
+        showToast(`Facebook Error: ${err.message}`, true);
+      } finally {
+        btnPublishFacebook.style.opacity = '1';
+        btnPublishFacebook.style.pointerEvents = 'auto';
+      }
+    });
+  }
+
+  // 1-Click Publish to ALL (Instagram Reels + Facebook Page + YouTube Shorts)
   const btnPublishBoth = document.getElementById('btnPublishBoth');
   if (btnPublishBoth) {
     btnPublishBoth.addEventListener('click', async () => {
       if (!currentRenderedReel) return;
 
       btnPublishBoth.disabled = true;
-      btnPublishBoth.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publishing to Instagram & YouTube...';
-      showToast('🚀 Publishing simultaneously to Instagram Reels & YouTube Shorts...');
+      btnPublishBoth.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publishing to Instagram, Facebook & YouTube...';
+      showToast('🚀 Publishing simultaneously to Instagram Reels, Facebook Page & YouTube...');
 
       try {
-        const fullDesc = `${viralCaptionText.textContent}\n\n${viralHashtagsText.textContent}`;
+        const fullDesc = `${viralCaptionText.textContent}\n\n${viralHashtagsText.textContent}\n\n🌐 Visit Vault: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750`;
         const res = await fetch('/api/social/publish-both-direct', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3118,6 +3156,7 @@ function initVideoStudio() {
             caption: viralCaptionText.textContent,
             hashtags: viralHashtagsText.textContent,
             description: fullDesc,
+            publishFacebook: true,
             youtubeToken: localStorage.getItem('YOUTUBE_ACCESS_TOKEN') || undefined,
             igToken: localStorage.getItem('META_IG_TOKEN') || undefined,
             igUserId: localStorage.getItem('META_IG_USER_ID') || undefined
@@ -3129,23 +3168,24 @@ function initVideoStudio() {
           throw new Error(data.error || 'Publishing failed.');
         }
 
-        let msg = '🎉 Published successfully!';
-        if (data.instagram && data.youtube) {
-          msg = '🎉 Posted to BOTH Instagram Reels & YouTube Shorts!';
-        } else if (data.instagram) {
-          msg = '🎉 Posted to Instagram Reels!';
-        } else if (data.youtube) {
-          msg = '🎉 Posted to YouTube Shorts!';
-        }
+        const publishedPlatforms = [];
+        if (data.instagram) publishedPlatforms.push('Instagram');
+        if (data.facebook) publishedPlatforms.push('Facebook Page');
+        if (data.youtube) publishedPlatforms.push('YouTube');
+
+        const msg = publishedPlatforms.length > 0 
+          ? `🎉 Posted to ${publishedPlatforms.join(' + ')}!`
+          : '🎉 Published successfully!';
         showToast(msg);
 
         if (data.instagram?.postUrl) window.open(data.instagram.postUrl, '_blank');
+        if (data.facebook?.postUrl) window.open(data.facebook.postUrl, '_blank');
         if (data.youtube?.postUrl) window.open(data.youtube.postUrl, '_blank');
       } catch (err) {
         showToast(`Publishing Error: ${err.message}`, true);
       } finally {
         btnPublishBoth.disabled = false;
-        btnPublishBoth.innerHTML = '<i class="fa-solid fa-bolt"></i> <span>🚀 1-Click Publish to BOTH (Instagram Reels + YouTube Shorts)</span>';
+        btnPublishBoth.innerHTML = '<i class="fa-solid fa-bolt"></i> <span>🚀 1-Click Publish to ALL (Instagram + Facebook Page + YouTube)</span>';
       }
     });
   }
@@ -3455,6 +3495,28 @@ function renderSchedulerState(state) {
     c.classList.toggle('active', parseInt(c.dataset.freq, 10) === freq);
   });
 
+  // Facebook Page Auto-Pilot Mode UI
+  const isFb5Min = !!state.facebookLongVideoMode;
+  const btnSchedFb30s = document.getElementById('btnSchedFb30s');
+  const btnSchedFb5min = document.getElementById('btnSchedFb5min');
+  if (btnSchedFb30s && btnSchedFb5min) {
+    if (isFb5Min) {
+      btnSchedFb30s.style.background = '#fff';
+      btnSchedFb30s.style.color = '#475569';
+      btnSchedFb30s.style.borderColor = '#cbd5e1';
+      btnSchedFb5min.style.background = '#2563eb';
+      btnSchedFb5min.style.color = '#fff';
+      btnSchedFb5min.style.borderColor = '#2563eb';
+    } else {
+      btnSchedFb30s.style.background = '#2563eb';
+      btnSchedFb30s.style.color = '#fff';
+      btnSchedFb30s.style.borderColor = '#2563eb';
+      btnSchedFb5min.style.background = '#fff';
+      btnSchedFb5min.style.color = '#475569';
+      btnSchedFb5min.style.borderColor = '#cbd5e1';
+    }
+  }
+
   const schedulerFileSelectedHint = document.getElementById('schedulerFileSelectedHint');
   const schedulerFileNameBadge = document.getElementById('schedulerFileNameBadge');
 
@@ -3634,6 +3696,7 @@ function renderSchedulerState(state) {
           </a>
           ${item.instagramPostUrl ? `<a href="${item.instagramPostUrl}" target="_blank" style="background: rgba(236,72,153,0.1); color: #ec4899; border: 1px solid rgba(236,72,153,0.3); border-radius: 9999px; padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;"><i class="fa-brands fa-instagram"></i> IG</a>` : ''}
           ${item.youtubePostUrl ? `<a href="${item.youtubePostUrl}" target="_blank" style="background: rgba(239,68,68,0.1); color: #dc2626; border: 1px solid rgba(239,68,68,0.3); border-radius: 9999px; padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;"><i class="fa-brands fa-youtube"></i> Shorts</a>` : ''}
+          ${item.facebookPostUrl ? `<a href="${item.facebookPostUrl}" target="_blank" style="background: rgba(24,119,242,0.1); color: #1877f2; border: 1px solid rgba(24,119,242,0.3); border-radius: 9999px; padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;"><i class="fa-brands fa-facebook"></i> Facebook Page${item.facebookIs5Min ? ' (5-Min)' : ''}</a>` : ''}
         </div>
       </div>
     `).join('');
@@ -4088,6 +4151,41 @@ function initSchedulerView() {
     fetchSchedulerStatus();
     showToast('Scheduler status refreshed.');
   });
+
+  // Facebook Page Auto-Pilot Mode Toggles (30s Reel vs 5-Min Long Video)
+  const btnFb30s = document.getElementById('btnSchedFb30s');
+  const btnFb5min = document.getElementById('btnSchedFb5min');
+  if (btnFb30s && btnFb5min) {
+    btnFb30s.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/scheduler/update-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ facebookLongVideoMode: false, facebookDuration: 30 })
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast('📘 Facebook Auto-Pilot: 30s Viral Reel Mode Active ✓');
+          renderSchedulerState(d.state);
+        }
+      } catch (_) {}
+    });
+
+    btnFb5min.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/scheduler/update-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ facebookLongVideoMode: true, facebookDuration: 300 })
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast('📘 Facebook Auto-Pilot: 5-Minute Long Video Mode Active ✓ (મોટી રીલ/વિડીયો)');
+          renderSchedulerState(d.state);
+        }
+      } catch (_) {}
+    });
+  }
 }
 
 // Check Social Media Integration Status

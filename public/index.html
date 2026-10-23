@@ -769,11 +769,20 @@
         <!-- Master 1-Click Publish Button -->
         <button id="btnPublishBoth" type="button" class="btn-master-publish-both">
           <i class="fa-solid fa-bolt"></i>
-          <span>1-Click Publish to BOTH (Instagram Reels + YouTube Shorts)</span>
+          <span>1-Click Publish to ALL (Instagram + Facebook Page + YouTube)</span>
         </button>
 
-        <!-- Dual Platform Connection Cards -->
+        <!-- Multi-Platform Connection Cards -->
         <div class="dual-platform-cards-row">
+          <div class="platform-connect-card" id="btnPublishFacebook" role="button" tabindex="0"
+            title="Publish 5-Min Video to Facebook Page">
+            <i class="fa-brands fa-facebook platform-icon fb-icon" style="color: #1877f2;"></i>
+            <div class="platform-card-meta">
+              <span class="platform-name">Upload to Facebook Page</span>
+              <span class="platform-account-badge">(5-Min Video / In-Stream Ads) <span
+                  class="status-live-dot"></span></span>
+            </div>
+          </div>
           <div class="platform-connect-card" id="btnPublishInstagram" role="button" tabindex="0"
             title="Publish to Instagram Reels">
             <i class="fa-brands fa-instagram platform-icon ig-icon"></i>
@@ -907,6 +916,29 @@
             </span>
           </div>
 
+          <!-- Facebook Page Auto-Pilot Options (30s Reel vs 5-Min Video) -->
+          <div style="margin-top: 0.85rem; padding: 0.75rem 0.85rem; background: #f0f7ff; border: 1.5px solid #bfdbfe; border-radius: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
+              <span style="font-weight: 700; font-size: 0.84rem; color: #1e40af; display: flex; align-items: center; gap: 0.45rem;">
+                <i class="fa-brands fa-facebook" style="color: #1877f2; font-size: 1.05rem;"></i> Facebook Page Auto-Pilot:
+              </span>
+              <span class="badge" style="background: #1877f2; color: #fff; font-size: 0.68rem; padding: 0.2rem 0.5rem; border-radius: 9999px; font-weight: 700;">
+                Connected ✓
+              </span>
+            </div>
+            <div style="font-size: 0.76rem; color: #1e3a8a; line-height: 1.4; margin-bottom: 0.55rem;">
+              Page: <b>Reel creator</b> (ID: <code>1320416261160842</code>). Auto-posts daily at scheduled times.
+            </div>
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+              <button type="button" class="chip sched-fb-mode-chip active" id="btnSchedFb30s" data-mode="30s" style="font-size: 0.74rem; padding: 0.35rem 0.65rem; border-radius: 8px; border: 1.5px solid #2563eb; background: #2563eb; color: #fff; font-weight: 700; cursor: pointer;">
+                ⚡ 30s Viral Reel
+              </button>
+              <button type="button" class="chip sched-fb-mode-chip" id="btnSchedFb5min" data-mode="5min" style="font-size: 0.74rem; padding: 0.35rem 0.65rem; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #fff; color: #475569; font-weight: 700; cursor: pointer;">
+                🎬 5-Min Extended Video (મોટી રીલ/વિડીયો)
+              </button>
+            </div>
+          </div>
+
           <!-- Safe Internal Storage Guarantee Banner -->
           <div style="margin-top: 0.85rem; padding: 0.65rem 0.85rem; background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; font-size: 0.76rem; color: #065f46; display: flex; align-items: flex-start; gap: 0.5rem;">
             <i class="fa-solid fa-shield-halved" style="color: #059669; font-size: 1.15rem; margin-top: 0.1rem; flex-shrink: 0;"></i>
@@ -961,6 +993,7 @@
           <h4 style="font-family: var(--font-serif), serif; color: #1c1917; font-size: 0.92rem; margin-bottom: 0.5rem;"><i class="fa-solid fa-server" style="color: #6e4f2b;"></i> Scheduler Status:</h4>
           <div class="status-rows" style="display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.8rem;">
             <div class="s-row" style="display: flex; justify-content: space-between;"><span>Status:</span> <b id="lblSchedStatus" style="color: #059669;">Active ✓</b></div>
+            <div class="s-row" style="display: flex; justify-content: space-between;"><span>Platforms:</span> <b style="color: #1e293b; font-size: 0.76rem;"><i class="fa-brands fa-instagram" style="color: #ec4899;"></i> Instagram + <i class="fa-brands fa-youtube" style="color: #dc2626;"></i> YouTube + <i class="fa-brands fa-facebook" style="color: #1877f2;"></i> Facebook Page</b></div>
             <div class="s-row" style="display: flex; justify-content: space-between;"><span>Daily Time:</span> <b id="lblSchedTime">Every day at 08:30 AM</b></div>
             <div class="s-row" style="display: flex; justify-content: space-between;"><span>Master Video:</span> <b id="lblSchedVideoName">No video set</b></div>
             <div class="s-row" style="display: flex; justify-content: space-between;"><span>Total Duration:</span> <b id="lblSchedTotalDur">0 Seconds</b></div>

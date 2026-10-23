@@ -1,6 +1,11 @@
 {
   "isActive": false,
   "scheduledTime": "11:30",
+  "publishFacebook": true,
+  "facebookPageId": "1320416261160842",
+  "facebookPageName": "Reel creator ",
+  "facebookLongVideoMode": false,
+  "facebookDuration": 300,
   "masterVideo": {
     "id": "mv-1791981575299-7713",
     "originalName": "GTAVI_An_Extended_Look.mp4",

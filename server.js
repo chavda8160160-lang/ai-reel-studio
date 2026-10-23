@@ -904,6 +904,7 @@ setInterval(async () => {
             const caption = `${item.viralCaption || ''}\n\n${item.viralHashtags || ''}`;
             let igSuccess = false;
             let ytSuccess = false;
+            let fbSuccess = false;
 
             // Direct Auto-Publish to Instagram if configured
             if (process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID) {
@@ -941,13 +942,40 @@ setInterval(async () => {
               }
             }
 
-            if (igSuccess && ytSuccess) {
-              item.status = 'Posted to IG & YouTube ✓';
-            } else if (igSuccess) {
-              item.status = 'Posted to Instagram ✓';
-            } else if (ytSuccess) {
-              item.status = 'Posted to YouTube ✓';
-            } else if (item.lastError || item.lastYoutubeError) {
+            // Direct Auto-Publish to Facebook Page if configured
+            const fbTok = process.env.META_INSTAGRAM_TOKEN;
+            const fbPgId = process.env.META_INSTAGRAM_PAGE_ID || '1320416261160842';
+            if (fbTok && fbPgId) {
+              try {
+                console.log(`🚀 [Auto-Post Engine] Auto-uploading due Reel to Facebook Page (${fbPgId})...`);
+                const fbTitle = (item.viralTitle || item.title || 'Viral AI Reel | Patola Heritage').substring(0, 100);
+                const fbDesc = `${caption}\n\n🌐 Authentic Handloom Patola: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750\n\n#patola #handloom #saree #heritage`;
+                const fbResult = await publishVideoDirectToFacebookPage({
+                  videoPath,
+                  title: fbTitle,
+                  description: fbDesc,
+                  customToken: fbTok,
+                  customPageId: fbPgId
+                });
+                item.facebookPostUrl = fbResult.postUrl;
+                item.facebookVideoId = fbResult.videoId;
+                delete item.lastFacebookError;
+                fbSuccess = true;
+                console.log(`🎉 [Auto-Post Engine] Reel successfully posted to Facebook Page: ${fbResult.postUrl}`);
+              } catch (fbErr) {
+                console.error(`❌ [Auto-Post Engine] Facebook Page upload failed:`, fbErr.message);
+                item.lastFacebookError = fbErr.message;
+              }
+            }
+
+            const successList = [];
+            if (igSuccess) successList.push('IG');
+            if (ytSuccess) successList.push('YouTube');
+            if (fbSuccess) successList.push('Facebook');
+
+            if (successList.length > 0) {
+              item.status = `Posted to ${successList.join(' + ')} ✓`;
+            } else if (item.lastError || item.lastYoutubeError || item.lastFacebookError) {
               item.status = 'Post Failed (Ready to retry)';
             } else {
               item.status = 'Ready to Post';
@@ -955,7 +983,7 @@ setInterval(async () => {
             }
 
             // 📲 Send Instant Alert to WhatsApp & Telegram
-            if (igSuccess || ytSuccess) {
+            if (igSuccess || ytSuccess || fbSuccess) {
               let plainText = `🎉 ForgeAI: New Reel Published!\n\n`;
               let htmlText = `🎉 <b>ForgeAI: New Reel Published!</b>\n\n`;
               if (igSuccess && item.lastPostUrl) {
@@ -965,6 +993,10 @@ setInterval(async () => {
               if (ytSuccess && item.youtubePostUrl) {
                 plainText += `🔴 YouTube Shorts: ${item.youtubePostUrl}\n`;
                 htmlText += `🔴 <b>YouTube Shorts:</b> <a href="${item.youtubePostUrl}">${item.youtubePostUrl}</a>\n`;
+              }
+              if (fbSuccess && item.facebookPostUrl) {
+                plainText += `📘 Facebook Page: ${item.facebookPostUrl}\n`;
+                htmlText += `📘 <b>Facebook Page:</b> <a href="${item.facebookPostUrl}">${item.facebookPostUrl}</a>\n`;
               }
               const timeStr = new Date().toLocaleTimeString('en-IN');
               plainText += `\n⏰ Published at: ${timeStr}`;
@@ -2550,13 +2582,108 @@ app.post('/api/social/publish-youtube-direct', async (req, res) => {
   }
 });
 
+// Facebook Page Video Direct Publishing Engine (Supports 3-min, 5-min, 10-min+ Long Videos)
+async function publishVideoDirectToFacebookPage({ videoPath, title, description, customToken, customPageId }) {
+  const pageId = customPageId || process.env.META_INSTAGRAM_PAGE_ID || '1320416261160842';
+  const token = customToken || process.env.META_INSTAGRAM_TOKEN;
+  if (!token) throw new Error('Facebook Page Access Token missing. Please check .env settings.');
+  if (!fs.existsSync(videoPath)) throw new Error('Video file not found: ' + videoPath);
+
+  const fileStat = await fsp.stat(videoPath);
+  console.log(`🚀 [Facebook Page Video] Uploading video "${path.basename(videoPath)}" (${(fileStat.size / (1024*1024)).toFixed(2)} MB) to Page ID: ${pageId}...`);
+
+  const fileBuffer = await fsp.readFile(videoPath);
+  const blob = new Blob([fileBuffer], { type: 'video/mp4' });
+  const form = new FormData();
+  form.append('source', blob, path.basename(videoPath));
+  form.append('title', title || 'Royal Heritage Patola Handloom Saree | 5-Minute Masterpiece');
+  form.append('description', description || 'Authentic Double Ikat Patola Handloom Saree Crafted by Master Artisans in Patan, Gujarat.\n\n🌐 Visit Vault: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750\n\n#patola #patanpatola #handloom #saree #heritage #craftsmanship');
+  form.append('published', 'true');
+  form.append('access_token', token);
+
+  const uploadRes = await fetch(`https://graph-video.facebook.com/v20.0/${pageId}/videos`, {
+    method: 'POST',
+    body: form
+  }).then(r => r.json());
+
+  if (uploadRes.error) {
+    console.error('Facebook Page Video Upload Error:', uploadRes.error);
+    throw new Error(uploadRes.error.message || 'Facebook Video upload failed');
+  }
+
+  const videoId = uploadRes.id;
+  const postUrl = `https://www.facebook.com/${pageId}/videos/${videoId}`;
+  console.log(`✅ [Facebook Page Video] Video successfully uploaded! Video ID: ${videoId}, URL: ${postUrl}`);
+
+  if (videoId) {
+    const plain = `📘 Facebook Page: Video Published!\n\n🔗 ${postUrl}\n\n⏰ Time: ${new Date().toLocaleTimeString('en-IN')}`;
+    const html = `📘 <b>Facebook Page: Long Video Published!</b>\n\n🔗 <a href="${postUrl}">${postUrl}</a>\n\n⏰ <i>Time: ${new Date().toLocaleTimeString('en-IN')}</i>`;
+    sendInstantAlert(plain, html).catch(() => {});
+  }
+
+  return { success: true, videoId, postUrl, platform: 'facebook' };
+}
+
+// Facebook Page Video Direct Publish Endpoint
+app.post('/api/facebook/publish-direct', async (req, res) => {
+  try {
+    const { videoFileName, title, description, customToken, customPageId } = req.body;
+    let videoPath = null;
+
+    if (videoFileName) {
+      const candidates = [
+        path.join(REELS_DIR, path.basename(videoFileName)),
+        path.join(UPLOADS_DIR, path.basename(videoFileName)),
+        path.join(UPLOADS_DIR, 'videos', path.basename(videoFileName))
+      ];
+      for (const p of candidates) {
+        if (fs.existsSync(p)) {
+          videoPath = p;
+          break;
+        }
+      }
+    }
+
+    if (!videoPath) {
+      const dirs = [REELS_DIR, path.join(UPLOADS_DIR, 'videos'), UPLOADS_DIR];
+      for (const d of dirs) {
+        if (fs.existsSync(d)) {
+          const files = fs.readdirSync(d).filter(f => f.endsWith('.mp4'));
+          if (files.length > 0) {
+            files.sort((a, b) => fs.statSync(path.join(d, b)).mtimeMs - fs.statSync(path.join(d, a)).mtimeMs);
+            videoPath = path.join(d, files[0]);
+            break;
+          }
+        }
+      }
+    }
+
+    if (!videoPath || !fs.existsSync(videoPath)) {
+      return res.status(404).json({ error: 'Video file not found for Facebook upload.' });
+    }
+
+    const result = await publishVideoDirectToFacebookPage({
+      videoPath,
+      title,
+      description,
+      customToken,
+      customPageId
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('Facebook Direct Publish Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Map to prevent duplicate double-posts within 3 minutes
 const recentPublishMap = new Map();
 
-// One-Click Dual Social Media Publishing (Instagram Reels + YouTube Shorts simultaneously)
+// One-Click Multi Social Media Publishing (Instagram Reels + Facebook Page 5-Min + YouTube Shorts)
 app.post('/api/social/publish-both-direct', async (req, res) => {
   try {
-    const { videoFileName, title, caption, hashtags, description, tags, youtubeToken, igToken, igUserId } = req.body;
+    const { videoFileName, fbVideoFileName, title, caption, hashtags, description, tags, youtubeToken, igToken, igUserId, publishFacebook, fbPageId } = req.body;
     let videoPath = null;
     if (videoFileName) {
       const p1 = path.join(REELS_DIR, path.basename(videoFileName));
@@ -2589,17 +2716,17 @@ app.post('/api/social/publish-both-direct', async (req, res) => {
     recentPublishMap.set(baseName, Date.now());
 
     const fullCaption = `${caption || ''}\n\n${hashtags || ''}`.trim();
-    const results = { instagram: null, youtube: null };
+    const results = { instagram: null, youtube: null, facebook: null };
     const errors = [];
 
     // 1. Post to Instagram
     const hasIg = (igToken || process.env.META_INSTAGRAM_TOKEN) && (igUserId || process.env.META_INSTAGRAM_USER_ID);
     if (hasIg) {
       try {
-        console.log(`🚀 [Publish-Both] Publishing to Instagram @${cachedIgUsername || 'user'}...`);
+        console.log(`🚀 [Publish-Multi] Publishing to Instagram @${cachedIgUsername || 'user'}...`);
         results.instagram = await publishReelDirectToInstagram(videoPath, fullCaption, igToken, igUserId);
       } catch (e) {
-        console.error('Publish-Both Instagram Error:', e.message);
+        console.error('Publish-Multi Instagram Error:', e.message);
         errors.push(`Instagram: ${e.message}`);
       }
     }
@@ -2608,28 +2735,50 @@ app.post('/api/social/publish-both-direct', async (req, res) => {
     const hasYt = !!(youtubeToken || process.env.YOUTUBE_ACCESS_TOKEN);
     if (hasYt) {
       try {
-        console.log('🚀 [Publish-Both] Publishing to YouTube Shorts...');
+        console.log('🚀 [Publish-Multi] Publishing to YouTube Shorts...');
         const ytTitle = (title || 'Viral AI Reel #Shorts').substring(0, 100);
         const ytDesc = description || fullCaption;
         results.youtube = await publishShortDirectToYouTube(videoPath, ytTitle, ytDesc, tags, youtubeToken);
       } catch (e) {
-        console.error('Publish-Both YouTube Error:', e.message);
+        console.error('Publish-Multi YouTube Error:', e.message);
         errors.push(`YouTube: ${e.message}`);
       }
     }
 
-    if (!hasIg && !hasYt) {
-      return res.status(400).json({ error: 'Neither Instagram nor YouTube account is connected.' });
+    // 3. Post to Facebook Page (Supports 5-Min / Long Videos)
+    const hasFb = !!(process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_PAGE_ID);
+    const shouldPostFb = publishFacebook === true || !!fbVideoFileName;
+    if (shouldPostFb && hasFb) {
+      try {
+        const candidateFbPath = fbVideoFileName ? path.join(REELS_DIR, path.basename(fbVideoFileName)) : null;
+        const effectiveFbVideoPath = (candidateFbPath && fs.existsSync(candidateFbPath)) ? candidateFbPath : videoPath;
+        const fbTitle = title || 'Royal Heritage Patola Handloom Saree';
+        const fbDesc = description || fullCaption;
+        console.log(`🚀 [Publish-Multi] Publishing 5-Min Video to Facebook Page ${process.env.META_INSTAGRAM_PAGE_ID}...`);
+        results.facebook = await publishVideoDirectToFacebookPage({
+          videoPath: effectiveFbVideoPath,
+          title: fbTitle,
+          description: fbDesc,
+          customPageId: fbPageId
+        });
+      } catch (e) {
+        console.error('Publish-Multi Facebook Error:', e.message);
+        errors.push(`Facebook: ${e.message}`);
+      }
     }
 
-    if (!results.instagram && !results.youtube) {
+    if (!hasIg && !hasYt && !shouldPostFb) {
+      return res.status(400).json({ error: 'No social media accounts connected.' });
+    }
+
+    if (!results.instagram && !results.youtube && !results.facebook) {
       return res.status(500).json({ error: errors.join(' | ') });
     }
 
     // 📲 Send Instant Alert to WhatsApp & Telegram
-    if (results.instagram?.postUrl || results.youtube?.postUrl) {
-      let plain = `🎉 ForgeAI: 1-Click Published!\n\n`;
-      let html = `🎉 <b>ForgeAI: 1-Click Published!</b>\n\n`;
+    if (results.instagram?.postUrl || results.youtube?.postUrl || results.facebook?.postUrl) {
+      let plain = `🎉 ForgeAI: Multi-Platform Published!\n\n`;
+      let html = `🎉 <b>ForgeAI: Multi-Platform Published!</b>\n\n`;
       if (results.instagram?.postUrl) {
         plain += `📸 Instagram: ${results.instagram.postUrl}\n`;
         html += `📸 <b>Instagram:</b> <a href="${results.instagram.postUrl}">${results.instagram.postUrl}</a>\n`;
@@ -2637,6 +2786,10 @@ app.post('/api/social/publish-both-direct', async (req, res) => {
       if (results.youtube?.postUrl) {
         plain += `🔴 YouTube Shorts: ${results.youtube.postUrl}\n`;
         html += `🔴 <b>YouTube Shorts:</b> <a href="${results.youtube.postUrl}">${results.youtube.postUrl}</a>\n`;
+      }
+      if (results.facebook?.postUrl) {
+        plain += `📘 Facebook Page: ${results.facebook.postUrl}\n`;
+        html += `📘 <b>Facebook Page:</b> <a href="${results.facebook.postUrl}">${results.facebook.postUrl}</a>\n`;
       }
       const timeStr = new Date().toLocaleTimeString('en-IN');
       plain += `\n⏰ Time: ${timeStr}`;
@@ -2648,6 +2801,7 @@ app.post('/api/social/publish-both-direct', async (req, res) => {
       success: true,
       instagram: results.instagram,
       youtube: results.youtube,
+      facebook: results.facebook,
       errors: errors.length ? errors : undefined,
       message: 'Publishing completed successfully! 🎉'
     });
@@ -2787,6 +2941,7 @@ app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
     const caption = `${item.viralCaption || ''}\n\n${item.viralHashtags || ''}`;
     let igSuccess = false;
     let ytSuccess = false;
+    let fbSuccess = false;
 
     // Instagram
     if (process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID) {
@@ -2821,20 +2976,46 @@ app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
       }
     }
 
-    if (igSuccess && ytSuccess) {
-      item.status = 'Posted to IG & YouTube ✓';
-    } else if (igSuccess) {
-      item.status = 'Posted to Instagram ✓';
-    } else if (ytSuccess) {
-      item.status = 'Posted to YouTube ✓';
+    // Facebook Page
+    const fbTokNow = process.env.META_INSTAGRAM_TOKEN;
+    const fbPgIdNow = process.env.META_INSTAGRAM_PAGE_ID || '1320416261160842';
+    if (fbTokNow && fbPgIdNow) {
+      try {
+        console.log(`🚀 [Manual Run Now] Uploading to Facebook Page (${fbPgIdNow})...`);
+        const fbTitle = (item.viralTitle || item.title || 'Viral AI Reel | Patola Heritage').substring(0, 100);
+        const fbDesc = `${caption}\n\n🌐 Authentic Handloom Patola: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750\n\n#patola #handloom #saree #heritage`;
+        const fbResult = await publishVideoDirectToFacebookPage({
+          videoPath,
+          title: fbTitle,
+          description: fbDesc,
+          customToken: fbTokNow,
+          customPageId: fbPgIdNow
+        });
+        item.facebookPostUrl = fbResult.postUrl;
+        item.facebookVideoId = fbResult.videoId;
+        delete item.lastFacebookError;
+        fbSuccess = true;
+      } catch (fbErr) {
+        console.error('Run-now Facebook Page error:', fbErr);
+        item.lastFacebookError = fbErr.message;
+      }
+    }
+
+    const successNowList = [];
+    if (igSuccess) successNowList.push('IG');
+    if (ytSuccess) successNowList.push('YouTube');
+    if (fbSuccess) successNowList.push('Facebook');
+
+    if (successNowList.length > 0) {
+      item.status = `Posted to ${successNowList.join(' + ')} ✓`;
     } else {
       item.status = 'Post Failed (Ready to retry)';
       saveScheduledQueue(queue);
-      return res.status(500).json({ error: item.lastError || item.lastYoutubeError || 'કૃપા કરીને Instagram અથવા YouTube ટોકન કનેક્ટ કરો.' });
+      return res.status(500).json({ error: item.lastError || item.lastYoutubeError || item.lastFacebookError || 'કૃપા કરીને Instagram, YouTube અથવા Facebook ટોકન કનેક્ટ કરો.' });
     }
 
     // 📲 Send Instant Alert to WhatsApp & Telegram
-    if (igSuccess || ytSuccess) {
+    if (igSuccess || ytSuccess || fbSuccess) {
       let plain = `🎉 ForgeAI: Reel Published Now!\n\n`;
       let html = `🎉 <b>ForgeAI: Reel Published Now!</b>\n\n`;
       if (igSuccess && item.lastPostUrl) {
@@ -2844,6 +3025,10 @@ app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
       if (ytSuccess && item.youtubePostUrl) {
         plain += `🔴 YouTube Shorts: ${item.youtubePostUrl}\n`;
         html += `🔴 <b>YouTube Shorts:</b> <a href="${item.youtubePostUrl}">${item.youtubePostUrl}</a>\n`;
+      }
+      if (fbSuccess && item.facebookPostUrl) {
+        plain += `📘 Facebook Page: ${item.facebookPostUrl}\n`;
+        html += `📘 <b>Facebook Page:</b> <a href="${item.facebookPostUrl}">${item.facebookPostUrl}</a>\n`;
       }
       const timeStr = new Date().toLocaleTimeString('en-IN');
       plain += `\n⏰ Time: ${timeStr}`;
@@ -2856,8 +3041,9 @@ app.post('/api/video/scheduled-queue/run-now', async (req, res) => {
       success: true,
       queue: getScheduledQueue(),
       item,
-      postUrl: item.lastPostUrl || item.youtubePostUrl,
+      postUrl: item.lastPostUrl || item.youtubePostUrl || item.facebookPostUrl,
       youtubePostUrl: item.youtubePostUrl,
+      facebookPostUrl: item.facebookPostUrl,
       message: 'Reel published successfully! 🎉'
     });
   } catch (err) {
@@ -3487,11 +3673,6 @@ Respond ONLY with valid JSON.`
       const ytRes = await publishShortDirectToYouTube(outputPath, ytTitle, ytDesc, ['Shorts', 'Reels', 'Viral']);
       historyItem.youtubePostUrl = ytRes.postUrl;
       historyItem.youtubeVideoId = ytRes.videoId;
-      if (historyItem.instagramPostUrl) {
-        historyItem.status = 'Posted to IG & YouTube ✓';
-      } else {
-        historyItem.status = 'Posted to YouTube ✓';
-      }
       console.log(`🎉 [Auto-Pilot Master Video] Part ${partNum} successfully posted to YouTube: ${ytRes.postUrl}`);
     } catch (e) {
       console.error(`❌ [Auto-Pilot Master Video] YouTube auto-upload error for Part ${partNum}:`, e.message);
@@ -3499,11 +3680,92 @@ Respond ONLY with valid JSON.`
     }
   }
 
+  // 100% Autonomous Daily Auto-Publish to Facebook Page (Reels & 5-Min Long Video Support)
+  const fbAutoToken = process.env.META_INSTAGRAM_TOKEN;
+  const fbAutoPageId = process.env.META_INSTAGRAM_PAGE_ID || '1320416261160842';
+  if (fbAutoToken && fbAutoPageId && state.publishFacebook !== false) {
+    try {
+      console.log(`🚀 [Auto-Pilot Master Video] Auto-publishing Part ${partNum} directly to Facebook Page (${fbAutoPageId})...`);
+      let fbUploadPath = outputPath;
+      let fbIs5Min = false;
+
+      // 🎬 Optional 5-Minute Long Video Mode for Facebook Page
+      if (state.facebookLongVideoMode || (Number(state.facebookDuration) >= 180)) {
+        const fbTargetDuration = Math.min(Number(state.facebookDuration) || 300, totalDur - startSec);
+        if (fbTargetDuration > segDuration) {
+          console.log(`🎬 [Facebook Page 5-Min Engine] Cutting ${fbTargetDuration}s (5-Min Extended) video specifically for Facebook Page...`);
+          const fbFileName = `daily-fb-part${partNum}-${Date.now()}.mp4`;
+          const fbFilePath = path.join(REELS_DIR, fbFileName);
+          try {
+            await new Promise((resFb, rejFb) => {
+              ffmpeg(state.masterVideo.path)
+                .setStartTime(startSec)
+                .duration(fbTargetDuration)
+                .videoFilters([
+                  'scale=1080:1920:force_original_aspect_ratio=decrease',
+                  'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black',
+                  `eq=saturation=${sat}:contrast=${con}:brightness=${bri}`
+                ])
+                .outputOptions([
+                  '-c:v libx264',
+                  '-preset fast',
+                  '-crf 22',
+                  '-pix_fmt yuv420p',
+                  '-c:a aac',
+                  '-b:a 192k',
+                  '-movflags +faststart'
+                ])
+                .save(fbFilePath)
+                .on('end', () => resFb())
+                .on('error', (err) => rejFb(err));
+            });
+            if (fs.existsSync(fbFilePath)) {
+              fbUploadPath = fbFilePath;
+              fbIs5Min = true;
+              historyItem.facebookVideoFile = fbFileName;
+            }
+          } catch (fbCutErr) {
+            console.warn('⚠️ [Facebook 5-Min Cut Fallback]:', fbCutErr.message);
+            fbUploadPath = outputPath;
+          }
+        }
+      }
+
+      const fbTitle = (partRecipe.viralTitle || `Part ${partNum} - Royal Heritage Patola Saree`).substring(0, 100);
+      const fbCaption = `${partRecipe.viralCaption || ''}\n\n${partRecipe.viralHashtags || ''}\n\n🌐 Authentic Patola Handloom: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750\n\n#patola #handloom #saree #craftsmanship #heritage #gujarat`;
+      
+      const fbRes = await publishVideoDirectToFacebookPage({
+        videoPath: fbUploadPath,
+        title: fbTitle + (fbIs5Min ? ' (5-Min Masterpiece)' : ''),
+        description: fbCaption,
+        customToken: fbAutoToken,
+        customPageId: fbAutoPageId
+      });
+
+      historyItem.facebookPostUrl = fbRes.postUrl;
+      historyItem.facebookVideoId = fbRes.videoId;
+      historyItem.facebookIs5Min = fbIs5Min;
+      console.log(`🎉 [Auto-Pilot Master Video] Part ${partNum} successfully posted to Facebook Page: ${fbRes.postUrl}`);
+    } catch (e) {
+      console.error(`❌ [Auto-Pilot Master Video] Facebook Page auto-upload error for Part ${partNum}:`, e.message);
+      historyItem.lastFacebookError = e.message;
+    }
+  }
+
+  // Update unified multi-platform status
+  const successPlatforms = [];
+  if (historyItem.instagramPostUrl) successPlatforms.push('IG');
+  if (historyItem.youtubePostUrl) successPlatforms.push('YouTube');
+  if (historyItem.facebookPostUrl) successPlatforms.push('Facebook Page' + (historyItem.facebookIs5Min ? ' (5-Min)' : ''));
+  if (successPlatforms.length > 0) {
+    historyItem.status = `Posted to ${successPlatforms.join(' + ')} ✓`;
+  }
+
   // 🛡️ Prevent manual duplicate publish for this file
   recentPublishMap.set(outputFileName, Date.now());
 
   // 📲 Send Instant Alert to WhatsApp & Telegram
-  if (historyItem.instagramPostUrl || historyItem.youtubePostUrl) {
+  if (historyItem.instagramPostUrl || historyItem.youtubePostUrl || historyItem.facebookPostUrl) {
     let plain = `🎉 ForgeAI Auto-Pilot: Part ${partNum} Published!\n\n`;
     let html = `🎉 <b>ForgeAI Auto-Pilot: Part ${partNum} Published!</b>\n\n`;
     if (historyItem.instagramPostUrl) {
@@ -3513,6 +3775,10 @@ Respond ONLY with valid JSON.`
     if (historyItem.youtubePostUrl) {
       plain += `🔴 YouTube Shorts: ${historyItem.youtubePostUrl}\n`;
       html += `🔴 <b>YouTube Shorts:</b> <a href="${historyItem.youtubePostUrl}">${historyItem.youtubePostUrl}</a>\n`;
+    }
+    if (historyItem.facebookPostUrl) {
+      plain += `📘 Facebook Page${historyItem.facebookIs5Min ? ' (5-Min Video)' : ''}: ${historyItem.facebookPostUrl}\n`;
+      html += `📘 <b>Facebook Page${historyItem.facebookIs5Min ? ' (5-Min Video)' : ''}:</b> <a href="${historyItem.facebookPostUrl}">${historyItem.facebookPostUrl}</a>\n`;
     }
     const timeStr = new Date().toLocaleTimeString('en-IN');
     plain += `\n⏰ Time: ${timeStr}`;
@@ -3591,7 +3857,7 @@ app.post('/api/scheduler/setup', upload.fields([{ name: 'masterVideo', maxCount:
       console.log(`🎬 Auto-Pilot: Processed ${videoItems.length} video(s). Active: "${state.masterVideo.originalName}", Queue count: ${state.masterVideosQueue.length}`);
     }
 
-    const { scheduledTimes, reelsPerDay } = req.body;
+    const { scheduledTimes, reelsPerDay, facebookLongVideoMode, facebookDuration, publishFacebook } = req.body;
     if (scheduledTimes) {
       state.scheduledTimes = Array.isArray(scheduledTimes) ? scheduledTimes : String(scheduledTimes).split(',').map(s => s.trim()).filter(Boolean);
       state.scheduledTime = state.scheduledTimes[0] || scheduledTime;
@@ -3601,6 +3867,17 @@ app.post('/api/scheduler/setup', upload.fields([{ name: 'masterVideo', maxCount:
       state.scheduledTimes = [scheduledTime];
       state.reelsPerDay = parseInt(reelsPerDay, 10) || 1;
     }
+
+    if (facebookLongVideoMode !== undefined) {
+      state.facebookLongVideoMode = facebookLongVideoMode === true || facebookLongVideoMode === 'true';
+    }
+    if (facebookDuration !== undefined) {
+      state.facebookDuration = parseInt(facebookDuration, 10) || 300;
+    }
+    if (publishFacebook !== undefined) {
+      state.publishFacebook = publishFacebook !== false && publishFacebook !== 'false';
+    }
+
     state.isActive = true;
     saveSchedulerState(state);
 
@@ -3617,6 +3894,43 @@ app.post('/api/scheduler/setup', upload.fields([{ name: 'masterVideo', maxCount:
     });
   } catch (err) {
     console.error('Scheduler setup error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update Auto-Pilot Scheduler Settings (Times, Facebook Mode, etc.)
+app.post('/api/scheduler/update-settings', (req, res) => {
+  try {
+    const { scheduledTimes, scheduledTime, reelsPerDay, facebookLongVideoMode, facebookDuration, publishFacebook } = req.body;
+    let state = getSchedulerState();
+    
+    if (scheduledTimes) {
+      state.scheduledTimes = Array.isArray(scheduledTimes) ? scheduledTimes : String(scheduledTimes).split(',').map(s => s.trim()).filter(Boolean);
+      state.scheduledTime = state.scheduledTimes[0] || state.scheduledTime;
+      state.reelsPerDay = parseInt(reelsPerDay, 10) || state.scheduledTimes.length;
+    } else if (scheduledTime) {
+      state.scheduledTime = scheduledTime;
+      state.scheduledTimes = [scheduledTime];
+      state.reelsPerDay = parseInt(reelsPerDay, 10) || 1;
+    }
+
+    if (facebookLongVideoMode !== undefined) {
+      state.facebookLongVideoMode = facebookLongVideoMode === true || facebookLongVideoMode === 'true';
+    }
+    if (facebookDuration !== undefined) {
+      state.facebookDuration = parseInt(facebookDuration, 10) || 300;
+    }
+    if (publishFacebook !== undefined) {
+      state.publishFacebook = publishFacebook !== false && publishFacebook !== 'false';
+    }
+
+    saveSchedulerState(state);
+    if (state.isActive) {
+      setupDailyCron(state.scheduledTimes || state.scheduledTime);
+    }
+
+    res.json({ success: true, state, message: 'શેડ્યૂલર સેટિંગ્સ સફળતાપૂર્વક અપડેટ થઈ ગઈ!' });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
