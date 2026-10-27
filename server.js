@@ -2582,7 +2582,7 @@ app.post('/api/social/publish-youtube-direct', async (req, res) => {
   }
 });
 
-// Facebook Page Video Direct Publishing Engine (Supports 3-min, 5-min, 10-min+ Long Videos)
+// Facebook Page Video Direct Publishing Engine (Supports 3-min, 5-min, 10-min, 20-min+ Long Videos with Resumable Upload)
 async function publishVideoDirectToFacebookPage({ videoPath, title, description, customToken, customPageId }) {
   const pageId = customPageId || process.env.META_INSTAGRAM_PAGE_ID || '1320416261160842';
   const token = customToken || process.env.META_INSTAGRAM_TOKEN;
@@ -2590,34 +2590,113 @@ async function publishVideoDirectToFacebookPage({ videoPath, title, description,
   if (!fs.existsSync(videoPath)) throw new Error('Video file not found: ' + videoPath);
 
   const fileStat = await fsp.stat(videoPath);
-  console.log(`🚀 [Facebook Page Video] Uploading video "${path.basename(videoPath)}" (${(fileStat.size / (1024*1024)).toFixed(2)} MB) to Page ID: ${pageId}...`);
+  const fileSize = fileStat.size;
+  console.log(`🚀 [Facebook Page Video] Uploading video "${path.basename(videoPath)}" (${(fileSize / (1024*1024)).toFixed(2)} MB) to Page ID: ${pageId}...`);
 
-  const fileBuffer = await fsp.readFile(videoPath);
-  const blob = new Blob([fileBuffer], { type: 'video/mp4' });
-  const form = new FormData();
-  form.append('source', blob, path.basename(videoPath));
-  form.append('title', title || 'Royal Heritage Patola Handloom Saree | 5-Minute Masterpiece');
-  form.append('description', description || 'Authentic Double Ikat Patola Handloom Saree Crafted by Master Artisans in Patan, Gujarat.\n\n🌐 Visit Vault: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750\n\n#patola #patanpatola #handloom #saree #heritage #craftsmanship');
-  form.append('published', 'true');
-  form.append('access_token', token);
+  let videoId = null;
 
-  const uploadRes = await fetch(`https://graph-video.facebook.com/v20.0/${pageId}/videos`, {
-    method: 'POST',
-    body: form
-  }).then(r => r.json());
+  // Use Chunked Resumable Upload for files larger than 25 MB to prevent 413 Entity Too Large errors
+  if (fileSize > 25 * 1024 * 1024) {
+    console.log(`🔄 [Facebook Resumable Upload] Using Chunked Resumable protocol for large file (${(fileSize / (1024*1024)).toFixed(2)} MB)...`);
+    const fd = fs.openSync(videoPath, 'r');
 
-  if (uploadRes.error) {
-    console.error('Facebook Page Video Upload Error:', uploadRes.error);
-    throw new Error(uploadRes.error.message || 'Facebook Video upload failed');
+    const startParams = new URLSearchParams({
+      upload_phase: 'start',
+      file_size: fileSize.toString(),
+      access_token: token
+    });
+    const startRes = await fetch(`https://graph-video.facebook.com/v20.0/${pageId}/videos`, {
+      method: 'POST',
+      body: startParams
+    }).then(r => r.json());
+
+    if (startRes.error) {
+      fs.closeSync(fd);
+      throw new Error(startRes.error.message || 'Facebook Resumable Start failed');
+    }
+
+    const sessionId = startRes.upload_session_id;
+    videoId = startRes.video_id;
+    let startOffset = parseInt(startRes.start_offset, 10);
+    let endOffset = parseInt(startRes.end_offset, 10);
+
+    while (startOffset < fileSize) {
+      const chunkSize = endOffset - startOffset;
+      const buffer = Buffer.alloc(chunkSize);
+      fs.readSync(fd, buffer, 0, chunkSize, startOffset);
+
+      const chunkBlob = new Blob([buffer], { type: 'application/octet-stream' });
+      const chunkForm = new FormData();
+      chunkForm.append('upload_phase', 'transfer');
+      chunkForm.append('upload_session_id', sessionId);
+      chunkForm.append('start_offset', startOffset.toString());
+      chunkForm.append('video_file_chunk', chunkBlob, 'chunk.bin');
+      chunkForm.append('access_token', token);
+
+      const transferRes = await fetch(`https://graph-video.facebook.com/v20.0/${pageId}/videos`, {
+        method: 'POST',
+        body: chunkForm
+      }).then(r => r.json());
+
+      if (transferRes.error) {
+        fs.closeSync(fd);
+        throw new Error(transferRes.error.message || 'Facebook Resumable Transfer failed');
+      }
+
+      startOffset = parseInt(transferRes.start_offset, 10);
+      endOffset = parseInt(transferRes.end_offset, 10);
+
+      if (startOffset === endOffset || startOffset >= fileSize) {
+        break;
+      }
+    }
+    fs.closeSync(fd);
+
+    const finishParams = new URLSearchParams({
+      upload_phase: 'finish',
+      upload_session_id: sessionId,
+      title: title || 'Royal Heritage Patola Handloom Saree | Masterpiece',
+      description: description || 'Authentic Handloom Saree Crafted by Master Artisans in Patan, Gujarat.\n\n🌐 Visit Vault: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750',
+      published: 'true',
+      access_token: token
+    });
+    const finishRes = await fetch(`https://graph-video.facebook.com/v20.0/${pageId}/videos`, {
+      method: 'POST',
+      body: finishParams
+    }).then(r => r.json());
+
+    if (finishRes.error) {
+      throw new Error(finishRes.error.message || 'Facebook Resumable Finish failed');
+    }
+  } else {
+    // Standard Direct POST for smaller videos
+    const fileBuffer = await fsp.readFile(videoPath);
+    const blob = new Blob([fileBuffer], { type: 'video/mp4' });
+    const form = new FormData();
+    form.append('source', blob, path.basename(videoPath));
+    form.append('title', title || 'Royal Heritage Patola Handloom Saree | 5-Minute Masterpiece');
+    form.append('description', description || 'Authentic Double Ikat Patola Handloom Saree Crafted by Master Artisans in Patan, Gujarat.\n\n🌐 Visit Vault: https://patolahandmadebyvankar.com\n📞 Helpline: +91 8160160750\n\n#patola #patanpatola #handloom #saree #heritage #craftsmanship');
+    form.append('published', 'true');
+    form.append('access_token', token);
+
+    const uploadRes = await fetch(`https://graph-video.facebook.com/v20.0/${pageId}/videos`, {
+      method: 'POST',
+      body: form
+    }).then(r => r.json());
+
+    if (uploadRes.error) {
+      console.error('Facebook Page Video Upload Error:', uploadRes.error);
+      throw new Error(uploadRes.error.message || 'Facebook Video upload failed');
+    }
+    videoId = uploadRes.id;
   }
 
-  const videoId = uploadRes.id;
   const postUrl = `https://www.facebook.com/${pageId}/videos/${videoId}`;
   console.log(`✅ [Facebook Page Video] Video successfully uploaded! Video ID: ${videoId}, URL: ${postUrl}`);
 
   if (videoId) {
     const plain = `📘 Facebook Page: Video Published!\n\n🔗 ${postUrl}\n\n⏰ Time: ${new Date().toLocaleTimeString('en-IN')}`;
-    const html = `📘 <b>Facebook Page: Long Video Published!</b>\n\n🔗 <a href="${postUrl}">${postUrl}</a>\n\n⏰ <i>Time: ${new Date().toLocaleTimeString('en-IN')}</i>`;
+    const html = `📘 <b>Facebook Page: Video Published!</b>\n\n🔗 <a href="${postUrl}">${postUrl}</a>\n\n⏰ <i>Time: ${new Date().toLocaleTimeString('en-IN')}</i>`;
     sendInstantAlert(plain, html).catch(() => {});
   }
 
@@ -3614,6 +3693,90 @@ function setupDailyCron(timeInput) {
     }
   });
 }
+
+// ========================================================
+// 🪈 LITTLE KRISHNA DAILY 7:00 PM (19:00) FACEBOOK SCHEDULER
+// ========================================================
+const KRISHNA_SERIES_FILE = path.join(DATA_DIR, 'krishna-series.json');
+
+async function processNextKrishnaPart() {
+  if (!fs.existsSync(KRISHNA_SERIES_FILE)) return null;
+  const seriesData = JSON.parse(fs.readFileSync(KRISHNA_SERIES_FILE, 'utf8'));
+  const nextPart = (seriesData.parts || []).find(p => p.status === 'Ready to Post');
+  if (!nextPart) {
+    console.log('🪈 [Little Krishna Engine] All parts in the current series have been posted!');
+    return null;
+  }
+
+  const fullVideoPath = path.isAbsolute(nextPart.filePath) ? nextPart.filePath : path.join(__dirname, nextPart.filePath);
+  if (!fs.existsSync(fullVideoPath)) {
+    console.error('🪈 [Little Krishna Engine] Video file missing:', fullVideoPath);
+    return null;
+  }
+
+  console.log(`🪈 [Little Krishna Engine] Triggering 07:00 PM auto-upload for Part ${nextPart.part}: "${nextPart.title}"...`);
+  nextPart.status = 'Publishing...';
+  fs.writeFileSync(KRISHNA_SERIES_FILE, JSON.stringify(seriesData, null, 2), 'utf8');
+
+  try {
+    const fbRes = await publishVideoDirectToFacebookPage({
+      videoPath: fullVideoPath,
+      title: nextPart.title,
+      description: nextPart.caption
+    });
+
+    nextPart.status = 'Posted to Facebook ✓';
+    nextPart.facebookPostUrl = fbRes.postUrl;
+    nextPart.facebookVideoId = fbRes.videoId;
+    nextPart.postedAt = new Date().toISOString();
+    fs.writeFileSync(KRISHNA_SERIES_FILE, JSON.stringify(seriesData, null, 2), 'utf8');
+    console.log(`🎉 [Little Krishna Engine] Part ${nextPart.part} successfully posted: ${fbRes.postUrl}`);
+    return nextPart;
+  } catch (err) {
+    console.error(`❌ [Little Krishna Engine] Failed to post Part ${nextPart.part}:`, err.message);
+    nextPart.status = 'Ready to Post';
+    nextPart.lastError = err.message;
+    fs.writeFileSync(KRISHNA_SERIES_FILE, JSON.stringify(seriesData, null, 2), 'utf8');
+    throw err;
+  }
+}
+
+// Every day at 7:00 PM (19:00 IST)
+try {
+  cron.schedule('0 19 * * *', async () => {
+    console.log('⏰ [CRON TRIGGER] Executing Little Krishna daily upload at 07:00 PM...');
+    try {
+      await processNextKrishnaPart();
+    } catch (e) {
+      console.error('Little Krishna cron error:', e.message);
+    }
+  });
+  console.log('⏰ Little Krishna auto-pilot cron activated for 19:00 (7:00 PM) every day (cron: "0 19 * * *")');
+} catch (e) {
+  console.error('Failed to register Little Krishna cron:', e.message);
+}
+
+// Endpoints for Little Krishna Series
+app.get('/api/krishna/status', (req, res) => {
+  try {
+    if (fs.existsSync(KRISHNA_SERIES_FILE)) {
+      return res.json({ success: true, ...JSON.parse(fs.readFileSync(KRISHNA_SERIES_FILE, 'utf8')) });
+    }
+    res.json({ success: false, message: 'Krishna series file not found' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/krishna/run-now', async (req, res) => {
+  try {
+    const item = await processNextKrishnaPart();
+    if (!item) return res.json({ success: false, message: 'All parts already published!' });
+    res.json({ success: true, item, message: `Part ${item.part} successfully published to Facebook!` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Smart Series / Franchise Name Extractor (e.g. GTA 6, The Punisher)
 function getSeriesLabel(fileName) {

@@ -3619,6 +3619,55 @@ function renderSchedulerState(state) {
     lblSchedTotalDur.textContent = `${state.masterVideo.totalDurationFormatted || ''} (${state.masterVideo.totalParts || 0} total parts)`;
     lblSchedNextPart.textContent = `Part ${state.currentPart} (Seconds ${state.lastPostedSeconds} - ${state.lastPostedSeconds + 30})`;
 
+    // Update Slot Video & Part Labels
+    const rawVidName = state.masterVideo ? (state.masterVideo.originalName || state.masterVideo.fileName || 'GTA 6') : 'GTA 6';
+    const cleanSeries = rawVidName.toLowerCase().includes('gta') ? 'GTA 6' : rawVidName.replace(/\.[a-z0-9]+$/i, '').slice(0, 18);
+    const currentPartNum = state.currentPart || 21;
+
+    const slot1Vid = document.getElementById('slot1VideoName');
+    const slot1Part = document.getElementById('slot1PartNumber');
+    if (slot1Vid) slot1Vid.textContent = cleanSeries;
+    if (slot1Part) {
+      const isSlot1DoneToday = currentPartNum > 20;
+      slot1Part.textContent = isSlot1DoneToday
+        ? `Part ${currentPartNum - 1} (આજે 11:30 AM પોસ્ટ થયેલ ✓)`
+        : `Part ${currentPartNum} (આજે 11:30 AM)`;
+    }
+
+    const slot2Vid = document.getElementById('slot2VideoName');
+    const slot2Part = document.getElementById('slot2PartNumber');
+    if (slot2Vid) slot2Vid.textContent = cleanSeries;
+    if (slot2Part) {
+      slot2Part.textContent = `Part ${currentPartNum} (આજે સાંજે 06:30 PM ⏳)`;
+    }
+
+    const slot3Vid = document.getElementById('slot3VideoName');
+    const slot3Part = document.getElementById('slot3PartNumber');
+    if (slot3Vid) slot3Vid.textContent = cleanSeries;
+    if (slot3Part) {
+      slot3Part.textContent = `Part ${currentPartNum + 1} (આગામી ભાગ)`;
+    }
+
+    // Update Dedicated Facebook Krishna Card
+    fetch('/api/krishna/status')
+      .then(r => r.json())
+      .then(kData => {
+        if (kData && kData.success) {
+          const fbKrishnaVid = document.getElementById('fbKrishnaVideoName');
+          const fbKrishnaPart = document.getElementById('fbKrishnaNextPart');
+          const nextKPart = (kData.parts || []).find(p => p.status === 'Ready to Post');
+          if (fbKrishnaVid) fbKrishnaVid.textContent = `${kData.seriesName} (Episode ${kData.episode})`;
+          if (fbKrishnaPart) {
+            if (nextKPart) {
+              fbKrishnaPart.textContent = `Part ${nextKPart.part} (${nextKPart.scheduledDateFormatted || 'સાંજે 07:00 PM'} - ${nextKPart.duration} મિનિટ)`;
+            } else {
+              fbKrishnaPart.textContent = 'બધા ભાગો પોસ્ટ થઈ ગયા છે ✓';
+            }
+          }
+        }
+      })
+      .catch(() => {});
+
     if (schedulerFileSelectedHint && schedulerFileNameBadge) {
       schedulerFileNameBadge.innerHTML = `<span style="color: #059669; font-weight: 800;">✓ Selected:</span> ${state.masterVideo.originalName || 'Master Video'} <span style="font-size: 0.74rem; color: #047857; margin-left: 0.35rem;">(${state.masterVideo.totalDurationFormatted || ''})</span>`;
       schedulerFileSelectedHint.classList.remove('hidden');

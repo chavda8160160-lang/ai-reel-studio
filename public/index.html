@@ -922,52 +922,105 @@
           </div>
 
           <!-- Slot 1 Time Picker -->
-          <div style="display: flex; gap: 0.8rem; align-items: center; background: #fff; border: 1px solid rgba(215, 206, 192, 0.65); padding: 0.5rem 0.85rem; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
-            <span style="font-size: 0.75rem; font-weight: 700; color: #78716c; min-width: 52px;" id="lblSlot1Name">Slot 1:</span>
-            <input type="time" id="scheduleDailyTime" value="09:00" class="custom-input" style="font-size: 1.15rem; font-weight: 700; width: 130px; letter-spacing: 0.05em; text-align: center; border: none; background: transparent; color: #1c1917;">
-            <span id="timeDisplayHint" style="font-size: 0.82rem; font-weight: 700; color: #b89758; background: #fbf7ee; padding: 0.35rem 0.75rem; border-radius: 9999px; border: 1px solid rgba(184, 151, 88, 0.3);">
-              Morning at 09:00 AM
-            </span>
+          <div style="background: #fff; border: 1.5px solid rgba(215, 206, 192, 0.75); padding: 0.65rem 0.95rem; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+            <div style="display: flex; gap: 0.6rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+              <div style="display: flex; gap: 0.6rem; align-items: center;">
+                <span style="font-size: 0.75rem; font-weight: 800; color: #78716c; min-width: 52px;" id="lblSlot1Name">Slot 1:</span>
+                <input type="time" id="scheduleDailyTime" value="11:30" class="custom-input" style="font-size: 1.15rem; font-weight: 700; width: 130px; letter-spacing: 0.05em; text-align: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #1c1917; padding: 0.2rem 0.4rem;">
+                <span id="timeDisplayHint" style="font-size: 0.8rem; font-weight: 700; color: #b89758; background: #fbf7ee; padding: 0.3rem 0.7rem; border-radius: 9999px; border: 1px solid rgba(184, 151, 88, 0.3);">
+                  Morning at 11:30 AM
+                </span>
+              </div>
+              <div id="slot1PartInfo" style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; background: #f0fdf4; border: 1.5px solid #86efac; padding: 0.35rem 0.75rem; border-radius: 8px; color: #166534; font-weight: 600;">
+                <i class="fa-solid fa-gamepad" style="color: #15803d; font-size: 0.95rem;"></i>
+                <span>વિડીયો: <strong id="slot1VideoName" style="color: #14532d;">GTA 6</strong> • <span id="slot1PartNumber" style="color: #047857; font-weight: 800;">Part 20 (આજે અપલોડ થયેલ ✓)</span></span>
+              </div>
+            </div>
           </div>
 
           <!-- Slot 2 Time Picker (Shown when 2 or 3 reels/day) -->
-          <div id="slot2TimeRow" style="display: none; margin-top: 0.5rem; gap: 0.8rem; align-items: center; background: #fff; border: 1px solid rgba(215, 206, 192, 0.65); padding: 0.5rem 0.85rem; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
-            <span style="font-size: 0.75rem; font-weight: 700; color: #78716c; min-width: 52px;">Slot 2:</span>
-            <input type="time" id="scheduleSlot2Time" value="18:00" class="custom-input" style="font-size: 1.15rem; font-weight: 700; width: 130px; letter-spacing: 0.05em; text-align: center; border: none; background: transparent; color: #1c1917;">
-            <span id="timeDisplayHintSlot2" style="font-size: 0.82rem; font-weight: 700; color: #7c3aed; background: #f5f3ff; padding: 0.35rem 0.75rem; border-radius: 9999px; border: 1px solid rgba(124, 58, 237, 0.3);">
-              Evening at 06:00 PM
-            </span>
+          <div id="slot2TimeRow" style="display: none; margin-top: 0.55rem; background: #fff; border: 1.5px solid rgba(215, 206, 192, 0.75); padding: 0.65rem 0.95rem; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+            <div style="display: flex; gap: 0.6rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+              <div style="display: flex; gap: 0.6rem; align-items: center;">
+                <span style="font-size: 0.75rem; font-weight: 800; color: #78716c; min-width: 52px;">Slot 2:</span>
+                <input type="time" id="scheduleSlot2Time" value="18:30" class="custom-input" style="font-size: 1.15rem; font-weight: 700; width: 130px; letter-spacing: 0.05em; text-align: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #1c1917; padding: 0.2rem 0.4rem;">
+                <span id="timeDisplayHintSlot2" style="font-size: 0.8rem; font-weight: 700; color: #7c3aed; background: #f5f3ff; padding: 0.3rem 0.7rem; border-radius: 9999px; border: 1px solid rgba(124, 58, 237, 0.3);">
+                  Evening at 06:30 PM
+                </span>
+              </div>
+              <div id="slot2PartInfo" style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; background: #faf5ff; border: 1.5px solid #d8b4fe; padding: 0.35rem 0.75rem; border-radius: 8px; color: #6b21a8; font-weight: 600;">
+                <i class="fa-solid fa-bolt" style="color: #9333ea; font-size: 0.95rem;"></i>
+                <span>વિડીયો: <strong id="slot2VideoName" style="color: #581c87;">GTA 6</strong> • <span id="slot2PartNumber" style="color: #7e22ce; font-weight: 800;">Part 21 (આજે સાંજે 06:30 PM ⏳)</span></span>
+              </div>
+            </div>
           </div>
 
           <!-- Slot 3 Time Picker (Shown when 3 reels/day) -->
-          <div id="slot3TimeRow" style="display: none; margin-top: 0.5rem; gap: 0.8rem; align-items: center; background: #fff; border: 1px solid rgba(215, 206, 192, 0.65); padding: 0.5rem 0.85rem; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
-            <span style="font-size: 0.75rem; font-weight: 700; color: #78716c; min-width: 52px;">Slot 3:</span>
-            <input type="time" id="scheduleSlot3Time" value="21:30" class="custom-input" style="font-size: 1.15rem; font-weight: 700; width: 130px; letter-spacing: 0.05em; text-align: center; border: none; background: transparent; color: #1c1917;">
-            <span id="timeDisplayHintSlot3" style="font-size: 0.82rem; font-weight: 700; color: #0284c7; background: #f0f9ff; padding: 0.35rem 0.75rem; border-radius: 9999px; border: 1px solid rgba(2, 132, 199, 0.3);">
-              Night at 09:30 PM
-            </span>
+          <div id="slot3TimeRow" style="display: none; margin-top: 0.55rem; background: #fff; border: 1.5px solid rgba(215, 206, 192, 0.65); padding: 0.65rem 0.95rem; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+            <div style="display: flex; gap: 0.6rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+              <div style="display: flex; gap: 0.6rem; align-items: center;">
+                <span style="font-size: 0.75rem; font-weight: 800; color: #78716c; min-width: 52px;">Slot 3:</span>
+                <input type="time" id="scheduleSlot3Time" value="21:30" class="custom-input" style="font-size: 1.15rem; font-weight: 700; width: 130px; letter-spacing: 0.05em; text-align: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #1c1917; padding: 0.2rem 0.4rem;">
+                <span id="timeDisplayHintSlot3" style="font-size: 0.8rem; font-weight: 700; color: #0284c7; background: #f0f9ff; padding: 0.3rem 0.7rem; border-radius: 9999px; border: 1px solid rgba(2, 132, 199, 0.3);">
+                  Night at 09:30 PM
+                </span>
+              </div>
+              <div id="slot3PartInfo" style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; background: #f0f9ff; border: 1.5px solid #bae6fd; padding: 0.35rem 0.75rem; border-radius: 8px; color: #0369a1; font-weight: 600;">
+                <i class="fa-solid fa-film" style="color: #0284c7; font-size: 0.95rem;"></i>
+                <span>વિડીયો: <strong id="slot3VideoName" style="color: #0c4a6e;">GTA 6</strong> • <span id="slot3PartNumber" style="color: #0284c7; font-weight: 800;">Part 22 (આગામી ભાગ)</span></span>
+              </div>
+            </div>
           </div>
 
-          <!-- Facebook Page Auto-Pilot Options (30s Reel vs 5-Min Video) -->
-          <div style="margin-top: 0.85rem; padding: 0.75rem 0.85rem; background: #f0f7ff; border: 1.5px solid #bfdbfe; border-radius: 12px;">
+          <!-- Facebook Page Auto-Pilot Options (30s Reel vs 5-Min Video + Dedicated Daily Series) -->
+          <div style="margin-top: 0.85rem; padding: 0.85rem 0.95rem; background: #f0f7ff; border: 1.5px solid #bfdbfe; border-radius: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
-              <span style="font-weight: 700; font-size: 0.84rem; color: #1e40af; display: flex; align-items: center; gap: 0.45rem;">
-                <i class="fa-brands fa-facebook" style="color: #1877f2; font-size: 1.05rem;"></i> Facebook Page Auto-Pilot:
+              <span style="font-weight: 800; font-size: 0.88rem; color: #1e40af; display: flex; align-items: center; gap: 0.45rem;">
+                <i class="fa-brands fa-facebook" style="color: #1877f2; font-size: 1.15rem;"></i> Facebook Page Auto-Pilot:
               </span>
-              <span class="badge" style="background: #1877f2; color: #fff; font-size: 0.68rem; padding: 0.2rem 0.5rem; border-radius: 9999px; font-weight: 700;">
+              <span class="badge" style="background: #1877f2; color: #fff; font-size: 0.68rem; padding: 0.2rem 0.55rem; border-radius: 9999px; font-weight: 700;">
                 Connected ✓
               </span>
             </div>
             <div style="font-size: 0.76rem; color: #1e3a8a; line-height: 1.4; margin-bottom: 0.55rem;">
               Page: <b>Reel creator</b> (ID: <code>1320416261160842</code>). Auto-posts daily at scheduled times.
             </div>
-            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
               <button type="button" class="chip sched-fb-mode-chip active" id="btnSchedFb30s" data-mode="30s" style="font-size: 0.74rem; padding: 0.35rem 0.65rem; border-radius: 8px; border: 1.5px solid #2563eb; background: #2563eb; color: #fff; font-weight: 700; cursor: pointer;">
                 ⚡ 30s Viral Reel
               </button>
               <button type="button" class="chip sched-fb-mode-chip" id="btnSchedFb5min" data-mode="5min" style="font-size: 0.74rem; padding: 0.35rem 0.65rem; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #fff; color: #475569; font-weight: 700; cursor: pointer;">
                 🎬 5-Min Extended Video (મોટી રીલ/વિડીયો)
               </button>
+            </div>
+
+            <!-- 🪈 DEDICATED FACEBOOK DAILY VIDEO SERIES CARD (Little Krishna) -->
+            <div id="fbKrishnaSeriesCard" style="background: #ffffff; border: 1.5px solid #60a5fa; border-radius: 10px; padding: 0.75rem 0.85rem; box-shadow: 0 2px 8px rgba(37,99,235,0.08);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <div style="display: flex; align-items: center; gap: 0.45rem; font-weight: 800; font-size: 0.82rem; color: #1e3a8a;">
+                  <span style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 0.15rem 0.45rem; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">
+                    🪈 દરરોજ સાંજે 07:00 PM
+                  </span>
+                  <span>Facebook ખાસ વિડિયો સીરિઝ</span>
+                </div>
+                <span class="badge" style="background: #10b981; color: #fff; font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 9999px; font-weight: 700;">
+                  ACTIVE ⏳
+                </span>
+              </div>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.65rem; margin-bottom: 0.4rem;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.35rem;">
+                  <i class="fa-solid fa-video" style="color: #2563eb;"></i>
+                  <span>વિડીયો: <span id="fbKrishnaVideoName" style="color: #1d4ed8;">Little Krishna Hindi - Episode 1</span></span>
+                </div>
+                <div style="font-size: 0.75rem; color: #334155; margin-top: 0.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.35rem;">
+                  <span>રોજનો ભાગ: <b id="fbKrishnaNextPart" style="color: #047857; font-weight: 800;">Part 1 (આજે સાંજે 07:00 PM - 8 મિનિટ)</b></span>
+                  <span style="font-size: 0.7rem; color: #64748b; background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px;">૮-૮ મિનિટના અલગ ભાગ</span>
+                </div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: #64748b;">
+                <span>કાલે: <b>Part 2</b> (07:00 PM) • પરમદિવસે: <b>Part 3</b> (07:00 PM)</span>
+                <span style="color: #16a34a; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> GTA 6 થી તદ્દન અલગ</span>
+              </div>
             </div>
           </div>
 
