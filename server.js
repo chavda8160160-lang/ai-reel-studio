@@ -3702,7 +3702,7 @@ const KRISHNA_SERIES_FILE = path.join(DATA_DIR, 'krishna-series.json');
 async function processNextKrishnaPart() {
   if (!fs.existsSync(KRISHNA_SERIES_FILE)) return null;
   const seriesData = JSON.parse(fs.readFileSync(KRISHNA_SERIES_FILE, 'utf8'));
-  const nextPart = (seriesData.parts || []).find(p => p.status === 'Ready to Post');
+  const nextPart = (seriesData.parts || []).find(p => p.status === 'Ready to Post' || p.status === 'Scheduled');
   if (!nextPart) {
     console.log('🪈 [Little Krishna Engine] All parts in the current series have been posted!');
     return null;
@@ -3729,6 +3729,13 @@ async function processNextKrishnaPart() {
     nextPart.facebookPostUrl = fbRes.postUrl;
     nextPart.facebookVideoId = fbRes.videoId;
     nextPart.postedAt = new Date().toISOString();
+
+    // Auto-promote the next scheduled part so it is ready for tomorrow
+    const subsequentPart = (seriesData.parts || []).find(p => p.part === nextPart.part + 1);
+    if (subsequentPart && (subsequentPart.status === 'Scheduled' || !subsequentPart.status)) {
+      subsequentPart.status = 'Ready to Post';
+    }
+
     fs.writeFileSync(KRISHNA_SERIES_FILE, JSON.stringify(seriesData, null, 2), 'utf8');
     console.log(`🎉 [Little Krishna Engine] Part ${nextPart.part} successfully posted: ${fbRes.postUrl}`);
     return nextPart;
