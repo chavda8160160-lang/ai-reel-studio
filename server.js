@@ -942,10 +942,11 @@ setInterval(async () => {
               }
             }
 
-            // Direct Auto-Publish to Facebook Page if configured
+            // Direct Auto-Publish to Facebook Page if configured (Strictly skip GTA games - GTA is Instagram exclusive)
             const fbTok = process.env.META_INSTAGRAM_TOKEN;
             const fbPgId = process.env.META_INSTAGRAM_PAGE_ID || '1320416261160842';
-            if (fbTok && fbPgId) {
+            const isGtaItem = (item.title || item.fileName || item.viralTitle || item.niche || '').toLowerCase().includes('gta');
+            if (fbTok && fbPgId && !isGtaItem && item.publishFacebook === true) {
               try {
                 console.log(`🚀 [Auto-Post Engine] Auto-uploading due Reel to Facebook Page (${fbPgId})...`);
                 const fbTitle = (item.viralTitle || item.title || 'Viral AI Reel | Patola Heritage').substring(0, 100);
@@ -2482,6 +2483,10 @@ async function publishShortDirectToYouTube(videoPath, title, description, tags, 
   const defaultTags = isShort ? ['Shorts', 'Viral', 'Trending'] : ['YouTube', 'Video', 'Trending', 'Viral'];
   const tagArray = tags ? (Array.isArray(tags) ? tags : String(tags).split(',').map(t => t.trim())) : defaultTags;
 
+  const contentText = ((title || '') + ' ' + (description || '') + ' ' + tagArray.join(' ')).toLowerCase();
+  const isGaming = contentText.includes('gta') || contentText.includes('game') || contentText.includes('gameplay');
+  const targetCategory = isGaming ? '20' : '22'; // 20 = Gaming, 22 = People & Blogs
+
   // Step 1: Initialize Resumable Upload Session
   const initRes = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
     method: 'POST',
@@ -2496,7 +2501,7 @@ async function publishShortDirectToYouTube(videoPath, title, description, tags, 
         title: title || defaultTitle,
         description: description || defaultDesc,
         tags: tagArray,
-        categoryId: '22'
+        categoryId: targetCategory
       },
       status: {
         privacyStatus: 'public',
@@ -4054,9 +4059,13 @@ Respond ONLY with valid JSON.`
   if (process.env.YOUTUBE_ACCESS_TOKEN) {
     try {
       console.log(`🚀 [Auto-Pilot Master Video] Auto-publishing Part ${partNum} directly to YouTube Shorts...`);
-      const ytTitle = (partRecipe.viralTitle || `Part ${partNum} - Viral Short #Shorts`).substring(0, 100);
-      const ytDesc = `${partRecipe.viralCaption || ''}\n\n${partRecipe.viralHashtags || ''}\n\n#Shorts #Viral`;
-      const ytRes = await publishShortDirectToYouTube(outputPath, ytTitle, ytDesc, ['Shorts', 'Reels', 'Viral']);
+      const ytTitle = (partRecipe.viralTitle || `GTA 6 Part ${partNum}: Gameplay Moment! #Shorts`).substring(0, 100);
+      const formattedHashtags = Array.isArray(partRecipe.viralHashtags) 
+        ? partRecipe.viralHashtags.join(' ') 
+        : (partRecipe.viralHashtags || '#GTA6 #Gaming #Shorts');
+      const ytDesc = `${partRecipe.viralCaption || ''}\n\n${formattedHashtags}\n\n#Shorts #GTA6 #Gaming #Viral`;
+      const ytTags = ['GTA 6', 'GTA VI', 'GTA 6 Gameplay', 'Grand Theft Auto', 'Gaming', 'Gaming Shorts', 'Rockstar Games', 'Shorts', 'Viral'];
+      const ytRes = await publishShortDirectToYouTube(outputPath, ytTitle, ytDesc, ytTags);
       historyItem.youtubePostUrl = ytRes.postUrl;
       historyItem.youtubeVideoId = ytRes.videoId;
       console.log(`🎉 [Auto-Pilot Master Video] Part ${partNum} successfully posted to YouTube: ${ytRes.postUrl}`);
@@ -4067,9 +4076,11 @@ Respond ONLY with valid JSON.`
   }
 
   // 100% Autonomous Daily Auto-Publish to Facebook Page (Reels & 5-Min Long Video Support)
+  // STRICT SEPARATION: GTA/Gaming videos are exclusive to Instagram & YouTube. Facebook Page is strictly reserved for Little Krishna / Devotional content.
   const fbAutoToken = process.env.META_INSTAGRAM_TOKEN;
   const fbAutoPageId = process.env.META_INSTAGRAM_PAGE_ID || '1320416261160842';
-  if (fbAutoToken && fbAutoPageId && state.publishFacebook !== false) {
+  const isGtaMaster = (state.masterVideo?.originalName || '').toLowerCase().includes('gta');
+  if (fbAutoToken && fbAutoPageId && state.publishFacebook === true && !isGtaMaster) {
     try {
       console.log(`🚀 [Auto-Pilot Master Video] Auto-publishing Part ${partNum} directly to Facebook Page (${fbAutoPageId})...`);
       let fbUploadPath = outputPath;
@@ -4776,6 +4787,8 @@ app.get('/api/social/analytics', async (req, res) => {
     const queue = getScheduledQueue();
     const hasIg = !!(process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_USER_ID);
     const hasYt = !!process.env.YOUTUBE_ACCESS_TOKEN;
+    const hasFb = !!(process.env.META_INSTAGRAM_TOKEN && process.env.META_INSTAGRAM_PAGE_ID);
+    const fbPageId = process.env.META_INSTAGRAM_PAGE_ID || '1320416261160842';
 
     let igProfile = {
       username: cachedIgUsername || 'moving.151120',
@@ -4848,6 +4861,8 @@ app.get('/api/social/analytics', async (req, res) => {
       let niche = 'Instagram Video';
       let ytVideoId = null;
       let ytPostUrl = null;
+      let fbVideoId = null;
+      let fbPostUrl = null;
 
       if (matchedQueue) {
         if (matchedQueue.thumbnailUrl) thumb = matchedQueue.thumbnailUrl;
@@ -4862,7 +4877,13 @@ app.get('/api/social/analytics', async (req, res) => {
         if (matchedQueue.niche) niche = matchedQueue.niche;
         ytVideoId = matchedQueue.youtubeVideoId || null;
         ytPostUrl = matchedQueue.youtubePostUrl || null;
+        fbVideoId = matchedQueue.facebookVideoId || null;
+        fbPostUrl = matchedQueue.facebookPostUrl || null;
       }
+
+      const platformsPosted = ['Instagram'];
+      if (ytPostUrl) platformsPosted.push('YouTube');
+      if (fbPostUrl) platformsPosted.push('Facebook');
 
       publishedReels.push({
         id: `ig-${igItem.id}`,
@@ -4883,8 +4904,13 @@ app.get('/api/social/analytics', async (req, res) => {
           url: ytPostUrl,
           posted: !!ytPostUrl
         },
+        facebook: {
+          videoId: fbVideoId,
+          url: fbPostUrl,
+          posted: !!fbPostUrl
+        },
         niche: niche,
-        status: ytPostUrl ? 'Posted to IG & YouTube ✓' : 'Posted to Instagram ✓'
+        status: `Posted to ${platformsPosted.join(' & ')} ✓`
       });
     }
 
@@ -4943,6 +4969,11 @@ app.get('/api/social/analytics', async (req, res) => {
         connected: hasYt,
         channelTitle: process.env.YOUTUBE_CHANNEL_TITLE || 'YouTube Shorts Channel'
       },
+      facebook: {
+        connected: hasFb,
+        pageId: fbPageId,
+        pageUrl: `https://www.facebook.com/${fbPageId}`
+      },
       summary: {
         totalReels: publishedReels.length,
         totalLikes: realIgLikes + realYtLikes,
@@ -4960,6 +4991,10 @@ app.get('/api/social/analytics', async (req, res) => {
             comments: 0,
             shorts: ytShortsCount,
             views: 0
+          },
+          facebook: {
+            connected: hasFb,
+            pageId: fbPageId
           }
         },
         topReel

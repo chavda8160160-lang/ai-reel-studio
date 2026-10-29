@@ -4855,6 +4855,23 @@ function populateAnalyticsUI(data, isLive = true) {
       if (s) s.textContent = '@' + igUsername + ' ↗';
     }
 
+    const btnOpenFb = document.getElementById('btnOpenFacebook');
+    if (btnOpenFb) {
+      const fbUrl = data.facebook?.pageUrl || (data.facebook?.pageId ? `https://www.facebook.com/${data.facebook.pageId}` : 'https://www.facebook.com/1320416261160842');
+      btnOpenFb.href = fbUrl;
+    }
+
+    const fbStatus = document.getElementById('analyticsFacebookStatus');
+    if (fbStatus) {
+      if (data.facebook?.connected !== false) {
+        fbStatus.textContent = 'Active ✓';
+        fbStatus.style.color = '#047857';
+      } else {
+        fbStatus.textContent = 'Ready';
+        fbStatus.style.color = '#1877f2';
+      }
+    }
+
     if (followersCount) followersCount.textContent = `${data.instagram?.followers || 0} Followers`;
     if (lastUpdated) {
       lastUpdated.textContent = isLive 
@@ -4910,6 +4927,7 @@ function populateAnalyticsUI(data, isLive = true) {
       reelsBreakdown.innerHTML = `
         <span style="color: #ec4899; background: rgba(236,72,153,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-instagram"></i> ${igReels} IG Reels</span>
         <span style="color: #ef4444; background: rgba(239,68,68,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-youtube"></i> ${ytShorts} YT Short</span>
+        <span style="color: #1877f2; background: rgba(24,119,242,0.08); padding: 0.15rem 0.45rem; border-radius: 4px;"><i class="fa-brands fa-facebook"></i> FB Active</span>
       `;
     }
 
@@ -5210,6 +5228,11 @@ function renderAnalyticsReelsGrid(reels) {
               ${hasYt ? `
                 <a href="${r.youtube.url}" target="_blank" rel="noopener noreferrer" class="analytics-reel-btn analytics-reel-btn-yt" title="View on YouTube">
                   <i class="fa-brands fa-youtube"></i> YT ↗
+                </a>
+              ` : ''}
+              ${r.facebook?.url ? `
+                <a href="${r.facebook.url}" target="_blank" rel="noopener noreferrer" class="analytics-reel-btn analytics-reel-btn-fb" title="View on Facebook">
+                  <i class="fa-brands fa-facebook"></i> FB ↗
                 </a>
               ` : ''}
             </div>
