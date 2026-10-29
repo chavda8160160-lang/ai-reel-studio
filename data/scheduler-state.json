@@ -18,9 +18,41 @@
     "totalParts": 54,
     "addedAt": "2026-10-14T12:39:35.300Z"
   },
-  "currentPart": 27,
-  "lastPostedSeconds": 780,
+  "currentPart": 28,
+  "lastPostedSeconds": 810,
   "history": [
+    {
+      "part": 27,
+      "startSeconds": 780,
+      "endSeconds": 810,
+      "duration": "30s",
+      "renderedReelUrl": "/rendered-reels/daily-part27-1793278819317.mp4",
+      "thumbnailUrl": "/rendered-reels/daily-part27-1793278819317-cover.jpg",
+      "fileName": "daily-part27-1793278819317.mp4",
+      "postedAt": "2026-10-29T13:00:48.679Z",
+      "displayTime": "10/29/2026, 6:30:48 PM",
+      "viralTitle": "GTA 6 - Part 27: The Most Beautiful Sunset Drive! 🌅🏎️ #Shorts",
+      "viralCaption": "GTA 6 Part 27: Cruising through the streets of Leonida as the sun sets. The level of detail is insane! 🤯 Don't miss the chaos unfolding in the sky. Follow for Part 28!",
+      "viralHashtags": [
+        "#GTA6",
+        "#Part27",
+        "#Gaming",
+        "#Shorts",
+        "#TrendingReels",
+        "#GTA6Gameplay",
+        "#ViceCity",
+        "#OpenWorld",
+        "#NextGenGaming",
+        "#RockstarGames",
+        "#ViralGaming",
+        "#GTA6Leaks"
+      ],
+      "detectedTopic": "A high-speed drive across a scenic bridge in GTA 6 during a golden hour sunset with helicopters overhead.",
+      "themeName": "Cinematic Golden Hour",
+      "status": "Ready & Published",
+      "lastError": "Meta Processing Error: Error processing Meta Reel on server.",
+      "lastYoutubeError": "Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project."
+    },
     {
       "part": 26,
       "startSeconds": 750,
