@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #0F0F10;
+    --bg-panel: #1A1A1C;
+    --border-color: #2A2A2D;
+    --accent: #22D3EE;
+  }
+}
+
+/* Custom scrollbar for sleek pro-app look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #141416;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2E2E33;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3F3F46;
+}
+
+/* Range input styling */
+input[type="range"] {
+  accent-color: #22D3EE;
+}
+
+/* Animation utilities */
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 2s infinite ease-in-out;
+}

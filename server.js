@@ -28,6 +28,9 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
+// Serve ClipForge Desktop-Grade Web Video Editor (React + TS + Tailwind + Zustand)
+app.use('/clipforge', express.static(path.join(__dirname, 'clipforge', 'dist')));
+
 // Authentication Routes & User Isolation
 const { authRouter, optionalAuth, authMiddleware } = require('./routes/auth');
 app.use('/api/auth', authRouter);
