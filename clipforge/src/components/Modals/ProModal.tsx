@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Check, Crown, Zap, ShieldCheck } from 'lucide-react';
+import { X, Check, Award, Zap, ShieldCheck } from 'lucide-react';
 import { useEditorStore } from '../../store/useEditorStore';
 
 export const ProModal: React.FC = () => {
@@ -9,76 +9,73 @@ export const ProModal: React.FC = () => {
 
   const PRO_PERKS = [
     'Export in 4K Ultra HD & 60 FPS ProRes',
-    '100% Commercial License & No Watermark',
-    'AI Auto-Captions with 1-Word Hormozi Highlights',
-    '1,000+ Trending Cinematic LUTs, Soundtracks & SFX',
-    'Unlimited Multi-Track Sequence Stacking',
-    'Cloud Auto-Backup & Cross-Device Sync',
+    'Commercial Studio License & No Watermark',
+    'Full Multi-Track Sequence Timeline Stacking',
+    'Cinematic Hollywood LUTs & Color Precision Presets',
+    'Lossless Audio Waveform Normalization & SFX Suite',
+    'Priority Cloud Render & Archival Encoding',
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 select-none">
-      <div className="w-full max-w-lg bg-[#141418] border border-amber-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col relative">
-        {/* Glow Ambient Backdrop */}
-        <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-amber-500/15 via-cyan-500/10 to-transparent pointer-events-none" />
-
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 select-none font-sans">
+      <div className="w-full max-w-md bg-[#16161A] border border-[#2A2A30] rounded-lg shadow-2xl overflow-hidden flex flex-col text-[#E8E6E1]">
         {/* Header */}
-        <div className="p-5 flex items-center justify-between relative z-10">
+        <div className="px-5 py-4 border-b border-[#24242A] flex items-center justify-between bg-[#121215]">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 text-black flex items-center justify-center shadow-lg shadow-amber-500/20">
-              <Crown className="w-5 h-5 stroke-[2.5]" />
+            <div className="w-8 h-8 rounded border border-[#C9A66B]/40 bg-[#C9A66B]/10 text-[#C9A66B] flex items-center justify-center">
+              <Award className="w-4 h-4" strokeWidth={1.5} />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-white flex items-center gap-1.5">
-                ClipForge Pro Suite
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400 text-black font-mono">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#E8E6E1] flex items-center gap-1.5">
+                ClipForge Studio Pro
+                <span className="text-[9px] font-mono font-medium px-1.5 py-0.5 rounded bg-[#C9A66B]/20 text-[#C9A66B] border border-[#C9A66B]/30">
                   LIFETIME
                 </span>
               </h3>
-              <p className="text-xs text-amber-200/80">Unlock Hollywood-Grade Editing Power</p>
+              <p className="text-[11px] text-[#8A8A92]">Hollywood-Grade Post-Production Suite</p>
             </div>
           </div>
           <button
             onClick={() => setProModalOpen(false)}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+            className="p-1 rounded text-[#8A8A92] hover:text-[#E8E6E1] hover:bg-[#1F1F24] transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
 
         {/* Perks List */}
-        <div className="px-6 py-4 space-y-2.5 relative z-10">
+        <div className="p-5 space-y-2.5">
           {PRO_PERKS.map((perk, idx) => (
-            <div key={idx} className="flex items-center gap-3 text-xs text-zinc-200">
-              <div className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-                <Check className="w-3 h-3 stroke-[3]" />
+            <div key={idx} className="flex items-center gap-2.5 text-xs text-[#E8E6E1]">
+              <div className="w-4 h-4 rounded-full border border-[#C9A66B]/40 bg-[#C9A66B]/15 text-[#C9A66B] flex items-center justify-center shrink-0">
+                <Check className="w-2.5 h-2.5" strokeWidth={2} />
               </div>
-              <span className="font-medium">{perk}</span>
+              <span className="font-normal text-[#D4D2CD]">{perk}</span>
             </div>
           ))}
         </div>
 
-        {/* Pricing Card */}
-        <div className="p-5 border-t border-[#25252E] bg-[#0E0E12] relative z-10 flex flex-col gap-3">
+        {/* Pricing & Activation */}
+        <div className="p-5 border-t border-[#24242A] bg-[#121215] flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-2xl font-black text-white">$19</span>
-              <span className="text-xs text-zinc-500 ml-1">/ one-time access</span>
+              <span className="text-xl font-mono font-semibold text-[#E8E6E1]">$19</span>
+              <span className="text-xs text-[#8A8A92] ml-1.5">one-time payment</span>
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>30-Day Money Back</span>
+            <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-400">
+              <ShieldCheck className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <span>Commercial License</span>
             </div>
           </div>
 
           <button
             onClick={() => {
-              alert("ClipForge Pro Activated! 4K exports and all pro features unlocked.");
+              alert("ClipForge Studio Pro Activated! 4K exports and all pro features unlocked.");
               setProModalOpen(false);
             }}
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-black font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 transition-all cursor-pointer"
+            className="w-full py-2.5 rounded bg-[#C9A66B] hover:bg-[#B89357] text-[#121214] font-medium text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
-            <Zap className="w-4 h-4 fill-current" />
+            <Zap className="w-3.5 h-3.5 fill-current" strokeWidth={1.5} />
             <span>Unlock Pro Access</span>
           </button>
         </div>

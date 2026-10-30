@@ -6,8 +6,10 @@ import {
   Keyboard, 
   Sparkles, 
   Download, 
-  CheckCircle2,
-  Pencil
+  Check, 
+  Pencil,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useEditorStore } from '../store/useEditorStore';
 
@@ -19,6 +21,8 @@ export const TopBar: React.FC = () => {
     redo, 
     undoStack, 
     redoStack,
+    theme,
+    toggleTheme,
     setExportModalOpen,
     setShortcutsModalOpen,
     setProModalOpen 
@@ -37,26 +41,26 @@ export const TopBar: React.FC = () => {
   };
 
   return (
-    <header className="h-12 bg-[#141416] border-b border-[#2A2A2D] px-4 flex items-center justify-between shrink-0 select-none z-30">
-      {/* Left: Brand Logo & Status */}
+    <header className="h-12 border-b px-4 flex items-center justify-between shrink-0 select-none z-30 transition-colors bg-[#17171B] border-[#2A2A30] text-[#E8E6E1]">
+      {/* Left: Brand Identity & Status */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 group cursor-pointer">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-teal-300 flex items-center justify-center shadow-md shadow-cyan-500/20 group-hover:scale-105 transition-transform">
-            <Film className="w-4 h-4 text-black stroke-[2.5]" />
+        <div className="flex items-center gap-2.5 group cursor-pointer">
+          <div className="w-7 h-7 rounded-md bg-[#24242B] border border-[#36363F] flex items-center justify-center text-[#C9A66B] group-hover:border-[#C9A66B]/60 transition-colors">
+            <Film className="w-3.5 h-3.5 stroke-[1.5]" />
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
-              ClipForge
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 font-mono font-semibold">PRO</span>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-xs tracking-tight">ClipForge Studio</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded border bg-[#202026] border-[#36363F] text-[#C9A66B]">
+              PRO
             </span>
           </div>
         </div>
 
-        <div className="h-4 w-px bg-[#2A2A2D] mx-1" />
+        <div className="h-3.5 w-px bg-[#2E2E36] mx-1" />
 
-        <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium bg-emerald-950/30 px-2 py-0.5 rounded-full border border-emerald-800/40">
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          <span className="text-[11px]">Auto-saved</span>
+        <div className="flex items-center gap-1.5 text-[11px] text-[#8A8A92]">
+          <Check className="w-3 h-3 text-[#C9A66B]" />
+          <span>Auto-Saved</span>
         </div>
       </div>
 
@@ -70,7 +74,7 @@ export const TopBar: React.FC = () => {
             onBlur={handleNameSubmit}
             onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
             autoFocus
-            className="bg-[#202024] text-white text-xs font-semibold px-2.5 py-1 rounded border border-cyan-400/60 outline-none w-56 text-center focus:ring-1 focus:ring-cyan-400"
+            className="text-xs font-medium px-2.5 py-1 rounded border outline-none w-60 text-center bg-[#222228] border-[#C9A66B] text-white focus:ring-1 focus:ring-[#C9A66B]"
           />
         ) : (
           <button
@@ -78,62 +82,71 @@ export const TopBar: React.FC = () => {
               setTempName(projectName);
               setIsEditingName(true);
             }}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[#D4D4D8] hover:text-white px-3 py-1 rounded-md hover:bg-[#202024] transition-colors group"
+            className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded border border-transparent hover:border-[#2E2E36] hover:bg-[#202026] text-[#D8D6D1] transition-colors group"
             title="Click to rename project"
           >
             <span>{projectName}</span>
-            <Pencil className="w-3 h-3 text-zinc-500 group-hover:text-cyan-400 transition-colors" />
+            <Pencil className="w-3 h-3 text-[#6E6E77] group-hover:text-[#C9A66B] transition-colors" />
           </button>
         )}
       </div>
 
-      {/* Right: Actions */}
+      {/* Right: Tools, Theme Toggle & Export */}
       <div className="flex items-center gap-2">
         {/* Undo / Redo */}
-        <div className="flex items-center bg-[#1C1C1F] border border-[#2A2A2D] rounded-md p-0.5">
+        <div className="flex items-center border rounded-md p-0.5 bg-[#1F1F24] border-[#2C2C33]">
           <button
             onClick={undo}
             disabled={undoStack.length === 0}
-            className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 rounded hover:bg-[#28282E] transition-colors"
+            className="p-1.5 rounded disabled:opacity-25 hover:bg-[#2A2A32] text-[#A6A6B0] hover:text-[#E8E6E1] transition-colors"
             title="Undo (Ctrl+Z)"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3.5 h-3.5 stroke-[1.5]" />
           </button>
-          <div className="w-px h-3.5 bg-[#2A2A2D]" />
+          <div className="w-px h-3 bg-[#2E2E36]" />
           <button
             onClick={redo}
             disabled={redoStack.length === 0}
-            className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 rounded hover:bg-[#28282E] transition-colors"
+            className="p-1.5 rounded disabled:opacity-25 hover:bg-[#2A2A32] text-[#A6A6B0] hover:text-[#E8E6E1] transition-colors"
             title="Redo (Ctrl+Y)"
           >
-            <RotateCw className="w-3.5 h-3.5" />
+            <RotateCw className="w-3.5 h-3.5 stroke-[1.5]" />
           </button>
         </div>
+
+        {/* Theme Switcher: Classic Warm Paper vs Obsidian Dark */}
+        <button
+          onClick={toggleTheme}
+          className="p-1.5 border rounded-md text-[#A6A6B0] hover:text-[#E8E6E1] bg-[#1F1F24] border-[#2C2C33] hover:bg-[#2A2A32] transition-colors"
+          title={theme === 'dark' ? "Switch to Classic Warm Paper Theme" : "Switch to Obsidian Dark Theme"}
+        >
+          {theme === 'dark' ? <Sun className="w-3.5 h-3.5 stroke-[1.5]" /> : <Moon className="w-3.5 h-3.5 stroke-[1.5]" />}
+        </button>
 
         {/* Shortcuts */}
         <button
           onClick={() => setShortcutsModalOpen(true)}
-          className="p-1.5 text-zinc-400 hover:text-white bg-[#1C1C1F] hover:bg-[#28282E] border border-[#2A2A2D] rounded-md transition-colors"
+          className="p-1.5 border rounded-md text-[#A6A6B0] hover:text-[#E8E6E1] bg-[#1F1F24] border-[#2C2C33] hover:bg-[#2A2A32] transition-colors"
           title="Keyboard Shortcuts (?)"
         >
-          <Keyboard className="w-4 h-4" />
+          <Keyboard className="w-3.5 h-3.5 stroke-[1.5]" />
         </button>
 
-        {/* Pro Upgrade Button */}
+        {/* Pro Badge */}
         <button
           onClick={() => setProModalOpen(true)}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-gradient-to-r from-amber-500/10 via-amber-400/20 to-yellow-500/10 hover:from-amber-500/20 hover:to-yellow-500/20 border border-amber-500/40 text-amber-300 transition-all hover:scale-[1.02] shadow-sm"
+          className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border text-[#C9A66B] bg-[#2A251D] border-[#C9A66B]/30 hover:border-[#C9A66B]/60 transition-colors"
         >
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>Upgrade</span>
+          <Sparkles className="w-3 h-3 stroke-[1.5]" />
+          <span>Pro</span>
         </button>
 
         {/* Primary Export Button */}
         <button
           onClick={() => setExportModalOpen(true)}
-          className="flex items-center gap-2 text-xs font-bold px-4 py-1.5 rounded-md bg-[#22D3EE] hover:bg-[#06B6D4] active:bg-[#0891B2] text-black shadow-md shadow-cyan-500/25 transition-all hover:scale-[1.02] cursor-pointer"
+          className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-md text-[#121214] bg-[#C9A66B] hover:bg-[#D9B77C] active:bg-[#B88E4B] transition-colors cursor-pointer shadow-sm"
         >
-          <Download className="w-4 h-4 stroke-[2.5]" />
+          <Download className="w-3.5 h-3.5 stroke-[2]" />
           <span>Export</span>
         </button>
       </div>

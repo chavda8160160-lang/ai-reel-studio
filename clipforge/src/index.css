@@ -2,43 +2,67 @@
 
 @layer base {
   :root {
-    --bg-main: #0F0F10;
-    --bg-panel: #1A1A1C;
-    --border-color: #2A2A2D;
-    --accent: #22D3EE;
+    --bg-main: #121214;
+    --bg-panel: #1B1B1F;
+    --bg-subpanel: #242429;
+    --border-hairline: #2C2C33;
+    --accent-gold: #C9A66B;
+    --text-primary: #E8E6E1;
+    --text-muted: #8A8A92;
+  }
+
+  html.light {
+    --bg-main: #F5F3EE;
+    --bg-panel: #FFFFFF;
+    --bg-subpanel: #EFECE5;
+    --border-hairline: #E2DFD7;
+    --accent-gold: #B88E4B;
+    --text-primary: #1C1917;
+    --text-muted: #78716C;
   }
 }
 
-/* Custom scrollbar for sleek pro-app look */
+/* Tabular Numerals for Precise NLE Timecodes */
+.font-mono {
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+  font-feature-settings: 'tnum' on, 'zero' on;
+}
+
+/* Refined Studio Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #141416;
+  background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #2E2E33;
-  border-radius: 4px;
+.dark ::-webkit-scrollbar-thumb {
+  background: #2C2C33;
+  border-radius: 3px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #3F3F46;
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3F3F48;
 }
 
-/* Range input styling */
+.light ::-webkit-scrollbar-thumb {
+  background: #D8D4CA;
+  border-radius: 3px;
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #BEB9AC;
+}
+
+/* Tactile Range Sliders in Champagne Gold */
 input[type="range"] {
-  accent-color: #22D3EE;
+  accent-color: var(--accent-gold);
 }
 
-/* Animation utilities */
-@keyframes pulseSubtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
-.animate-pulse-subtle {
-  animation: pulseSubtle 2s infinite ease-in-out;
+/* Restrained, non-bouncy micro-transitions */
+button, input, select, a {
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }

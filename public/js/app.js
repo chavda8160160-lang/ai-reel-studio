@@ -1263,9 +1263,9 @@ function initVideoStudio() {
   }
 
   function handleVideoFiles(fileList) {
-    const validFiles = Array.from(fileList).filter(f => f.type.startsWith('video/') || /\.(mp4|mov|webm|mkv)$/i.test(f.name));
+    const validFiles = Array.from(fileList).filter(f => f.type.startsWith('video/') || /\.(mp4|mov|webm|mkv|avi|m4v|3gp|flv|wmv|ts)$/i.test(f.name));
     if (validFiles.length === 0) {
-      showToast('Please select valid video files (MP4/MOV/WEBM).', true);
+      showToast('Please select valid video files (MP4, MOV, WEBM, MKV, AVI).', true);
       return;
     }
 

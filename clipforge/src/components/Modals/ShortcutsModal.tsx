@@ -20,31 +20,33 @@ export const ShortcutsModal: React.FC = () => {
   if (!isShortcutsModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 select-none">
-      <div className="w-full max-w-md bg-[#16161A] border border-[#2E2E36] rounded-xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 select-none font-sans">
+      <div className="w-full max-w-md bg-[#16161A] border border-[#2A2A30] rounded-lg shadow-2xl overflow-hidden flex flex-col text-[#E8E6E1]">
         {/* Header */}
-        <div className="p-4 border-b border-[#25252C] flex items-center justify-between bg-[#121215]">
-          <div className="flex items-center gap-2 text-white">
-            <Keyboard className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-sm font-bold">Keyboard Shortcuts</h3>
+        <div className="px-4 py-3.5 border-b border-[#24242A] flex items-center justify-between bg-[#121215]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded border border-[#C9A66B]/30 bg-[#C9A66B]/10 text-[#C9A66B] flex items-center justify-center">
+              <Keyboard className="w-3.5 h-3.5" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#E8E6E1]">Keyboard Shortcuts</h3>
           </div>
           <button
             onClick={() => setShortcutsModalOpen(false)}
-            className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-[#202026] transition-colors"
+            className="p-1 rounded text-[#8A8A92] hover:text-[#E8E6E1] hover:bg-[#1F1F24] transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
 
         {/* Shortcuts List */}
-        <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto">
+        <div className="p-4 space-y-2 max-h-[380px] overflow-y-auto">
           {SHORTCUTS.map((sc) => (
             <div
               key={sc.key}
-              className="flex items-center justify-between p-2 rounded-lg bg-[#1C1C22] border border-[#26262E] text-xs"
+              className="flex items-center justify-between p-2.5 rounded bg-[#18181C] border border-[#26262B] text-xs"
             >
-              <span className="text-zinc-300 font-medium">{sc.desc}</span>
-              <kbd className="px-2 py-1 bg-[#121216] border border-[#34343E] rounded text-cyan-400 font-mono text-[11px] font-bold shadow-sm">
+              <span className="text-[#8A8A92] font-medium">{sc.desc}</span>
+              <kbd className="px-2 py-0.5 bg-[#121214] border border-[#33333A] rounded text-[#C9A66B] font-mono text-[11px] font-medium">
                 {sc.key}
               </kbd>
             </div>
@@ -52,12 +54,12 @@ export const ShortcutsModal: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-[#25252C] bg-[#121215] flex justify-end">
+        <div className="px-4 py-3 border-t border-[#24242A] bg-[#121215] flex justify-end">
           <button
             onClick={() => setShortcutsModalOpen(false)}
-            className="px-4 py-1.5 rounded-md bg-[#22D3EE] text-black font-bold text-xs"
+            className="px-4 py-1.5 rounded bg-[#202026] hover:bg-[#26262E] border border-[#33333A] text-[#E8E6E1] text-xs font-medium transition-colors"
           >
-            Got it
+            Close
           </button>
         </div>
       </div>

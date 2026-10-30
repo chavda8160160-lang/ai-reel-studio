@@ -44,22 +44,22 @@ export const Playhead: React.FC<PlayheadProps> = ({ currentTime, totalDuration, 
         left: 0,
       }}
     >
-      {/* 1. Inverted Triangle Top Handle */}
+      {/* 1. Geometric Diamond Top Handle */}
       <div
         ref={handleRef}
         onPointerDown={handlePointerDown}
-        className="w-4 h-5 -ml-2 absolute -top-1 pointer-events-auto cursor-ew-resize flex items-center justify-center group"
+        className="w-3.5 h-4 -ml-[7px] absolute -top-0.5 pointer-events-auto cursor-ew-resize flex items-center justify-center group"
       >
         <svg
-          viewBox="0 0 16 20"
-          className="w-3.5 h-4.5 fill-cyan-400 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:scale-110 transition-transform"
+          viewBox="0 0 14 18"
+          className="w-3 h-4 fill-[#C9A66B] filter drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)] group-hover:scale-110 transition-transform"
         >
-          <path d="M0 0 H16 V11 L8 19 L0 11 Z" />
+          <path d="M0 0 H14 V10 L7 17 L0 10 Z" />
         </svg>
       </div>
 
-      {/* 2. Vertical Needle Line */}
-      <div className="w-0.5 h-full bg-[#22D3EE] shadow-[0_0_8px_#22D3EE,0_0_16px_rgba(34,211,238,0.5)]" />
+      {/* 2. Thin 1.5px Razor Line */}
+      <div className="w-[1.5px] h-full bg-[#C9A66B] shadow-[0_0_6px_rgba(201,166,107,0.4)]" />
     </div>
   );
 };

@@ -1,24 +1,84 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useEditorStore } from '../../store/useEditorStore';
+import { TIMELINE_END_PADDING } from '../../types/editor';
 
 interface TimeRulerProps {
   totalDuration: number;
-  zoom: number; // Pixels per second
+  zoom: number;
 }
 
 export const TimeRuler: React.FC<TimeRulerProps> = ({ totalDuration, zoom }) => {
   const { seek } = useEditorStore();
   const rulerRef = useRef<HTMLDivElement>(null);
 
-  // Generate tick markers every 1s, major marker every 5s
-  const ticksCount = Math.ceil(totalDuration) + 10;
-  const ticks = Array.from({ length: ticksCount }, (_, i) => i);
+  const maxTime = Math.max(0.5, totalDuration + TIMELINE_END_PADDING);
+  const totalWidth = maxTime * zoom;
 
-  const formatSeconds = (sec: number) => {
-    const mins = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
+  const { ticks } = useMemo(() => {
+    const MIN_MAJOR_PX = 70; // Minimum pixel gap between major timecode labels
+    const CANDIDATE_STEPS = [0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
+    const majorStep = CANDIDATE_STEPS.find(step => step * zoom >= MIN_MAJOR_PX) 
+      || Math.max(60, Math.ceil(MIN_MAJOR_PX / zoom / 60) * 60);
+
+    let minorStep: number | null = null;
+    if (majorStep >= 60) {
+      minorStep = majorStep / 4;
+    } else if (majorStep >= 10) {
+      minorStep = majorStep / 5;
+    } else if (majorStep >= 2) {
+      minorStep = majorStep / 2;
+    } else if (majorStep >= 0.5) {
+      minorStep = majorStep / 5;
+    }
+
+    const formatTimeLabel = (sec: number) => {
+      if (majorStep < 1) {
+        const mins = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        const tenths = Math.floor((sec % 1) * 10);
+        return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${tenths}`;
+      }
+      const mins = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      if (maxTime >= 3600) {
+        const hrs = Math.floor(mins / 60);
+        const remMins = mins % 60;
+        return `${hrs.toString().padStart(2, '0')}:${remMins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      }
+      return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const resultTicks: { time: number; isMajor: boolean; label?: string }[] = [];
+    const epsilon = 0.001;
+
+    // Major ticks
+    for (let t = 0; t <= maxTime + epsilon; t += majorStep) {
+      const roundedT = Number(t.toFixed(3));
+      if (roundedT <= maxTime + epsilon) {
+        resultTicks.push({
+          time: roundedT,
+          isMajor: true,
+          label: formatTimeLabel(roundedT)
+        });
+      }
+    }
+
+    // Minor ticks (only if pixel distance >= 8px)
+    if (minorStep && minorStep * zoom >= 8) {
+      for (let t = minorStep; t <= maxTime + epsilon; t += minorStep) {
+        const roundedT = Number(t.toFixed(3));
+        const isNearMajor = resultTicks.some(m => m.isMajor && Math.abs(m.time - roundedT) < (minorStep! * 0.4));
+        if (!isNearMajor && roundedT <= maxTime + epsilon) {
+          resultTicks.push({
+            time: roundedT,
+            isMajor: false
+          });
+        }
+      }
+    }
+
+    return { ticks: resultTicks };
+  }, [maxTime, zoom]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!rulerRef.current) return;
@@ -48,33 +108,35 @@ export const TimeRuler: React.FC<TimeRulerProps> = ({ totalDuration, zoom }) => 
     <div
       ref={rulerRef}
       onPointerDown={handlePointerDown}
-      className="h-6 relative border-b border-[#24242A] cursor-pointer select-none bg-[#111115]"
-      style={{ width: `${(totalDuration + 5) * zoom}px` }}
+      className="h-5 relative border-b cursor-pointer select-none bg-[#111114] border-[#202026] overflow-hidden transition-[width] duration-150 ease-out"
+      style={{ width: `${totalWidth}px` }}
     >
-      {ticks.map((sec) => {
-        const isMajor = sec % 5 === 0;
-        return (
-          <div
-            key={sec}
-            className="absolute top-0 bottom-0 pointer-events-none flex flex-col justify-between"
-            style={{ left: `${sec * zoom}px` }}
-          >
-            {/* Major Label */}
-            {isMajor ? (
-              <span className="text-[10px] font-mono text-zinc-400 font-semibold pl-1 select-none leading-none pt-1">
-                {formatSeconds(sec)}
-              </span>
-            ) : null}
+      {ticks.map((tick) => (
+        <div
+          key={`${tick.isMajor ? 'maj' : 'min'}-${tick.time}`}
+          className="absolute top-0 bottom-0 pointer-events-none flex flex-col justify-between"
+          style={{ left: `${tick.time * zoom}px` }}
+        >
+          {tick.isMajor ? (
+            <span className="text-[9.5px] font-mono text-[#8A8A92] font-medium pl-1 select-none leading-none pt-0.5">
+              {tick.label}
+            </span>
+          ) : null}
 
-            {/* Tick Mark */}
-            <div
-              className={`w-px ${
-                isMajor ? 'h-2.5 bg-zinc-400' : 'h-1.5 bg-zinc-600'
-              }`}
-            />
-          </div>
-        );
-      })}
+          <div
+            className={`w-px ${
+              tick.isMajor ? 'h-2 bg-[#64646E]' : 'h-1 bg-[#3A3A44]'
+            }`}
+          />
+        </div>
+      ))}
+
+      {/* Subtle End Boundary Mark */}
+      <div 
+        className="absolute top-0 bottom-0 w-px bg-[#EF4444]/40 pointer-events-none"
+        style={{ left: `${totalDuration * zoom}px` }}
+        title="Project End"
+      />
     </div>
   );
 };

@@ -11,7 +11,11 @@ import {
   ZoomOut, 
   Maximize,
   MousePointer,
-  Plus
+  Plus,
+  ArrowLeftToLine,
+  ArrowRightToLine,
+  Copy,
+  Rows
 } from 'lucide-react';
 import { useEditorStore } from '../../store/useEditorStore';
 
@@ -19,6 +23,8 @@ export const TimelineToolbar: React.FC = () => {
   const { 
     splitClipAtPlayhead, 
     deleteClip, 
+    moveClip,
+    currentTime,
     selectedClipId, 
     updateClipProperties,
     tracks,
@@ -26,10 +32,15 @@ export const TimelineToolbar: React.FC = () => {
     toggleSnap, 
     zoom, 
     setZoom,
-    addTrack 
+    minZoom,
+    isAutoFit,
+    fitToView,
+    addTrack,
+    duplicateSelectedClip,
+    trackHeightMode,
+    toggleTrackHeightMode
   } = useEditorStore();
 
-  // Find selected clip
   let activeClip = null;
   for (const t of tracks) {
     const found = t.clips.find(c => c.id === selectedClipId);
@@ -56,65 +67,106 @@ export const TimelineToolbar: React.FC = () => {
   };
 
   return (
-    <div className="h-10 bg-[#141417] border-b border-[#2A2A2D] px-3 flex items-center justify-between shrink-0 select-none text-xs">
+    <div className="h-8 border-b px-2.5 flex items-center justify-between shrink-0 select-none text-xs bg-[#141418] border-[#24242A]">
       {/* Left: Editing Tools */}
       <div className="flex items-center gap-1">
         <button
-          className="p-1.5 text-cyan-400 bg-cyan-950/40 border border-cyan-500/30 rounded hover:bg-cyan-950/70 transition-colors"
-          title="Select Tool (V)"
+          className="p-1.5 rounded border transition-colors text-[#C9A66B] bg-[#2A251D] border-[#C9A66B]/30"
+          title="Pointer Select Tool (V)"
         >
-          <MousePointer className="w-3.5 h-3.5" />
+          <MousePointer className="w-3.5 h-3.5 stroke-[1.5]" />
         </button>
 
-        <div className="w-px h-4 bg-[#2A2A2D] mx-1" />
+        <div className="w-px h-3.5 bg-[#2A2A32] mx-1" />
 
         {/* Split at Playhead */}
         <button
           onClick={() => splitClipAtPlayhead()}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-zinc-300 hover:text-white bg-[#1C1C20] hover:bg-[#25252B] border border-[#2A2A2D] hover:border-cyan-400/50 rounded transition-colors group cursor-pointer"
+          className="flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-medium text-[#D8D6D1] bg-[#1E1E24] border-[#2C2C33] hover:border-[#C9A66B]/50 transition-colors cursor-pointer group"
           title="Split Clip at Playhead (S)"
         >
-          <Scissors className="w-3.5 h-3.5 text-zinc-400 group-hover:text-cyan-400" />
-          <span className="font-medium text-[11px]">Split</span>
+          <Scissors className="w-3 h-3 stroke-[1.5] text-[#8A8A92] group-hover:text-[#C9A66B]" />
+          <span>Split</span>
+        </button>
+
+        {/* Move to 0:00 Start */}
+        <button
+          onClick={() => {
+            if (activeClip) {
+              moveClip(activeClip.id, 0);
+            }
+          }}
+          disabled={!selectedClipId}
+          className="flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-medium text-[#D8D6D1] bg-[#1E1E24] border-[#2C2C33] hover:border-[#C9A66B]/50 disabled:opacity-25 transition-colors cursor-pointer"
+          title="Move selected clip to 00:00 (Start of timeline)"
+        >
+          <ArrowLeftToLine className="w-3 h-3 text-[#C9A66B]" />
+          <span>To 0:00</span>
+        </button>
+
+        {/* Move to Current Playhead */}
+        <button
+          onClick={() => {
+            if (activeClip) {
+              moveClip(activeClip.id, currentTime);
+            }
+          }}
+          disabled={!selectedClipId}
+          className="flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-medium text-[#D8D6D1] bg-[#1E1E24] border-[#2C2C33] hover:border-[#C9A66B]/50 disabled:opacity-25 transition-colors cursor-pointer"
+          title="Move selected clip to current playhead"
+        >
+          <ArrowRightToLine className="w-3 h-3 text-[#C9A66B]" />
+          <span>To Head</span>
+        </button>
+
+        {/* Duplicate */}
+        <button
+          onClick={() => duplicateSelectedClip()}
+          disabled={!selectedClipId}
+          className="flex items-center gap-1 px-2 py-0.5 rounded border text-[10.5px] font-medium text-[#D8D6D1] bg-[#1E1E24] border-[#2C2C33] hover:border-[#C9A66B]/50 disabled:opacity-25 transition-colors cursor-pointer"
+          title="Duplicate Selected Clip (Ctrl+D)"
+        >
+          <Copy className="w-3 h-3 stroke-[1.5] text-[#C9A66B]" />
+          <span>Duplicate</span>
         </button>
 
         {/* Delete */}
         <button
           onClick={() => deleteClip()}
           disabled={!selectedClipId}
-          className="p-1.5 text-zinc-400 hover:text-red-400 disabled:opacity-30 disabled:hover:text-zinc-400 bg-[#1C1C20] hover:bg-[#25252B] border border-[#2A2A2D] rounded transition-colors"
+          className="p-1.5 rounded border text-[#8A8A92] hover:text-[#EF4444] disabled:opacity-25 bg-[#1E1E24] border-[#2C2C33] transition-colors"
           title="Delete Selected Clip (Delete / Backspace)"
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" />
         </button>
 
-        <div className="w-px h-4 bg-[#2A2A2D] mx-1" />
+        <div className="w-px h-3.5 bg-[#2A2A32] mx-1" />
 
         {/* Quick Transform tools */}
         <button
-          onClick={handleCrop}
-          className="p-1.5 text-zinc-400 hover:text-white bg-[#1C1C20] hover:bg-[#25252B] border border-[#2A2A2D] rounded transition-colors"
+          onClick={() => alert("Crop Tool: Drag the canvas corner handles to crop.")}
+          className="p-1.5 rounded border text-[#8A8A92] hover:text-[#E8E6E1] bg-[#1E1E24] border-[#2C2C33] transition-colors"
           title="Crop Video Canvas (C)"
         >
-          <Crop className="w-3.5 h-3.5" />
+          <Crop className="w-3.5 h-3.5 stroke-[1.5]" />
         </button>
 
         <button
           onClick={handleFlip}
           disabled={!selectedClipId}
-          className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-30 bg-[#1C1C20] hover:bg-[#25252B] border border-[#2A2A2D] rounded transition-colors"
+          className="p-1.5 rounded border text-[#8A8A92] hover:text-[#E8E6E1] disabled:opacity-25 bg-[#1E1E24] border-[#2C2C33] transition-colors"
           title="Mirror / Flip Horizontal"
         >
-          <FlipHorizontal className="w-3.5 h-3.5" />
+          <FlipHorizontal className="w-3.5 h-3.5 stroke-[1.5]" />
         </button>
 
         <button
           onClick={handleRotate}
           disabled={!selectedClipId}
-          className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-30 bg-[#1C1C20] hover:bg-[#25252B] border border-[#2A2A2D] rounded transition-colors"
+          className="p-1.5 rounded border text-[#8A8A92] hover:text-[#E8E6E1] disabled:opacity-25 bg-[#1E1E24] border-[#2C2C33] transition-colors"
           title="Rotate 90° Clockwise"
         >
-          <RotateCw className="w-3.5 h-3.5" />
+          <RotateCw className="w-3.5 h-3.5 stroke-[1.5]" />
         </button>
 
         <button
@@ -124,83 +176,97 @@ export const TimelineToolbar: React.FC = () => {
             }
           }}
           disabled={!selectedClipId}
-          className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-30 bg-[#1C1C20] hover:bg-[#25252B] border border-[#2A2A2D] rounded transition-colors"
+          className="p-1.5 rounded border text-[#8A8A92] hover:text-[#E8E6E1] disabled:opacity-25 bg-[#1E1E24] border-[#2C2C33] transition-colors"
           title="Freeze Frame (2s hold)"
         >
-          <Snowflake className="w-3.5 h-3.5" />
+          <Snowflake className="w-3.5 h-3.5 stroke-[1.5]" />
         </button>
 
-        <div className="w-px h-4 bg-[#2A2A2D] mx-1" />
+        <div className="w-px h-3.5 bg-[#2A2A32] mx-1" />
 
-        {/* Add Track Dropdown */}
+        {/* Add Track */}
         <button
           onClick={() => addTrack('video')}
-          className="flex items-center gap-1 px-2 py-1 text-emerald-400 hover:text-emerald-300 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/30 rounded text-[11px] font-medium transition-colors"
-          title="Add New Track"
+          className="flex items-center gap-1 px-2 py-0.5 rounded border text-[10.5px] font-medium text-[#C9A66B] bg-[#2A251D] border-[#C9A66B]/30 hover:border-[#C9A66B]/60 transition-colors"
+          title="Add Sequence Track"
         >
-          <Plus className="w-3 h-3" />
+          <Plus className="w-3 h-3 stroke-[2]" />
           <span>Track</span>
         </button>
       </div>
 
-      {/* Right: Magnet Snap, Zoom Slider & Fit */}
-      <div className="flex items-center gap-3">
+      {/* Right: Height Toggle, Magnet Snap, Zoom Slider & Fit */}
+      <div className="flex items-center gap-2">
+        {/* Track Height Toggle (Compact / Normal) */}
+        <button
+          onClick={toggleTrackHeightMode}
+          className="flex items-center gap-1 px-2 py-0.5 rounded border text-[10.5px] font-medium transition-colors bg-[#1E1E24] border-[#2C2C33] text-[#D8D6D1] hover:border-[#C9A66B]/50"
+          title={`Toggle Track Height: currently ${trackHeightMode}`}
+        >
+          <Rows className="w-3 h-3 text-[#C9A66B]" />
+          <span className="capitalize">{trackHeightMode}</span>
+        </button>
+
+        <div className="w-px h-3.5 bg-[#2A2A32]" />
+
         {/* Magnetic Snapping Toggle */}
         <button
           onClick={toggleSnap}
-          className={`flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-semibold transition-colors ${
+          className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[10.5px] font-semibold transition-colors ${
             isSnapEnabled
-              ? 'bg-cyan-950/40 text-cyan-300 border-cyan-500/40'
-              : 'bg-[#1C1C20] text-zinc-500 border-[#2A2A2D] hover:text-zinc-300'
+              ? 'text-[#C9A66B] bg-[#2A251D] border-[#C9A66B]/40'
+              : 'text-[#787882] bg-[#1E1E24] border-[#2C2C33] hover:text-[#D8D6D1]'
           }`}
           title="Magnetic Snapping (N)"
         >
-          <Magnet className="w-3.5 h-3.5" />
+          <Magnet className="w-3 h-3 stroke-[1.5]" />
           <span>Snap {isSnapEnabled ? 'ON' : 'OFF'}</span>
         </button>
 
-        <div className="w-px h-4 bg-[#2A2A2D]" />
+        <div className="w-px h-3.5 bg-[#2A2A32]" />
 
         {/* Zoom Slider */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
-            onClick={() => setZoom(zoom - 6)}
-            className="text-zinc-400 hover:text-white p-1"
+            onClick={() => setZoom(zoom - 5)}
+            disabled={zoom <= (minZoom || 1)}
+            className="text-[#8A8A92] hover:text-[#E8E6E1] disabled:opacity-25 p-0.5"
             title="Zoom Out"
           >
-            <ZoomOut className="w-3.5 h-3.5" />
+            <ZoomOut className="w-3 h-3 stroke-[1.5]" />
           </button>
           <input
             type="range"
-            min="16"
-            max="100"
-            value={zoom}
-            onChange={(e) => setZoom(parseInt(e.target.value, 10))}
-            className="w-20 h-1 bg-[#25252C] rounded cursor-pointer"
-            title="Timeline Zoom Level"
+            min={Number((minZoom || 1).toFixed(1))}
+            max={Math.max(120, Number((minZoom || 1).toFixed(1)) + 80)}
+            step="0.5"
+            value={Number(zoom.toFixed(1))}
+            onChange={(e) => setZoom(parseFloat(e.target.value))}
+            className="w-16 h-1 bg-[#282832] rounded cursor-pointer"
+            title={`Timeline Scale: ${zoom.toFixed(1)} px/s (min: ${(minZoom || 1).toFixed(1)})`}
           />
           <button
-            onClick={() => setZoom(zoom + 6)}
-            className="text-zinc-400 hover:text-white p-1"
+            onClick={() => setZoom(zoom + 5)}
+            className="text-[#8A8A92] hover:text-[#E8E6E1] p-0.5"
             title="Zoom In"
           >
-            <ZoomIn className="w-3.5 h-3.5" />
+            <ZoomIn className="w-3 h-3 stroke-[1.5]" />
           </button>
         </div>
 
-        {/* Fit Timeline */}
+        {/* Fit Timeline Button (Rule 3) */}
         <button
-          onClick={() => setZoom(36)}
-          className="p-1.5 text-zinc-400 hover:text-white bg-[#1C1C20] hover:bg-[#25252B] border border-[#2A2A2D] rounded transition-colors"
-          title="Fit Timeline"
+          onClick={() => fitToView()}
+          className={`p-1 rounded border transition-colors ${
+            isAutoFit 
+              ? 'bg-[#2A251D] border-[#C9A66B] text-[#C9A66B]' 
+              : 'text-[#8A8A92] hover:text-[#E8E6E1] bg-[#1E1E24] border-[#2C2C33]'
+          }`}
+          title="Fit Project to Window (F)"
         >
-          <Maximize className="w-3.5 h-3.5" />
+          <Maximize className="w-3 h-3 stroke-[1.5]" />
         </button>
       </div>
     </div>
   );
-
-  function handleCrop() {
-    alert("Crop Tool: Drag the canvas corner handles to crop aspect ratio.");
-  }
 };

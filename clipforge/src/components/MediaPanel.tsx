@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   FolderPlus, 
   Music, 
@@ -12,8 +12,11 @@ import {
   UploadCloud, 
   Plus, 
   Play, 
+  Square,
   Lock,
-  Clock
+  Clock,
+  Check,
+  X
 } from 'lucide-react';
 import { useEditorStore } from '../store/useEditorStore';
 import type { LeftPanelTab } from '../types/editor';
@@ -47,10 +50,32 @@ const TABS: TabConfig[] = [
 ];
 
 export const MediaPanel: React.FC = () => {
-  const { activeLeftTab, setActiveLeftTab, addClipToTrack, setProModalOpen } = useEditorStore();
+  const { 
+    activeLeftTab, 
+    setActiveLeftTab, 
+    addClipToTrack, 
+    selectClip,
+    setActiveInspectorTab,
+    selectedClipId,
+    tracks,
+    updateClipProperties,
+    currentTime,
+    setProModalOpen, 
+    loadVideoMedia, 
+    loadAudioMedia 
+  } = useEditorStore();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [customUploads, setCustomUploads] = useState<AssetCard[]>([]);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [previewingAudioId, setPreviewingAudioId] = useState<string | null>(null);
+
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+
+  // Get active video clip to show active filter / grade
+  const activeVideoClip = tracks.find(t => t.type === 'video')?.clips.find(c => c.id === selectedClipId) 
+    || tracks.find(t => t.type === 'video')?.clips[0];
 
   // Get assets for current active tab
   const getTabAssets = (): AssetCard[] => {
@@ -77,39 +102,106 @@ export const MediaPanel: React.FC = () => {
   };
 
   const currentAssets = getTabAssets();
-
-  // Extract unique categories for filter chips
   const categories = ['All', ...Array.from(new Set(currentAssets.map(a => a.category)))];
 
-  // Filtered assets by search & category
+  // AND logic: active category AND search query
   const filteredAssets = currentAssets.filter(asset => {
-    const matchesCategory = activeCategory === 'All' || asset.category === activeCategory;
-    const matchesSearch = asset.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          asset.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCategory = activeCategory === 'All' || asset.category.toLowerCase() === activeCategory.toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
+    const matchesSearch = !query || 
+      asset.name.toLowerCase().includes(query) || 
+      asset.tags.some(t => t.toLowerCase().includes(query)) ||
+      asset.category.toLowerCase().includes(query);
     return matchesCategory && matchesSearch;
   });
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    Array.from(files).forEach((file, index) => {
+  const processFiles = (fileList: FileList | File[]) => {
+    Array.from(fileList).forEach((file, index) => {
       const url = URL.createObjectURL(file);
-      const isAudio = file.type.startsWith('audio');
-      const newAsset: AssetCard = {
-        id: `upload-${Date.now()}-${index}`,
-        category: 'Custom Uploads',
-        name: file.name,
-        duration: 15.0,
-        thumbnailUrl: isAudio 
-          ? 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&q=80'
-          : 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&q=80',
-        type: isAudio ? 'audio' : 'video',
-        tags: ['uploaded', 'local'],
-        previewUrl: url,
-      };
-      setCustomUploads(prev => [newAsset, ...prev]);
+      const isAudio = file.type.startsWith('audio') || /\.(mp3|wav|ogg|m4a|aac)$/i.test(file.name);
+      const isVideo = file.type.startsWith('video') || /\.(mp4|mov|webm|mkv|avi|m4v|3gp|flv|wmv|ts)$/i.test(file.name);
+
+      if (isVideo) {
+        const tempVid = document.createElement('video');
+        tempVid.preload = 'metadata';
+        tempVid.src = url;
+        tempVid.onloadedmetadata = () => {
+          const realDur = Math.round(tempVid.duration) || 15;
+          loadVideoMedia(file.name, url, realDur);
+        };
+        tempVid.onerror = () => {
+          loadVideoMedia(file.name, url, 15);
+        };
+
+        const newAsset: AssetCard = {
+          id: `upload-${Date.now()}-${index}`,
+          category: 'Custom Uploads',
+          name: file.name,
+          duration: 15.0,
+          thumbnailUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&q=80',
+          type: 'video',
+          tags: ['uploaded', 'local', 'video'],
+          previewUrl: url,
+        };
+        setCustomUploads(prev => [newAsset, ...prev]);
+      } else if (isAudio) {
+        const tempAud = new Audio(url);
+        tempAud.onloadedmetadata = () => {
+          const realDur = Math.round(tempAud.duration) || 30;
+          loadAudioMedia(file.name, url, realDur);
+        };
+        tempAud.onerror = () => {
+          loadAudioMedia(file.name, url, 30);
+        };
+
+        const newAsset: AssetCard = {
+          id: `upload-${Date.now()}-${index}`,
+          category: 'Custom Uploads',
+          name: file.name,
+          duration: 30.0,
+          thumbnailUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&q=80',
+          type: 'audio',
+          tags: ['uploaded', 'local', 'audio'],
+          previewUrl: url,
+        };
+        setCustomUploads(prev => [newAsset, ...prev]);
+      }
     });
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(e.target.files);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
+  };
+
+  // Audio Preview Handler
+  const toggleAudioPreview = (asset: AssetCard) => {
+    if (previewingAudioId === asset.id) {
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+        audioPreviewRef.current.currentTime = 0;
+      }
+      setPreviewingAudioId(null);
+    } else {
+      if (!audioPreviewRef.current) {
+        audioPreviewRef.current = new Audio();
+      }
+      const audio = audioPreviewRef.current;
+      audio.src = asset.previewUrl || '/rendered-reels/bgm-cyber.mp3';
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+      audio.onended = () => setPreviewingAudioId(null);
+      setPreviewingAudioId(asset.id);
+    }
   };
 
   const handleAddAsset = (asset: AssetCard) => {
@@ -118,32 +210,59 @@ export const MediaPanel: React.FC = () => {
       return;
     }
 
+    if (asset.comingSoon) {
+      return; // Disabled item
+    }
+
     if (asset.type === 'video') {
+      const dur = asset.duration || 15;
       addClipToTrack('track-video', {
         title: asset.name,
         type: 'video',
-        duration: asset.duration || 10,
+        start: currentTime,
+        duration: dur,
+        sourceDuration: dur,
+        offset: 0,
         thumbnail: asset.thumbnailUrl,
-        color: '#2563EB',
+        src: asset.previewUrl || '/rendered-reels/reel-demo.mp4',
+        color: '#384357',
       });
     } else if (asset.type === 'audio') {
+      const dur = asset.duration || 30;
       addClipToTrack('track-audio', {
         title: asset.name,
         type: 'audio',
-        duration: asset.duration || 30,
-        waveform: [50, 70, 90, 60, 100, 80, 45, 90, 75, 60, 95, 85, 70, 65, 80, 90],
-        color: '#059669',
+        start: currentTime,
+        duration: dur,
+        sourceDuration: dur,
+        offset: 0,
+        src: asset.previewUrl || '/rendered-reels/bgm-cyber.mp3',
+        waveform: [40, 60, 80, 50, 90, 70, 45, 80, 70, 60, 85, 80, 65, 60, 75, 85],
+        color: '#345242',
       });
     } else if (asset.type === 'text' || asset.type === 'caption') {
+      // Rule 3: Text presets add a text clip on text track at playhead (default 3s), selected immediately with inline edit mode
+      const payload = asset.textPayload || {
+        text: asset.name,
+        fontStyle: 'classic',
+        fontColor: '#E8E6E1',
+        fontSize: 28,
+        scale: 1,
+        posY: 0
+      };
+
       addClipToTrack('track-text', {
         title: asset.name,
         type: 'text',
-        duration: 6,
-        color: '#D97706',
+        start: currentTime,
+        duration: 3.0, // default 3s
+        sourceDuration: 20.0,
+        offset: 0,
+        color: '#7C5C30',
         properties: {
           posX: 0,
-          posY: 0,
-          scale: 1,
+          posY: payload.posY || 0,
+          scale: payload.scale || 1,
           rotation: 0,
           opacity: 1,
           flipH: false,
@@ -153,40 +272,84 @@ export const MediaPanel: React.FC = () => {
           fadeOut: 0,
           isMuted: false,
           speed: 1,
-          adjust: { brightness: 0, contrast: 100, saturation: 100, temperature: 0, vignette: 0, sharpen: 0 },
+          adjust: { brightness: 0, contrast: 0, saturation: 0, temperature: 0, vignette: 0, sharpen: 0 },
           filter: 'none',
-          text: asset.name,
-          fontColor: asset.id === 't-1' ? '#FACC15' : '#FFFFFF',
-          fontStyle: asset.id === 't-1' ? 'hormozi' : 'clean',
+          text: payload.text,
+          fontColor: payload.fontColor || '#E8E6E1',
+          fontStyle: payload.fontStyle || 'classic',
+          fontSize: payload.fontSize || 28,
         }
       });
+      setActiveInspectorTab('text');
     } else if (asset.type === 'sticker') {
+      // Rule 4: Stickers add overlay clip at playhead
       addClipToTrack('track-sticker', {
         title: asset.name,
         type: 'sticker',
-        duration: 6,
+        start: currentTime,
+        duration: 3.0,
+        sourceDuration: 20.0,
+        offset: 0,
         thumbnail: asset.thumbnailUrl,
-        color: '#9333EA',
+        color: '#634368',
+        properties: {
+          scale: 0.9,
+          rotation: 0,
+          posX: 0,
+          posY: -20,
+          opacity: 1
+        }
       });
-    } else {
-      // Effects or filters applied
-      useEditorStore.getState().updateClipProperties(
-        useEditorStore.getState().selectedClipId || 'clip-video-1',
-        { filter: asset.id === 'f-1' ? 'cinematic' : (asset.id === 'f-3' ? 'noir' : 'vibrant') }
-      );
+      setActiveInspectorTab('sticker');
+    } else if (asset.type === 'filter') {
+      // Real filter application on video clip
+      const filterMap: Record<string, string> = {
+        'f-1': 'cinematic',
+        'f-2': 'warm',
+        'f-3': 'noir',
+        'f-4': 'cyberpunk',
+        'f-5': 'vibrant',
+        'f-0': 'none'
+      };
+      const chosenFilter = filterMap[asset.id] || 'cinematic';
+      const targetVideo = tracks.find(t => t.type === 'video')?.clips.find(c => c.id === selectedClipId) 
+        || tracks.find(t => t.type === 'video')?.clips[0];
+      if (targetVideo) {
+        updateClipProperties(targetVideo.id, { filter: chosenFilter });
+        selectClip(targetVideo.id, 'track-video');
+        setActiveInspectorTab('adjust');
+      }
+    } else if (asset.type === 'effect') {
+      // Real visual effect
+      const targetVideo = tracks.find(t => t.type === 'video')?.clips.find(c => c.id === selectedClipId) 
+        || tracks.find(t => t.type === 'video')?.clips[0];
+      const effectFilters: Record<string, any> = {
+        'e-1': { filter: 'vibrant', inAnimation: 'Fade In' },
+        'e-2': { filter: 'warm', inAnimation: 'Zoom In' },
+        'e-3': { filter: 'noir', inAnimation: 'Dissolve' },
+        'e-4': { filter: 'cyberpunk', inAnimation: 'Slide Left' }
+      };
+      if (targetVideo) {
+        updateClipProperties(targetVideo.id, effectFilters[asset.id] || { filter: 'cinematic' });
+        selectClip(targetVideo.id, 'track-video');
+        setActiveInspectorTab('animation');
+      }
     }
   };
 
-  // Drag start handler for timeline drop
   const handleDragStart = (e: React.DragEvent, asset: AssetCard) => {
+    if (asset.comingSoon) {
+      e.preventDefault();
+      return;
+    }
     e.dataTransfer.setData('application/json', JSON.stringify(asset));
     e.dataTransfer.effectAllowed = 'copy';
   };
 
   return (
-    <div className="w-[320px] h-full bg-[#18181B] border-r border-[#2A2A2D] flex select-none shrink-0 overflow-hidden">
-      {/* 1. Left Vertical Icon Tabs Strip (64px) */}
-      <nav className="w-16 bg-[#131316] border-r border-[#242428] py-2 flex flex-col items-center gap-1 shrink-0 overflow-y-auto">
+    <div className="w-[320px] h-full border-r flex select-none shrink-0 overflow-hidden bg-[#18181C] border-[#2A2A30]">
+      {/* 1. Left Vertical Icon Tabs Strip (58px) */}
+      <nav className="w-14 border-r py-2 flex flex-col items-center gap-1 shrink-0 overflow-y-auto bg-[#141417] border-[#242429]">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeLeftTab === tab.id;
@@ -198,55 +361,67 @@ export const MediaPanel: React.FC = () => {
                 setActiveCategory('All');
                 setSearchQuery('');
               }}
-              className={`w-12 py-2 px-1 rounded-lg flex flex-col items-center justify-center gap-1 transition-all ${
+              className={`w-11 py-2 px-0.5 rounded-md flex flex-col items-center justify-center gap-1 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#C9A66B] ${
                 isActive 
-                  ? 'bg-[#22D3EE]/15 text-[#22D3EE] font-semibold shadow-sm shadow-cyan-500/10' 
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#1E1E22]'
+                  ? 'bg-[#2A241D] text-[#C9A66B] font-semibold border border-[#C9A66B]/50 shadow-sm' 
+                  : 'text-[#8A8A92] hover:text-[#E8E6E1] hover:bg-[#1E1E22]'
               }`}
               title={tab.label}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
-              <span className="text-[10px] tracking-tight">{tab.label}</span>
+              <Icon className="w-3.5 h-3.5 stroke-[1.5]" />
+              <span className="text-[9.5px] tracking-tight leading-none">{tab.label}</span>
             </button>
           );
         })}
       </nav>
 
-      {/* 2. Main Content Panel (256px) */}
-      <div className="flex-1 flex flex-col h-full bg-[#1A1A1D] overflow-hidden">
+      {/* 2. Main Content Panel (262px) */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#18181C]">
         {/* Panel Header */}
-        <div className="p-3 border-b border-[#2A2A2D] flex flex-col gap-2.5 shrink-0">
+        <div className="p-3 border-b flex flex-col gap-2 shrink-0 border-[#26262D]">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#D8D6D1]">
               {TABS.find(t => t.id === activeLeftTab)?.label} Library
             </h2>
-            <span className="text-[11px] text-zinc-500 font-mono">
+            <span className="text-[10px] text-[#8A8A92] font-mono">
               {filteredAssets.length} items
             </span>
           </div>
 
           {/* Search Box */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#64646E]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={`Search ${activeLeftTab}...`}
-              className="w-full bg-[#131316] text-xs text-white placeholder-zinc-500 pl-8 pr-2.5 py-1.5 rounded-md border border-[#2A2A2D] focus:border-cyan-400 focus:outline-none transition-colors"
+              className="w-full text-xs placeholder-[#64646E] pl-7 pr-7 py-1 rounded border outline-none bg-[#1F1F24] border-[#2E2E36] text-[#E8E6E1] focus:border-[#C9A66B] transition-colors"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#787882] hover:text-[#E8E6E1] p-0.5"
+                title="Clear input"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
 
-          {/* Category Filter Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+          {/* Category Filter Chips with Horizontal Fading Scroll */}
+          <div 
+            className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar"
+            style={{ maskImage: 'linear-gradient(to right, black 88%, transparent 100%)' }}
+          >
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap transition-colors ${
+                className={`text-[10px] font-medium px-2 py-0.5 rounded border whitespace-nowrap transition-colors ${
                   activeCategory === cat
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                    : 'bg-[#141416] text-zinc-400 hover:text-white border border-[#2A2A2D]'
+                    ? 'bg-[#2A251D] text-[#C9A66B] border-[#C9A66B]/50 font-semibold shadow-sm'
+                    : 'bg-[#1F1F24] text-[#8A8A92] hover:text-[#E8E6E1] border-[#2C2C33]'
                 }`}
               >
                 {cat}
@@ -256,104 +431,177 @@ export const MediaPanel: React.FC = () => {
         </div>
 
         {/* Assets Content Area */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5">
           {/* Media Tab Specific: Import Dropzone */}
           {activeLeftTab === 'media' && (
-            <label className="border-2 border-dashed border-[#34343B] hover:border-cyan-400/70 bg-[#141417]/60 hover:bg-cyan-950/10 rounded-lg p-3.5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all group">
+            <label 
+              onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
+              onDragLeave={() => setIsDraggingOver(false)}
+              onDrop={handleDrop}
+              className={`border border-dashed rounded-md p-3.5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors group ${
+                isDraggingOver 
+                  ? 'border-[#C9A66B] bg-[#282218]' 
+                  : 'border-[#3A3A44] hover:border-[#C9A66B]/70 bg-[#141418]'
+              }`}
+            >
               <input
                 type="file"
                 multiple
-                accept="video/*,audio/*,image/*"
+                accept="video/*,audio/*,.mp4,.mov,.webm,.mkv,.avi,.mp3,.wav,.m4v"
                 onChange={handleFileUpload}
                 className="hidden"
               />
-              <div className="w-8 h-8 rounded-full bg-[#202026] group-hover:bg-cyan-500/20 flex items-center justify-center text-zinc-400 group-hover:text-cyan-400 transition-colors">
-                <UploadCloud className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-full bg-[#202026] group-hover:bg-[#2A251D] flex items-center justify-center text-[#8A8A92] group-hover:text-[#C9A66B] transition-colors">
+                <UploadCloud className="w-4 h-4 stroke-[1.5]" />
               </div>
-              <div className="text-center">
-                <p className="text-xs font-semibold text-zinc-300 group-hover:text-white">
-                  Import Media
-                </p>
-                <p className="text-[10px] text-zinc-500">
-                  Drag & drop video, audio or image
-                </p>
-              </div>
+              <p className="text-[11px] font-medium text-[#D8D6D1] group-hover:text-white">
+                {isDraggingOver ? 'Drop Media Now' : 'Import Local Footage'}
+              </p>
+              <p className="text-[9.5px] text-[#787882]">
+                Click or drag video (MP4, MOV) or audio (MP3)
+              </p>
             </label>
           )}
 
           {/* Grid of Asset Cards */}
           <div className="grid grid-cols-2 gap-2">
-            {filteredAssets.map((asset) => (
-              <div
-                key={asset.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, asset)}
-                onClick={() => handleAddAsset(asset)}
-                className="group relative bg-[#141417] hover:bg-[#202026] border border-[#2A2A2D] hover:border-cyan-400/50 rounded-md overflow-hidden cursor-pointer transition-all flex flex-col shadow-sm"
-              >
-                {/* Thumbnail Preview */}
-                <div className="relative aspect-video w-full bg-[#0D0D10] overflow-hidden">
-                  <img
-                    src={asset.thumbnailUrl}
-                    alt={asset.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                  {/* Duration Badge */}
-                  {asset.duration && (
-                    <div className="absolute bottom-1 right-1 bg-black/75 backdrop-blur-sm text-[9px] font-mono font-medium text-white px-1 rounded flex items-center gap-0.5">
-                      <Clock className="w-2.5 h-2.5" />
-                      <span>{asset.duration}s</span>
-                    </div>
-                  )}
+            {filteredAssets.map((asset) => {
+              const isAudioPreviewing = previewingAudioId === asset.id;
+              const isFilterActive = asset.type === 'filter' && (
+                (asset.id === 'f-1' && activeVideoClip?.properties.filter === 'cinematic') ||
+                (asset.id === 'f-2' && activeVideoClip?.properties.filter === 'warm') ||
+                (asset.id === 'f-3' && activeVideoClip?.properties.filter === 'noir') ||
+                (asset.id === 'f-4' && activeVideoClip?.properties.filter === 'cyberpunk') ||
+                (asset.id === 'f-5' && activeVideoClip?.properties.filter === 'vibrant') ||
+                (asset.id === 'f-0' && (!activeVideoClip?.properties.filter || activeVideoClip?.properties.filter === 'none'))
+              );
 
-                  {/* Pro Badge */}
-                  {asset.isPro && (
-                    <div className="absolute top-1 right-1 bg-amber-500/90 text-black text-[9px] font-bold px-1 rounded flex items-center gap-0.5 shadow-sm">
-                      <Lock className="w-2.5 h-2.5" />
-                      <span>PRO</span>
-                    </div>
-                  )}
+              return (
+                <div
+                  key={asset.id}
+                  draggable={!asset.comingSoon}
+                  onDragStart={(e) => handleDragStart(e, asset)}
+                  onClick={() => handleAddAsset(asset)}
+                  className={`group relative border rounded-md overflow-hidden transition-all flex flex-col bg-[#141418] ${
+                    asset.comingSoon 
+                      ? 'border-[#222228] opacity-60 cursor-not-allowed'
+                      : isFilterActive
+                      ? 'border-[#C9A66B] ring-1 ring-[#C9A66B]/50 cursor-pointer shadow-md'
+                      : 'border-[#272730] hover:border-[#C9A66B]/60 cursor-pointer'
+                  }`}
+                >
+                  <div className="relative aspect-video w-full bg-[#0D0D10] overflow-hidden flex items-center justify-center">
+                    <img
+                      src={asset.thumbnailUrl}
+                      alt={asset.name}
+                      className={`w-full h-full object-cover transition-transform duration-300 ${
+                        asset.comingSoon ? 'grayscale' : 'group-hover:scale-105'
+                      }`}
+                      loading="lazy"
+                    />
 
-                  {/* Hover Overlay with Add Button */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button
-                      className="w-7 h-7 rounded-full bg-cyan-400 text-black flex items-center justify-center hover:scale-110 transition-transform shadow-md"
-                      title="Add to timeline"
-                    >
-                      <Plus className="w-4 h-4 stroke-[2.5]" />
-                    </button>
-                    {asset.type === 'audio' && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Preview audio toggle
-                        }}
-                        className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center transition-colors"
-                        title="Preview sound"
-                      >
-                        <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                      </button>
+                    {/* Active Filter Check Badge */}
+                    {isFilterActive && (
+                      <div className="absolute top-1 left-1 bg-[#C9A66B] text-black w-4 h-4 rounded-full flex items-center justify-center shadow-md">
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      </div>
+                    )}
+
+                    {/* Duration Badge */}
+                    {asset.duration && (
+                      <div className="absolute bottom-1 right-1 bg-black/85 text-[8.5px] font-mono font-medium text-white px-1 rounded flex items-center gap-0.5">
+                        <Clock className="w-2.5 h-2.5 stroke-[1.5]" />
+                        <span>{asset.duration}s</span>
+                      </div>
+                    )}
+
+                    {/* Pro Badge */}
+                    {asset.isPro && (
+                      <div className="absolute top-1 right-1 bg-[#C9A66B] text-black text-[8.5px] font-bold px-1 rounded flex items-center gap-0.5">
+                        <Lock className="w-2.5 h-2.5 stroke-[2]" />
+                        <span>PRO</span>
+                      </div>
+                    )}
+
+                    {/* Coming Soon Badge (Rule 6: No fake items) */}
+                    {asset.comingSoon && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#C9A66B] bg-[#1F1F24] border border-[#C9A66B]/40 px-2 py-0.5 rounded shadow">
+                          Coming Soon
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Hover Overlay Actions */}
+                    {!asset.comingSoon && (
+                      <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        {asset.type === 'audio' ? (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleAudioPreview(asset);
+                              }}
+                              className="w-7 h-7 rounded-full bg-[#1F1F24] border border-[#3C3C48] text-white flex items-center justify-center hover:bg-[#C9A66B] hover:text-black hover:border-transparent transition-all shadow"
+                              title={isAudioPreviewing ? "Stop Preview" : "Preview Sound"}
+                            >
+                              {isAudioPreviewing ? (
+                                <Square className="w-3 h-3 fill-current" />
+                              ) : (
+                                <Play className="w-3 h-3 fill-current ml-0.5" />
+                              )}
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddAsset(asset);
+                              }}
+                              className="w-7 h-7 rounded-full bg-[#C9A66B] text-black flex items-center justify-center hover:scale-105 transition-transform shadow"
+                              title="Add to Audio Track"
+                            >
+                              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className="w-7 h-7 rounded-full bg-[#C9A66B] text-black flex items-center justify-center hover:scale-105 transition-transform shadow"
+                            title="Add to Timeline"
+                          >
+                            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                </div>
 
-                {/* Name & Tag */}
-                <div className="p-1.5 flex flex-col">
-                  <span className="text-[11px] font-medium text-zinc-300 group-hover:text-cyan-300 truncate" title={asset.name}>
-                    {asset.name}
-                  </span>
-                  <span className="text-[9px] text-zinc-500 truncate">
-                    {asset.category}
-                  </span>
+                  <div className="p-1.5 flex flex-col">
+                    <span className="text-[10.5px] font-medium text-[#D8D6D1] truncate" title={asset.name}>
+                      {asset.name}
+                    </span>
+                    <span className="text-[9px] text-[#787882] truncate">
+                      {asset.category}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
+          {/* Empty Search Result (Rule 2) */}
           {filteredAssets.length === 0 && (
-            <div className="text-center py-8 text-zinc-500 text-xs">
-              No matching assets found
+            <div className="text-center py-8 px-3 space-y-2.5">
+              <p className="text-[11px] text-[#8A8A92]">
+                No results for <span className="text-[#E8E6E1] font-semibold">"{searchQuery || activeCategory}"</span>
+              </p>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setActiveCategory('All');
+                }}
+                className="text-[10px] text-[#C9A66B] bg-[#2A241D] border border-[#C9A66B]/40 px-2.5 py-1 rounded hover:bg-[#342D23] transition-colors"
+              >
+                Clear search & filters
+              </button>
             </div>
           )}
         </div>

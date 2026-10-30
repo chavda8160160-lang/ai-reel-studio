@@ -1,5 +1,6 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useEditorStore } from '../../store/useEditorStore';
+import { TRACK_HEADER_WIDTH, TIMELINE_END_PADDING } from '../../types/editor';
 import { TimelineToolbar } from './TimelineToolbar';
 import { TimeRuler } from './TimeRuler';
 import { TrackLane } from './TrackLane';
@@ -12,16 +13,84 @@ export const Timeline: React.FC = () => {
     currentTime, 
     zoom, 
     setZoom,
+    fitToView,
+    setTimelineViewportWidth,
     togglePlay,
     splitClipAtPlayhead,
     deleteClip,
+    duplicateSelectedClip,
     undo,
-    redo 
+    redo,
+    snapGuideTime 
   } = useEditorStore();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isResizingRef = useRef(false);
 
-  // Global Keyboard Shortcuts (Space, S, Delete, Ctrl+Z, Ctrl+Y)
+  // Timeline panel total height: about 30% of screen, resizable (min 180px, max 55%)
+  const [panelHeight, setPanelHeight] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      return Math.max(180, Math.round(window.innerHeight * 0.30));
+    }
+    return 240;
+  });
+
+  const handleResizePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    isResizingRef.current = true;
+    const startY = e.clientY;
+    const initialHeight = panelHeight;
+
+    const onPointerMove = (moveEvt: PointerEvent) => {
+      if (!isResizingRef.current) return;
+      const deltaY = moveEvt.clientY - startY;
+      const minH = 180;
+      const maxH = Math.round(window.innerHeight * 0.55);
+      const newH = Math.max(minH, Math.min(maxH, initialHeight - deltaY));
+      setPanelHeight(newH);
+    };
+
+    const onPointerUp = () => {
+      isResizingRef.current = false;
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
+
+  // ResizeObserver for auto-fit on window / panel resize & first load (Rule 3)
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+    const el = scrollContainerRef.current;
+
+    const handleResize = () => {
+      const width = el.clientWidth;
+      if (width > 0) {
+        setTimelineViewportWidth(width);
+        fitToView(width);
+      }
+    };
+
+    handleResize();
+
+    const ro = new ResizeObserver(() => {
+      handleResize();
+    });
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, [fitToView, setTimelineViewportWidth]);
+
+  // Auto-fit whenever totalDuration changes (Rule 3)
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      fitToView(scrollContainerRef.current.clientWidth);
+    }
+  }, [totalDuration]);
+
+  // Global Keyboard Shortcuts (Space, S, Delete, Ctrl+Z, Ctrl+Y, F for Fit)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is typing in an input
@@ -50,6 +119,12 @@ export const Timeline: React.FC = () => {
         deleteClip();
       }
 
+      // Ctrl+D = Duplicate Selected Clip
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault();
+        duplicateSelectedClip();
+      }
+
       // Ctrl+Z = Undo
       if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
         e.preventDefault();
@@ -64,13 +139,21 @@ export const Timeline: React.FC = () => {
         e.preventDefault();
         redo();
       }
+
+      // F = Fit to View
+      if (e.key === 'f' || e.key === 'F') {
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          fitToView();
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlay, splitClipAtPlayhead, deleteClip, undo, redo]);
+  }, [togglePlay, splitClipAtPlayhead, deleteClip, undo, redo, fitToView]);
 
-  // Ctrl + Wheel = Timeline Zoom
+  // Ctrl + Wheel = Timeline Zoom (Rule 5 & 6: Zoom out never goes below fit level)
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -79,49 +162,98 @@ export const Timeline: React.FC = () => {
     }
   };
 
-  const timelineContentWidth = (totalDuration + 5) * zoom;
+  // Rule 2: Lock right side scrolling (clamp scrollLeft to scrollWidth - clientWidth)
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    const el = scrollContainerRef.current;
+    const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+    if (el.scrollLeft > maxScroll) {
+      el.scrollLeft = maxScroll;
+    }
+  };
+
+  // Drag and drop video/audio files directly onto timeline
+  const handleTimelineDrop = (e: React.DragEvent) => {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      const url = URL.createObjectURL(file);
+      const isAudio = file.type.startsWith('audio') || /\.(mp3|wav|ogg)$/i.test(file.name);
+      if (isAudio) {
+        const tempAudio = document.createElement('audio');
+        tempAudio.src = url;
+        tempAudio.onloadedmetadata = () => {
+          useEditorStore.getState().loadAudioMedia(file.name, url, tempAudio.duration || 15);
+        };
+      } else {
+        const tempVideo = document.createElement('video');
+        tempVideo.src = url;
+        tempVideo.onloadedmetadata = () => {
+          useEditorStore.getState().loadVideoMedia(file.name, url, tempVideo.duration || 15);
+        };
+      }
+    }
+  };
+
+  // Timeline end = totalDuration + small padding (Rule 1)
+  const maxProjectTime = Math.max(0.5, totalDuration + TIMELINE_END_PADDING);
+  const timelineContentWidth = maxProjectTime * zoom;
 
   return (
     <section 
-      className="h-[36%] min-h-[220px] bg-[#0E0E12] border-t border-[#2A2A2D] flex flex-col select-none shrink-0 z-20 relative overflow-hidden"
+      style={{ height: `${panelHeight}px` }}
+      className="min-h-[180px] bg-[#121214] border-t border-[#24242A] flex flex-col select-none shrink-0 z-20 relative overflow-hidden transition-colors"
       onWheel={handleWheel}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={handleTimelineDrop}
     >
-      {/* 1. Timeline Toolbar */}
+      {/* Top Drag-to-Resize Handle (min 180px, max 55% screen) */}
+      <div 
+        onPointerDown={handleResizePointerDown}
+        className="absolute top-0 inset-x-0 h-1 cursor-row-resize z-50 hover:bg-[#C9A66B] transition-colors"
+        title="Drag up/down to resize timeline panel"
+      />
+
+      {/* 1. Timeline Toolbar (32px) */}
       <TimelineToolbar />
 
       {/* 2. Main Timeline Scrollable Body */}
       <div 
         ref={scrollContainerRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-x-auto overflow-y-auto relative flex flex-col"
       >
         <div 
-          className="relative flex flex-col min-h-full"
-          style={{ width: `calc(130px + ${timelineContentWidth}px)` }}
+          className="relative flex flex-col min-h-full transition-[width] duration-150 ease-out"
+          style={{ width: `${TRACK_HEADER_WIDTH + timelineContentWidth}px` }}
         >
-          {/* Header Row: Track Corner Label + Time Ruler */}
-          <div className="flex h-6 border-b border-[#24242A] shrink-0 sticky top-0 z-30 bg-[#121216]">
+          {/* Header Row: Track Corner Label + Time Ruler (20px sticky) */}
+          <div className="flex h-5 border-b border-[#24242A] shrink-0 sticky top-0 z-30 bg-[#17171C]">
             {/* Top Left Track Tag Corner */}
-            <div className="w-[130px] shrink-0 bg-[#141418] border-r border-[#24242C] px-2 flex items-center justify-between text-[10px] text-zinc-500 font-mono font-medium">
+            <div 
+              className="shrink-0 bg-[#1B1B20] border-r border-[#24242C] px-2 flex items-center justify-between text-[11px] text-[#8A8A92] font-mono tracking-wider font-medium"
+              style={{ width: `${TRACK_HEADER_WIDTH}px` }}
+            >
               <span>TRACKS</span>
               <span>SEC</span>
             </div>
 
-            {/* Time Ruler */}
-            <div className="flex-1 relative">
+            {/* Time Ruler (20px) */}
+            <div className="flex-1 relative overflow-hidden">
               <TimeRuler totalDuration={totalDuration} zoom={zoom} />
             </div>
           </div>
 
-          {/* Tracks Stack + Playhead */}
-          <div className="flex-1 relative flex flex-col">
+          {/* Tracks Stack + Playhead (Rule 9: tracks fill remaining height with no big dead space) */}
+          <div className="flex-1 relative flex flex-col min-h-0">
             {tracks.map((track) => (
               <TrackLane key={track.id} track={track} zoom={zoom} />
             ))}
 
-            {/* Playhead Needle (Offset by left 130px track headers) */}
+            {/* Playhead Needle (Offset by left TRACK_HEADER_WIDTH track headers) */}
             <div 
               className="absolute top-0 bottom-0 pointer-events-none z-40"
-              style={{ left: '130px' }}
+              style={{ left: `${TRACK_HEADER_WIDTH}px` }}
             >
               <Playhead 
                 currentTime={currentTime} 
@@ -129,6 +261,18 @@ export const Timeline: React.FC = () => {
                 zoom={zoom} 
               />
             </div>
+
+            {/* Magnetic Snap Guide Line (Active during clip drag / handle trim) */}
+            {snapGuideTime !== null && (
+              <div 
+                className="absolute top-0 bottom-0 pointer-events-none z-30 border-l border-dashed border-[#22D3EE] transition-none"
+                style={{ left: `${TRACK_HEADER_WIDTH + snapGuideTime * zoom}px` }}
+              >
+                <div className="bg-[#22D3EE] text-[#0F0F10] text-[9.5px] font-mono font-bold px-1 py-0.5 rounded shadow-lg -translate-x-1/2 mt-0.5">
+                  {snapGuideTime.toFixed(2)}s
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

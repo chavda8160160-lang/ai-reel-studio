@@ -18,9 +18,43 @@
     "totalParts": 54,
     "addedAt": "2026-10-14T12:39:35.300Z"
   },
-  "currentPart": 28,
-  "lastPostedSeconds": 810,
+  "currentPart": 29,
+  "lastPostedSeconds": 840,
   "history": [
+    {
+      "part": 28,
+      "startSeconds": 810,
+      "endSeconds": 840,
+      "duration": "30s",
+      "renderedReelUrl": "/rendered-reels/daily-part28-1793340005477.mp4",
+      "thumbnailUrl": "/rendered-reels/daily-part28-1793340005477-cover.jpg",
+      "fileName": "daily-part28-1793340005477.mp4",
+      "postedAt": "2026-10-30T06:00:36.147Z",
+      "displayTime": "10/30/2026, 11:30:36 AM",
+      "viralTitle": "GTA 6 - Part 28: The Tension is Real! 🚗💨 #Shorts",
+      "viralCaption": "GTA 6 Part 28: Lucia and Jason are plotting their next move in Vice City. The detail in this game is absolutely insane! 🤯 Don't miss the story unfold—follow for Part 29!",
+      "viralHashtags": [
+        "#GTA6",
+        "#Part28",
+        "#Gaming",
+        "#Shorts",
+        "#TrendingReels",
+        "#ViceCity",
+        "#RockstarGames",
+        "#GTA6Leaks",
+        "#GamingCommunity",
+        "#OpenWorld",
+        "#LuciaAndJason",
+        "#NextGen"
+      ],
+      "detectedTopic": "Lucia and Jason are sitting inside a car, looking out at a sunny street in Vice City.",
+      "themeName": "Cinematic Realism",
+      "status": "Posted to IG + YouTube ✓",
+      "instagramPostUrl": "https://www.instagram.com/p/17953158960281303/",
+      "instagramPostId": "17953158960281303",
+      "youtubePostUrl": "https://www.youtube.com/shorts/b90FDzW6e5c",
+      "youtubeVideoId": "b90FDzW6e5c"
+    },
     {
       "part": 27,
       "startSeconds": 780,
@@ -49,9 +83,11 @@
       ],
       "detectedTopic": "A high-speed drive across a scenic bridge in GTA 6 during a golden hour sunset with helicopters overhead.",
       "themeName": "Cinematic Golden Hour",
-      "status": "Ready & Published",
-      "lastError": "Meta Processing Error: Error processing Meta Reel on server.",
-      "lastYoutubeError": "Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project."
+      "status": "Posted to IG + YouTube (100% Live) ✅",
+      "instagramPostUrl": "https://www.instagram.com/p/17921216550242572/",
+      "instagramPostId": "17921216550242572",
+      "youtubePostUrl": "https://www.youtube.com/shorts/WTlnax9f04s",
+      "youtubeVideoId": "WTlnax9f04s"
     },
     {
       "part": 26,

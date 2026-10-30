@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useEditorStore } from './store/useEditorStore';
 import { TopBar } from './components/TopBar';
 import { MediaPanel } from './components/MediaPanel';
 import { Player } from './components/Player';
@@ -9,8 +10,27 @@ import { ShortcutsModal } from './components/Modals/ShortcutsModal';
 import { ProModal } from './components/Modals/ProModal';
 
 export const App: React.FC = () => {
+  const { theme } = useEditorStore();
+  const isLight = theme === 'light';
+
+  useEffect(() => {
+    (window as any).useEditorStore = useEditorStore;
+  }, []);
+
+  useEffect(() => {
+    if (isLight) {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+  }, [isLight]);
+
   return (
-    <div className="w-screen h-screen bg-[#0F0F10] text-[#E4E4E7] flex flex-col overflow-hidden select-none font-sans min-w-[1280px]">
+    <div 
+      className={`w-screen h-screen flex flex-col overflow-hidden select-none font-sans min-w-[1280px] transition-colors ${
+        isLight ? 'bg-[#F5F3EE] text-[#1C1917]' : 'bg-[#121214] text-[#E8E6E1]'
+      }`}
+    >
       {/* 1. Top Navigation Bar (48px) */}
       <TopBar />
 
