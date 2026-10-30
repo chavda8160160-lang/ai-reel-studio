@@ -5612,7 +5612,7 @@ function initTimelineStudio() {
       // Move needle across timeline (only during playback when user is not manually scrubbing/trimming)
       if (needle && editorState.duration > 0 && !isScrubbingTimeline && !isDraggingTrimLeft && !isDraggingTrimRight) {
         const pct = (cur / editorState.duration) * 100;
-        needle.style.left = `${Math.min(100, Math.max(0, pct))}%`;
+        updateNeedlePosition(cur / editorState.duration);
       }
 
       // Strictly enforce trim boundaries during playback (loop within trim range)
@@ -5691,6 +5691,23 @@ function initTimelineStudio() {
     }
 
     // Helper: calculate time and percentage from any mouse/touch X coordinate
+    
+    // Helper: update needle position accurately relative to time ruler
+    function updateNeedlePosition(pct) {
+      if (!needle) return;
+      const ruler = document.getElementById('proTimeRulerWithBeats');
+      const tracksEl = document.getElementById('proTimelineTracks');
+      if (ruler && tracksEl) {
+        const tracksRect = tracksEl.getBoundingClientRect();
+        const rulerRect = ruler.getBoundingClientRect();
+        const rulerLeftOffset = rulerRect.left - tracksRect.left;
+        const px = rulerLeftOffset + (Math.max(0, Math.min(1, pct)) * rulerRect.width);
+        needle.style.left = `${px}px`;
+      } else {
+        needle.style.left = `${(Math.max(0, Math.min(1, pct)) * 100).toFixed(3)}%`;
+      }
+    }
+
     function getTimeFromPointer(e) {
       const ruler = document.getElementById('proTimeRulerWithBeats');
       if (!ruler || !editorState.duration) return { pct: 0, time: 0 };
@@ -5709,7 +5726,7 @@ function initTimelineStudio() {
 
       // Instant 60fps needle visual tracking (Zero Lag)
       if (needle) {
-        needle.style.left = `${(pct * 100).toFixed(3)}%`;
+        updateNeedlePosition(pct);
       }
 
       // Instant relative playback timer display
@@ -5753,7 +5770,7 @@ function initTimelineStudio() {
         if (lblRangeDisplay) lblRangeDisplay.textContent = `${formatTrimTime(newStart)} – ${formatTrimTime(editorState.trimEnd)} (${clipDur}s)`;
 
         // Move needle & seek to newStart smoothly
-        if (needle) needle.style.left = `${((newStart / maxDur) * 100).toFixed(3)}%`;
+        if (needle) updateNeedlePosition(newStart / maxDur);
         smoothVideoSeek(newStart);
 
       } else if (isDraggingTrimRight) {
@@ -5776,7 +5793,7 @@ function initTimelineStudio() {
         if (lblRangeDisplay) lblRangeDisplay.textContent = `${formatTrimTime(editorState.trimStart)} – ${formatTrimTime(newEnd)} (${clipDur}s)`;
 
         // Move needle & seek to newEnd smoothly
-        if (needle) needle.style.left = `${((newEnd / maxDur) * 100).toFixed(3)}%`;
+        if (needle) updateNeedlePosition(newEnd / maxDur);
         smoothVideoSeek(newEnd);
       }
     }
@@ -5816,6 +5833,24 @@ function initTimelineStudio() {
         handleTimelineScrub(e);
       });
       timeRuler.addEventListener('touchstart', (e) => {
+        isScrubbingTimeline = true;
+        document.body.classList.add('timeline-dragging');
+        handleTimelineScrub(e);
+      }, { passive: true });
+    }
+
+    
+    if (needle) {
+      needle.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        isScrubbingTimeline = true;
+        document.body.classList.add('timeline-dragging');
+        handleTimelineScrub(e);
+      });
+      needle.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
         isScrubbingTimeline = true;
         document.body.classList.add('timeline-dragging');
         handleTimelineScrub(e);
@@ -5918,7 +5953,7 @@ function initTimelineStudio() {
     if (!modalEl) return;
 
     // 1. Update tab ribbon button active classes
-    modalEl.querySelectorAll('.pro-cat-tab, .editor-tab-btn').forEach(btn => {
+    modalEl.querySelectorAll('.pro-cat-tab, .editor-tab-btn, .capcut-nav-btn').forEach(btn => {
       const bTab = btn.getAttribute('data-tab') || btn.dataset.tab;
       if (bTab === tabId) {
         btn.classList.add('active');
@@ -5941,7 +5976,7 @@ function initTimelineStudio() {
     });
   };
 
-  const allCatTabs = modal.querySelectorAll('.pro-cat-tab, .editor-tab-btn');
+  const allCatTabs = modal.querySelectorAll('.pro-cat-tab, .editor-tab-btn, .capcut-nav-btn');
   allCatTabs.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();

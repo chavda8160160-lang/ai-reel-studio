@@ -7487,3 +7487,669 @@ body.timeline-dragging * {
 
 
 
+
+
+/* =========================================================================
+   GENUINE CAPCUT PRO PC DESKTOP WORKSTATION - MULTI-TRACK DRAG & DROP TIMELINE
+   ========================================================================= */
+
+#timelineStudioModal .pro-studio-card {
+  width: 98vw !important;
+  max-width: 1560px !important;
+  height: 96vh !important;
+  max-height: 96vh !important;
+  background: #0e0e12 !important;
+  border: 1px solid #23232c !important;
+  border-radius: 14px !important;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+  color: #f4f4f5 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+/* 1. Top Header */
+#timelineStudioModal .pro-studio-topbar {
+  background: #141418 !important;
+  border-bottom: 1px solid #22222b !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  padding: 0 1.25rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+}
+
+#timelineStudioModal .pro-brand-chip {
+  background: #1c1c24 !important;
+  border: 1px solid #2a2a36 !important;
+  border-radius: 6px !important;
+  padding: 0.3rem 0.65rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+#timelineStudioModal .pro-brand-icon {
+  color: #00f2fe !important;
+  font-size: 1rem !important;
+  filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.6)) !important;
+}
+
+#timelineStudioModal .pro-brand-name {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  letter-spacing: -0.01em !important;
+}
+
+#timelineStudioModal .pro-project-input {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: #e4e4e7 !important;
+  font-weight: 600 !important;
+  font-size: 0.82rem !important;
+  padding: 0.2rem 0.5rem !important;
+  border-radius: 4px !important;
+}
+
+#timelineStudioModal .pro-project-input:focus {
+  background: #20202a !important;
+  border-color: #00f2fe !important;
+  outline: none !important;
+}
+
+#timelineStudioModal .pro-badge-saved {
+  color: #34d399 !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  padding: 0.15rem 0.5rem !important;
+  border-radius: 4px !important;
+}
+
+#timelineStudioModal .btn-pro-export-master {
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
+  border: none !important;
+  color: #09090b !important;
+  font-weight: 800 !important;
+  font-size: 0.82rem !important;
+  padding: 0.45rem 1rem !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 18px rgba(0, 242, 254, 0.45) !important;
+  transition: all 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+}
+
+#timelineStudioModal .btn-pro-export-master:hover {
+  transform: translateY(-1px) scale(1.02) !important;
+  box-shadow: 0 6px 26px rgba(0, 242, 254, 0.75) !important;
+}
+
+/* 2. Main Workstation 3-Column Upper Body */
+#timelineStudioModal .pro-workstation-main {
+  background: #09090d !important;
+  display: grid !important;
+  grid-template-columns: 290px 1fr 280px !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* 2A. Left Drawer (CapCut Media & Asset Bin) */
+#timelineStudioModal .pro-tools-drawer {
+  background: #111116 !important;
+  border-right: 1px solid #1f1f28 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.capcut-left-nav {
+  display: flex !important;
+  background: #16161d !important;
+  border-bottom: 1px solid #23232e !important;
+  padding: 6px !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+.capcut-nav-btn {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  padding: 7px 2px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: #9ca3af !important;
+  border-radius: 6px !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.capcut-nav-btn i {
+  font-size: 0.95rem !important;
+}
+
+.capcut-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #f4f4f5 !important;
+}
+
+.capcut-nav-btn.active {
+  background: #232330 !important;
+  border-color: #313144 !important;
+  color: #00f2fe !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+.capcut-drawer-content {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  padding: 0.85rem !important;
+}
+
+.capcut-active-media-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
+  background: #181820 !important;
+  border: 1px solid #282836 !important;
+  border-radius: 8px !important;
+  padding: 0.65rem !important;
+}
+
+.media-thumb-preview {
+  width: 42px !important;
+  height: 42px !important;
+  background: #242432 !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #00f2fe !important;
+  font-size: 1.1rem !important;
+  flex-shrink: 0 !important;
+}
+
+.media-info {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.media-info b {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.btn-capcut-mini {
+  background: #232330 !important;
+  border: 1px solid #2f2f40 !important;
+  color: #e4e4e7 !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-capcut-mini:hover {
+  background: #2c2c3e !important;
+  color: #00f2fe !important;
+}
+
+.btn-capcut-mini.text-red:hover {
+  color: #ef4444 !important;
+}
+
+/* 2B. Center Monitor Viewport */
+#timelineStudioModal .pro-preview-viewport {
+  background: #09090d !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0.65rem !important;
+  position: relative !important;
+}
+
+#timelineStudioModal .pro-player-stage {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  width: 100% !important;
+  min-height: 0 !important;
+}
+
+#timelineStudioModal .pro-monitor-frame {
+  aspect-ratio: 9/16 !important;
+  height: calc(100% - 48px) !important;
+  max-height: calc(100% - 48px) !important;
+  width: auto !important;
+  background: #000000 !important;
+  border-radius: 12px !important;
+  border: 1.5px solid #282836 !important;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 242, 254, 0.2) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#timelineStudioModal .pro-transport-bar {
+  height: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+  width: 100% !important;
+  max-width: 580px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background: #14141a !important;
+  border: 1px solid #242432 !important;
+  border-radius: 8px !important;
+  padding: 0 0.75rem !important;
+  margin-top: 6px !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 2C. Right Inspector Panel */
+#timelineStudioModal .pro-inspector-panel {
+  background: #111116 !important;
+  border-left: 1px solid #1f1f28 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  padding: 0.85rem !important;
+}
+
+/* 3. Bottom Multi-Track Drag & Drop Timeline (CapCut Desktop Experience) */
+#timelineStudioModal .pro-timeline-container {
+  height: 250px !important;
+  min-height: 250px !important;
+  max-height: 250px !important;
+  background: #0d0d12 !important;
+  border-top: 1px solid #22222e !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-shrink: 0 !important;
+  z-index: 100 !important;
+  position: relative !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+#timelineStudioModal .pro-timeline-toolbar {
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 1rem !important;
+  background: #14141b !important;
+  border-bottom: 1px solid #1e1e28 !important;
+  flex-shrink: 0 !important;
+}
+
+#timelineStudioModal .btn-timeline-action {
+  background: #1d1d26 !important;
+  border: 1px solid #292938 !important;
+  color: #e4e4e7 !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  padding: 0.35rem 0.75rem !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+  transition: all 0.15s ease !important;
+}
+
+#timelineStudioModal .btn-timeline-action:hover,
+#timelineStudioModal .btn-timeline-action.active-tool {
+  background: #252535 !important;
+  border-color: #00f2fe !important;
+  color: #00f2fe !important;
+}
+
+#timelineStudioModal .btn-timeline-action.btn-add-clip {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #34d399 !important;
+}
+
+#timelineStudioModal .timeline-range-badge {
+  background: rgba(0, 242, 254, 0.1) !important;
+  border: 1px solid rgba(0, 242, 254, 0.35) !important;
+  color: #00f2fe !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  padding: 0.25rem 0.85rem !important;
+  border-radius: 6px !important;
+}
+
+#timelineStudioModal .timeline-zoom-chip {
+  background: #1d1d26 !important;
+  border: 1px solid #292938 !important;
+  color: #a1a1aa !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  padding: 0.3rem 0.65rem !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+}
+
+/* Timeline Tracks Stack */
+#timelineStudioModal .pro-timeline-tracks {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 6px 1rem 8px 1rem !important;
+  background: #0a0a0f !important;
+  position: relative !important;
+}
+
+/* Time Ruler */
+#timelineStudioModal .pro-time-ruler {
+  height: 22px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-left: 132px !important;
+  border-bottom: 1px solid #20202d !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 0.68rem !important;
+  color: #71717a !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+  cursor: pointer !important;
+}
+
+/* Track Lane */
+#timelineStudioModal .pro-track-lane {
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 5px !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+}
+
+#timelineStudioModal .pro-track-lane .track-tag {
+  width: 125px !important;
+  min-width: 125px !important;
+  height: 100% !important;
+  background: #14141c !important;
+  border: 1px solid #222230 !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 0 7px !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  color: #e4e4e7 !important;
+  flex-shrink: 0 !important;
+  margin-right: 7px !important;
+  box-sizing: border-box !important;
+}
+
+#timelineStudioModal .btn-track-ctl {
+  background: transparent !important;
+  border: none !important;
+  color: #71717a !important;
+  cursor: pointer !important;
+  font-size: 0.75rem !important;
+  padding: 2px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+#timelineStudioModal .btn-track-ctl:hover {
+  color: #00f2fe !important;
+}
+
+#timelineStudioModal .track-content-lane {
+  flex: 1 !important;
+  height: 100% !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-radius: 6px !important;
+  border: 1px dashed rgba(255, 255, 255, 0.08) !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  overflow: hidden !important;
+}
+
+#timelineStudioModal .pro-multi-clip-wrapper {
+  display: flex !important;
+  gap: 4px !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+}
+
+/* 1. Video Clip Block */
+#timelineStudioModal .video-clip-block {
+  background: linear-gradient(135deg, #1e1b4b 0%, #2e287a 100%) !important;
+  border: 1.5px solid #6366f1 !important;
+  border-radius: 6px !important;
+  height: 90% !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  cursor: grab !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
+  flex: 1 !important;
+}
+
+#timelineStudioModal .clip-thumbnails-strip {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  gap: 2px !important;
+  opacity: 0.25 !important;
+  pointer-events: none !important;
+}
+
+#timelineStudioModal .clip-thumbnails-strip .thumb-cell {
+  flex: 1 !important;
+  height: 100% !important;
+  background: linear-gradient(180deg, #3730a3, #1e1b4b) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+#timelineStudioModal .clip-trim-handle {
+  width: 11px !important;
+  height: 100% !important;
+  background: #00f2fe !important;
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  z-index: 25 !important;
+  cursor: col-resize !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 0 8px rgba(0, 242, 254, 0.7) !important;
+}
+
+#timelineStudioModal .clip-trim-handle::after {
+  content: '' !important;
+  width: 2px !important;
+  height: 14px !important;
+  background: #09090b !important;
+  border-radius: 1px !important;
+}
+
+#timelineStudioModal .clip-trim-handle.handle-left {
+  left: 0 !important;
+  border-top-left-radius: 5px !important;
+  border-bottom-left-radius: 5px !important;
+}
+
+#timelineStudioModal .clip-trim-handle.handle-right {
+  right: 0 !important;
+  border-top-right-radius: 5px !important;
+  border-bottom-right-radius: 5px !important;
+}
+
+#timelineStudioModal .clip-label {
+  position: relative !important;
+  z-index: 10 !important;
+  padding: 0 16px !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  white-space: nowrap !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+}
+
+/* 2. Captions Clip Block */
+#timelineStudioModal .text-clip-block {
+  background: linear-gradient(135deg, #78350f 0%, #b45309 100%) !important;
+  border: 1.5px solid #f59e0b !important;
+  border-radius: 6px !important;
+  height: 85% !important;
+  width: 85% !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 10px !important;
+  color: #fef3c7 !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25) !important;
+}
+
+/* 3. Audio Clip Block */
+#timelineStudioModal .audio-clip-block {
+  background: linear-gradient(135deg, #064e3b 0%, #047857 100%) !important;
+  border: 1.5px solid #10b981 !important;
+  border-radius: 6px !important;
+  height: 85% !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 10px !important;
+  color: #d1fae5 !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25) !important;
+}
+
+.audio-waveform-bars {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  padding: 0 12px !important;
+  opacity: 0.35 !important;
+  pointer-events: none !important;
+}
+
+.audio-waveform-bars span {
+  width: 2.5px !important;
+  background: #34d399 !important;
+  border-radius: 2px !important;
+  display: inline-block !important;
+}
+
+.btn-track-pill {
+  position: relative !important;
+  z-index: 10 !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  font-size: 0.68rem !important;
+  padding: 0.15rem 0.5rem !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+}
+
+/* 4. FX Clip Block */
+#timelineStudioModal .fx-clip-block {
+  background: linear-gradient(135deg, #581c87 0%, #7e22ce 100%) !important;
+  border: 1.5px solid #a855f7 !important;
+  border-radius: 6px !important;
+  height: 85% !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 10px !important;
+  color: #f3e8ff !important;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.25) !important;
+}
+
+/* Playhead Needle Scrubber */
+#timelineStudioModal .pro-playhead-needle {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 2px !important;
+  background: #00f2fe !important;
+  z-index: 200 !important;
+  pointer-events: none !important;
+  left: 132px !important;
+  box-shadow: 0 0 10px #00f2fe, 0 0 20px rgba(0, 242, 254, 0.6) !important;
+  transition: left 0.05s linear !important;
+}
+
+#timelineStudioModal .pro-playhead-needle .playhead-cap {
+  position: absolute !important;
+  top: -2px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  color: #00f2fe !important;
+  font-size: 16px !important;
+  filter: drop-shadow(0 2px 6px rgba(0, 242, 254, 0.9)) !important;
+  pointer-events: auto !important;
+  cursor: ew-resize !important;
+}
+

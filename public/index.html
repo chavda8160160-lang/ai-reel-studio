@@ -2042,31 +2042,27 @@
     </div>
 
     <!-- 🎬 CapCut Pro Style Professional Reel Editing Studio Workstation Modal -->
-    <div id="timelineStudioModal" class="modal-backdrop hidden">
+        <div id="timelineStudioModal" class="modal-backdrop hidden">
       <div class="modal-card pro-studio-card">
-        <!-- 1. Top Application Bar -->
+        <!-- 1. Top CapCut Pro Header Bar -->
         <header class="pro-studio-topbar">
           <div class="pro-topbar-left">
             <div class="pro-brand-chip">
-              <span class="pro-brand-icon">✂️</span>
+              <span class="pro-brand-icon"><i class="fa-solid fa-film"></i></span>
               <span class="pro-brand-name">CapCut Pro Studio</span>
             </div>
             <div class="pro-project-meta">
-              <input type="text" id="txtProProjectName" value="My Reel Project" class="pro-project-input"
-                title="Click to rename project">
-              <span class="pro-badge-saved">● Auto-Saved</span>
+              <input type="text" id="txtProProjectName" value="My Reel Project" class="pro-project-input" title="Click to rename project">
+              <span class="pro-badge-saved"><i class="fa-solid fa-cloud-check"></i> Auto-Saved</span>
             </div>
           </div>
 
           <div class="pro-topbar-center">
             <div class="pro-transport-quick">
-              <button type="button" id="btnProUndo" class="btn-pro-icon-sm" title="Undo (Ctrl+Z)"><i
-                  class="fa-solid fa-rotate-left"></i></button>
-              <button type="button" id="btnProRedo" class="btn-pro-icon-sm" title="Redo (Ctrl+Y)"><i
-                  class="fa-solid fa-rotate-right"></i></button>
+              <button type="button" id="btnProUndo" class="btn-pro-icon-sm" title="Undo (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i></button>
+              <button type="button" id="btnProRedo" class="btn-pro-icon-sm" title="Redo (Ctrl+Y)"><i class="fa-solid fa-rotate-right"></i></button>
               <div class="pro-v-divider"></div>
-              <span class="pro-canvas-pill" id="lblProAspectBadge"><i class="fa-solid fa-mobile-screen"></i> 9:16
-                Reel</span>
+              <span class="pro-canvas-pill" id="lblProAspectBadge"><i class="fa-solid fa-mobile-screen"></i> 9:16 Reel</span>
               <span class="pro-res-pill" id="lblProResBadge">1080 × 1920</span>
             </div>
           </div>
@@ -2075,16 +2071,13 @@
             <button type="button" id="btnTimelineAiAuto" class="btn-pro-ai" title="1-Click AI Master Auto-Enhance">
               <i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI Auto-Enhance</span>
             </button>
-            <button type="button" id="btnTimelineReset" class="btn-pro-ghost"
-              title="Reset all edits to original AI reel">
+            <button type="button" id="btnTimelineReset" class="btn-pro-ghost" title="Reset all edits to original AI reel">
               <i class="fa-solid fa-arrows-rotate"></i> <span>Reset</span>
             </button>
-            <button type="button" id="btnApplyTimelineEdits" class="btn-pro-export-master"
-              title="Render and Export HD Reel">
+            <button type="button" id="btnApplyTimelineEdits" class="btn-pro-export-master" title="Render and Export HD Reel">
               <i class="fa-solid fa-arrow-up-from-bracket"></i> <span>Export HD Reel</span>
             </button>
-            <button type="button" id="btnProNextToUpload" class="btn-pro-next"
-              title="Exit Studio & Proceed to Upload Section">
+            <button type="button" id="btnProNextToUpload" class="btn-pro-next" title="Exit Studio & Proceed to Upload Section">
               <span>Next</span> <i class="fa-solid fa-arrow-right"></i>
             </button>
             <button type="button" id="btnCloseTimelineModal" class="btn-pro-close" title="Close Editor">
@@ -2093,1093 +2086,290 @@
           </div>
         </header>
 
-        <!-- 2. Master Category Navigation Tabs (CapCut Desktop / Premiere Rush Style) -->
-        <nav class="pro-category-nav">
-          <button type="button" class="pro-cat-tab active" data-tab="tabTimelineTrim"
-            onclick="switchTimelineTab('tabTimelineTrim')">
-            <i class="fa-solid fa-scissors"></i> <span>Trim & Cut</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineSpeed"
-            onclick="switchTimelineTab('tabTimelineSpeed')">
-            <i class="fa-solid fa-gauge-high"></i> <span>Speed</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineFilter"
-            onclick="switchTimelineTab('tabTimelineFilter')">
-            <i class="fa-solid fa-palette"></i> <span>Filters</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineAdjust"
-            onclick="switchTimelineTab('tabTimelineAdjust')">
-            <i class="fa-solid fa-sliders"></i> <span>Adjust</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineFX"
-            onclick="switchTimelineTab('tabTimelineFX')">
-            <i class="fa-solid fa-wand-magic"></i> <span>Effects</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineChroma"
-            onclick="switchTimelineTab('tabTimelineChroma')">
-            <i class="fa-solid fa-wand-magic-sparkles" style="color: #10b981;"></i> <span>Chroma Key</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineAI"
-            onclick="switchTimelineTab('tabTimelineAI')">
-            <i class="fa-solid fa-microchip"></i> <span>AI Tools</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineText"
-            onclick="switchTimelineTab('tabTimelineText')">
-            <i class="fa-solid fa-font"></i> <span>Text & Subs</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineStickers"
-            onclick="switchTimelineTab('tabTimelineStickers')">
-            <i class="fa-solid fa-icons"></i> <span>Stickers</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineAudio"
-            onclick="switchTimelineTab('tabTimelineAudio')">
-            <i class="fa-solid fa-volume-high"></i> <span>Audio & Voice</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineTransitions"
-            onclick="switchTimelineTab('tabTimelineTransitions')">
-            <i class="fa-solid fa-film"></i> <span>Transitions</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineTemplates"
-            onclick="switchTimelineTab('tabTimelineTemplates')">
-            <i class="fa-solid fa-table-cells-large" style="color: #f59e0b;"></i> <span>Templates</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineCanvas"
-            onclick="switchTimelineTab('tabTimelineCanvas')">
-            <i class="fa-solid fa-crop"></i> <span>Canvas</span>
-          </button>
-          <button type="button" class="pro-cat-tab" data-tab="tabTimelineExport"
-            onclick="switchTimelineTab('tabTimelineExport')">
-            <i class="fa-solid fa-share-nodes"></i> <span>Publish</span>
-          </button>
-        </nav>
-
-        <!-- 3. Main Workstation 3-Column Body -->
+        <!-- 2. Main Workstation 3-Column Body (Upper Section) -->
         <div class="pro-workstation-main">
-          <!-- 3A. Left Column: Tools & Options Drawer -->
+          <!-- 2A. Left Column: Media & Assets Bin (CapCut Pro PC Style) -->
           <aside class="pro-tools-drawer">
-            <!-- PANE 1: ✂️ Trim & Cut -->
-            <div id="tabTimelineTrim" class="pro-tab-pane active">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-scissors"></i> Trim & Timeline Cuts</h4>
-                <span class="pro-pane-sub">Precision trim, split clip, flip & rotate</span>
-              </div>
-
-              <div class="pro-group-box">
-                <label class="pro-group-label">Timeline Range (0.1s Precision):</label>
-                <div class="pro-range-sliders">
-                  <div>
-                    <div class="pro-slider-meta">
-                      <span>🟢 Start Trim:</span>
-                      <b id="lblTrimStartVal" class="pro-val-highlight">0.0s</b>
-                    </div>
-                    <input type="range" id="rngTrimStart" min="0" max="3600" step="0.5" value="0" class="pro-slider">
-                  </div>
-                  <div>
-                    <div class="pro-slider-meta">
-                      <span>🔴 End Trim:</span>
-                      <b id="lblTrimEndVal" class="pro-val-highlight">30.0s</b>
-                    </div>
-                    <input type="range" id="rngTrimEnd" min="2" max="3600" step="0.5" value="30" class="pro-slider">
-                  </div>
-                </div>
-
-                <div class="pro-quick-chips-row">
-                  <span class="pro-sub-label">⚡ Quick Presets:</span>
-                  <button type="button" class="chip btn-quick-cut" data-from-here="30" style="background: rgba(0,242,254,0.2); border: 1px solid #00f2fe; color: #00f2fe; font-weight: 600;" title="Make 30s Reel starting right from where you are playing"><i class="fa-solid fa-crosshairs"></i> 30s From Current Point</button>
-                  <button type="button" class="chip btn-quick-cut" data-extend="30" style="background: rgba(168,85,247,0.2); border: 1px solid #a855f7; color: #d8b4fe;" title="Extend End Trim by 30 seconds">+30s More</button>
-                  <button type="button" class="chip btn-quick-cut" data-start="0" data-end="30">First 30s</button>
-                  <button type="button" class="chip btn-quick-cut" data-start="15" data-end="45">15s – 45s</button>
-                  <button type="button" class="chip btn-quick-cut" data-start="0" data-end="max">Full Length</button>
-                </div>
-              </div>
-
-              <div class="pro-group-box">
-                <label class="pro-group-label">Clip Editing Tools:</label>
-                <div class="pro-actions-grid-2">
-                  <button type="button" id="btnTimelineSplitTool" class="btn-pro-tool">
-                    <i class="fa-solid fa-cut"></i> <span>Split at Playhead</span>
-                  </button>
-                  <button type="button" id="btnToolRotate90" class="btn-pro-tool">
-                    <i class="fa-solid fa-rotate"></i> <span>Rotate 90°</span>
-                  </button>
-                  <button type="button" id="btnToolFlipH" class="btn-pro-tool">
-                    <i class="fa-solid fa-arrows-left-right"></i> <span>Flip Horizontal</span>
-                  </button>
-                  <button type="button" id="btnToolFlipV" class="btn-pro-tool">
-                    <i class="fa-solid fa-arrows-up-down"></i> <span>Flip Vertical</span>
-                  </button>
-                  <button type="button" id="btnToolFreezeFrame" class="btn-pro-tool">
-                    <i class="fa-solid fa-snowflake"></i> <span>Freeze Frame (2s)</span>
-                  </button>
-                  <button type="button" id="btnToolReverseVideo" class="btn-pro-tool">
-                    <i class="fa-solid fa-backward"></i> <span>Reverse Speed</span>
-                  </button>
-                  <button type="button" id="btnCapCutRemoveVideo" class="btn-pro-tool"
-                    style="background: #fef2f2; border: 1.5px solid #fca5a5; color: #dc2626;"
-                    title="Cancel and remove current video without uploading">
-                    <i class="fa-solid fa-trash-can"></i> <span>Cancel / Remove Video</span>
-                  </button>
-                  <button type="button" id="btnCapCutReplaceVideo" class="btn-pro-tool"
-                    style="background: #fffdfa; border: 1.5px solid #b89758; color: #946e2b;"
-                    title="Choose another video file from computer">
-                    <i class="fa-solid fa-folder-open"></i> <span>Upload / Change Video</span>
-                  </button>
-                  <input type="file" id="capcutVideoFileInput" accept="video/mp4,video/quicktime,video/webm,video/mkv"
-                    style="display: none !important; width: 0; height: 0; pointer-events: none;">
-                </div>
-              </div>
+            <!-- Left Side Mini Tab Switcher -->
+            <div class="capcut-left-nav">
+              <button type="button" class="capcut-nav-btn active" data-tab="tabTimelineTrim" onclick="switchTimelineTab('tabTimelineTrim')">
+                <i class="fa-solid fa-photo-film"></i> <span>Media</span>
+              </button>
+              <button type="button" class="capcut-nav-btn" data-tab="tabTimelineAudio" onclick="switchTimelineTab('tabTimelineAudio')">
+                <i class="fa-solid fa-music"></i> <span>Audio</span>
+              </button>
+              <button type="button" class="capcut-nav-btn" data-tab="tabTimelineText" onclick="switchTimelineTab('tabTimelineText')">
+                <i class="fa-solid fa-closed-captioning"></i> <span>Captions</span>
+              </button>
+              <button type="button" class="capcut-nav-btn" data-tab="tabTimelineFX" onclick="switchTimelineTab('tabTimelineFX')">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Effects</span>
+              </button>
             </div>
 
-            <!-- PANE 2: ⚡ Speed -->
-            <div id="tabTimelineSpeed" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-gauge-high"></i> Speed Ramping</h4>
-                <span class="pro-pane-sub">Smooth slow-motion, hyperlapse & curve ramping</span>
-              </div>
-
-              <div class="pro-group-box">
-                <div class="pro-flex-between">
-                  <label class="pro-group-label">Playback Rate:</label>
-                  <span id="lblSpeedDisplay" class="pro-badge-gold">1.00x (Normal)</span>
-                </div>
-                <div class="speed-chips-grid">
-                  <button type="button" class="speed-chip-btn" data-speed="0.2">
-                    <span class="speed-label">0.2x</span>
-                    <span class="speed-sub">Super Slow</span>
-                  </button>
-                  <button type="button" class="speed-chip-btn" data-speed="0.5">
-                    <span class="speed-label">0.5x</span>
-                    <span class="speed-sub">Slow-Mo</span>
-                  </button>
-                  <button type="button" class="speed-chip-btn" data-speed="0.75">
-                    <span class="speed-label">0.75x</span>
-                    <span class="speed-sub">Chill</span>
-                  </button>
-                  <button type="button" class="speed-chip-btn active" data-speed="1.0">
-                    <span class="speed-label">1.0x</span>
-                    <span class="speed-sub">Normal</span>
-                  </button>
-                  <button type="button" class="speed-chip-btn" data-speed="1.25">
-                    <span class="speed-label">1.25x</span>
-                    <span class="speed-sub">Dynamic Hook</span>
-                  </button>
-                  <button type="button" class="speed-chip-btn" data-speed="1.5">
-                    <span class="speed-label">1.5x</span>
-                    <span class="speed-sub">Fast Paced</span>
-                  </button>
-                  <button type="button" class="speed-chip-btn" data-speed="2.0">
-                    <span class="speed-label">2.0x</span>
-                    <span class="speed-sub">Double</span>
-                  </button>
-                  <button type="button" class="speed-chip-btn" data-speed="5.0">
-                    <span class="speed-label">5.0x</span>
-                    <span class="speed-sub">Fast Reel</span>
-                  </button>
-                  <button type="button" class="speed-chip-btn" data-speed="10.0">
-                    <span class="speed-label">10x</span>
-                    <span class="speed-sub">Hyperlapse</span>
-                  </button>
+            <div class="capcut-drawer-content">
+              <!-- PANE 1: Media & Trim -->
+              <div id="tabTimelineTrim" class="pro-tab-pane active">
+                <div class="pro-pane-header">
+                  <h4><i class="fa-solid fa-photo-film"></i> Media Pool & Sequence</h4>
+                  <span class="pro-pane-sub">Active clip sequence & precision trim</span>
                 </div>
 
-                <div style="margin-top: 0.75rem;">
-                  <div class="pro-slider-meta">
-                    <span>Custom Speed Slider (0.1x – 10x):</span>
-                    <b id="lblSpeedSliderVal">1.00x</b>
-                  </div>
-                  <input type="range" id="rngVideoSpeed" min="0.1" max="10.0" step="0.05" value="1.0"
-                    class="pro-slider">
-                </div>
-              </div>
-
-              <div class="pro-group-box">
-                <label class="pro-group-label">Curve Speed Presets (CapCut Curves):</label>
-                <div class="pro-actions-grid-2">
-                  <button type="button" class="btn-pro-tool btn-curve-preset active" data-curve="standard">
-                    <i class="fa-solid fa-chart-line"></i> <span>Standard Constant</span>
-                  </button>
-                  <button type="button" class="btn-pro-tool btn-curve-preset" data-curve="hero">
-                    <i class="fa-solid fa-bolt"></i> <span>Hero (Slow In - Fast Out)</span>
-                  </button>
-                  <button type="button" class="btn-pro-tool btn-curve-preset" data-curve="jump">
-                    <i class="fa-solid fa-forward"></i> <span>Jump Cut Ramp</span>
-                  </button>
-                  <button type="button" class="btn-pro-tool btn-curve-preset" data-curve="flash">
-                    <i class="fa-solid fa-fire"></i> <span>Flash Ramp (Beat Sync)</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- PANE 3: 🎨 Filters -->
-            <div id="tabTimelineFilter" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-palette"></i> Cinematic Filters & LUTs</h4>
-                <span class="pro-pane-sub">Curated Hollywood, Vintage & Editorial Color Grades</span>
-              </div>
-
-              <div class="filter-options-grid">
-                <button type="button" class="timeline-filter-card active" data-filter="none">
-                  <span class="filter-icon">✨</span>
-                  <b>Original</b>
-                  <small>Natural</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="warm-gold">
-                  <span class="filter-icon">🌅</span>
-                  <b>Warm Gold</b>
-                  <small>Royal Glow</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="cinema">
-                  <span class="filter-icon">🎬</span>
-                  <b>Cinema Film</b>
-                  <small>Hollywood</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="vibrant">
-                  <span class="filter-icon">⚡</span>
-                  <b>Vibrant Pop</b>
-                  <small>Saturated</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="vintage">
-                  <span class="filter-icon">📼</span>
-                  <b>Vintage 90s</b>
-                  <small>Retro Film</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="teal-orange">
-                  <span class="filter-icon">🌊</span>
-                  <b>Teal & Orange</b>
-                  <small>Blockbuster</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="hdr">
-                  <span class="filter-icon">💎</span>
-                  <b>HDR Vivid</b>
-                  <small>Ultra Crisp</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="fashion">
-                  <span class="filter-icon">🥻</span>
-                  <b>Fashion Luxury</b>
-                  <small>Silk Velvet</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="cool">
-                  <span class="filter-icon">❄️</span>
-                  <b>Cool Blue</b>
-                  <small>Modern Chill</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="beauty">
-                  <span class="filter-icon">🌸</span>
-                  <b>Beauty Glow</b>
-                  <small>Soft Portrait</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="food">
-                  <span class="filter-icon">☕</span>
-                  <b>Warm Amber</b>
-                  <small>Cozy Cafe</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="neon">
-                  <span class="filter-icon">🟣</span>
-                  <b>Cyber Neon</b>
-                  <small>Night Club</small>
-                </button>
-                <button type="button" class="timeline-filter-card" data-filter="noir">
-                  <span class="filter-icon">🎞️</span>
-                  <b>B&W Noir</b>
-                  <small>Classic Film</small>
-                </button>
-              </div>
-            </div>
-
-            <!-- PANE 4: 🌈 Adjust (Pro Color Grading & Sliders) -->
-            <div id="tabTimelineAdjust" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-sliders"></i> Pro Color Adjustments</h4>
-                <span class="pro-pane-sub">Live real-time 60fps sliders with FFmpeg rendering</span>
-              </div>
-
-              <div class="pro-group-box">
-                <div class="pro-adjust-slider-row">
-                  <div class="pro-slider-meta">
-                    <span>☀️ Brightness:</span>
-                    <b id="lblAdjBrightness">0%</b>
-                  </div>
-                  <input type="range" id="rngAdjBrightness" min="-50" max="50" step="1" value="0" class="pro-slider">
-                </div>
-
-                <div class="pro-adjust-slider-row">
-                  <div class="pro-slider-meta">
-                    <span>🌓 Contrast:</span>
-                    <b id="lblAdjContrast">100%</b>
-                  </div>
-                  <input type="range" id="rngAdjContrast" min="50" max="200" step="1" value="100" class="pro-slider">
-                </div>
-
-                <div class="pro-adjust-slider-row">
-                  <div class="pro-slider-meta">
-                    <span>🎨 Saturation:</span>
-                    <b id="lblAdjSaturation">100%</b>
-                  </div>
-                  <input type="range" id="rngAdjSaturation" min="0" max="250" step="1" value="100" class="pro-slider">
-                </div>
-
-                <div class="pro-adjust-slider-row">
-                  <div class="pro-slider-meta">
-                    <span>💡 Exposure:</span>
-                    <b id="lblAdjExposure">0</b>
-                  </div>
-                  <input type="range" id="rngAdjExposure" min="-30" max="30" step="1" value="0" class="pro-slider">
-                </div>
-
-                <div class="pro-adjust-slider-row">
-                  <div class="pro-slider-meta">
-                    <span>🌡️ Temperature (Warm / Cool):</span>
-                    <b id="lblAdjTemp">0</b>
-                  </div>
-                  <input type="range" id="rngAdjTemp" min="-50" max="50" step="1" value="0" class="pro-slider">
-                </div>
-
-                <div class="pro-adjust-slider-row">
-                  <div class="pro-slider-meta">
-                    <span>🔍 Sharpness & Vibrance:</span>
-                    <b id="lblAdjSharp">0%</b>
-                  </div>
-                  <input type="range" id="rngAdjSharp" min="0" max="100" step="5" value="0" class="pro-slider">
-                </div>
-
-                <button type="button" id="btnResetAdjustments" class="btn-pro-ghost"
-                  style="width: 100%; margin-top: 0.5rem;">
-                  <i class="fa-solid fa-rotate-left"></i> Reset Color Sliders
-                </button>
-              </div>
-            </div>
-
-            <!-- PANE 5: 🎭 Effects (Visual FX) -->
-            <div id="tabTimelineFX" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-wand-magic"></i> Visual Effects & Transitions</h4>
-                <span class="pro-pane-sub">CapCut punch zoom, beat flash, glitch, noise & vignette</span>
-              </div>
-
-              <div class="pro-group-box">
-                <label class="pro-fx-toggle-card">
-                  <div>
-                    <b>⚡ White Flash Beat Transition</b>
-                    <p>Trendy dynamic white intro flash on audio beat</p>
-                  </div>
-                  <input type="checkbox" id="chkFxFlash" class="pro-checkbox">
-                </label>
-
-                <label class="pro-fx-toggle-card">
-                  <div>
-                    <b>🔍 Punch-in Zoom (1.15x)</b>
-                    <p>Center zoom for higher viewer retention and focus</p>
-                  </div>
-                  <input type="checkbox" id="chkFxZoom" class="pro-checkbox">
-                </label>
-
-                <label class="pro-fx-toggle-card">
-                  <div>
-                    <b>🌫️ Cinematic Vignette Glow</b>
-                    <p>Darkened corners for editorial film atmosphere</p>
-                  </div>
-                  <input type="checkbox" id="chkFxVignette" class="pro-checkbox">
-                </label>
-
-                <label class="pro-fx-toggle-card">
-                  <div>
-                    <b>📺 VHS Retro Noise Scanlines</b>
-                    <p>Classic 90s camcorder aesthetic scanlines</p>
-                  </div>
-                  <input type="checkbox" id="chkFxVhs" class="pro-checkbox">
-                </label>
-
-                <label class="pro-fx-toggle-card">
-                  <div>
-                    <b>⚡ Glitch Pulse Effect</b>
-                    <p>Dynamic RGB chromatic aberration shake</p>
-                  </div>
-                  <input type="checkbox" id="chkFxGlitch" class="pro-checkbox">
-                </label>
-
-                <label class="pro-fx-toggle-card">
-                  <div>
-                    <b>✨ Luxury Sparkle Glow</b>
-                    <p>Soft radiant shimmer on jewelry & saree highlights</p>
-                  </div>
-                  <input type="checkbox" id="chkFxSparkle" class="pro-checkbox">
-                </label>
-              </div>
-            </div>
-
-            <!-- PANE 5B: 🟢 Chroma Key & Green Screen Background Remover -->
-            <div id="tabTimelineChroma" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-wand-magic-sparkles" style="color: #10b981;"></i> Chroma Key & Green Screen</h4>
-                <span class="pro-pane-sub">1-Click green/blue background removal & replacement</span>
-              </div>
-
-              <div class="pro-group-box">
-                <label class="pro-fx-toggle-card">
-                  <div>
-                    <b>🟢 Enable Chroma Key</b>
-                    <p>Remove selected solid background color in real-time</p>
-                  </div>
-                  <input type="checkbox" id="chkChromaEnable" class="pro-checkbox">
-                </label>
-
-                <div id="chromaSettingsGroup" style="margin-top: 0.75rem;">
-                  <label class="pro-group-label">Key Color Picker:</label>
-                  <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.65rem;">
-                    <button type="button" class="chip btn-chroma-preset active" data-color="#00FF00" style="background: rgba(34,197,94,0.15); border: 1.5px solid #22c55e; color: #22c55e;">🟢 Green Screen</button>
-                    <button type="button" class="chip btn-chroma-preset" data-color="#0000FF" style="background: rgba(59,130,246,0.15); border: 1.5px solid #3b82f6; color: #3b82f6;">🔵 Blue Screen</button>
-                    <input type="color" id="clrChromaCustom" value="#00FF00" style="width: 38px; height: 32px; border-radius: 8px; border: 1px solid #3f3f46; cursor: pointer; background: transparent;" title="Pick custom color">
-                  </div>
-
-                  <div class="pro-adjust-slider-row">
-                    <div class="pro-slider-meta">
-                      <span>🎯 Color Similarity (Tolerance):</span>
-                      <b id="lblChromaSim">0.25</b>
+                <div class="pro-group-box">
+                  <div class="capcut-active-media-card">
+                    <div class="media-thumb-preview">
+                      <i class="fa-solid fa-video"></i>
                     </div>
-                    <input type="range" id="rngChromaSimilarity" min="0.05" max="0.65" step="0.02" value="0.25" class="pro-slider">
-                  </div>
-
-                  <div class="pro-adjust-slider-row">
-                    <div class="pro-slider-meta">
-                      <span>✨ Edge Smoothness / Blend:</span>
-                      <b id="lblChromaBlend">0.10</b>
+                    <div class="media-info">
+                      <b id="lblMediaFileName" style="color: #fff; font-size: 0.82rem;">reel-demo.mp4</b>
+                      <span id="lblMediaDuration" style="color: #9ca3af; font-size: 0.74rem;">30.0s • 1080p</span>
                     </div>
-                    <input type="range" id="rngChromaBlend" min="0.0" max="0.35" step="0.02" value="0.10" class="pro-slider">
-                  </div>
-
-                  <div style="margin-top: 0.85rem;">
-                    <label class="pro-group-label">Replace Background With:</label>
-                    <div class="pro-actions-grid-2">
-                      <button type="button" class="btn-pro-tool btn-chroma-bg active" data-bg="penthouse">
-                        <i class="fa-solid fa-building"></i> <span>Luxury Penthouse</span>
-                      </button>
-                      <button type="button" class="btn-pro-tool btn-chroma-bg" data-bg="cyberpunk">
-                        <i class="fa-solid fa-bolt"></i> <span>Neon Cyberpunk</span>
-                      </button>
-                      <button type="button" class="btn-pro-tool btn-chroma-bg" data-bg="studio">
-                        <i class="fa-solid fa-camera"></i> <span>Dark Studio</span>
-                      </button>
-                      <button type="button" class="btn-pro-tool btn-chroma-bg" data-bg="sunset">
-                        <i class="fa-solid fa-sun"></i> <span>Golden Sunset</span>
-                      </button>
-                      <button type="button" class="btn-pro-tool btn-chroma-bg" data-bg="blur">
-                        <i class="fa-solid fa-water"></i> <span>Blurred Backdrop</span>
-                      </button>
-                      <button type="button" class="btn-pro-tool btn-chroma-bg" data-bg="none">
-                        <i class="fa-solid fa-ban"></i> <span>Transparent Black</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- PANE 6: ✨ AI Tools -->
-            <div id="tabTimelineAI" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-microchip"></i> AI Studio Tools</h4>
-                <span class="pro-pane-sub">AI face glow, upscale, silence removal & auto-cut</span>
-              </div>
-
-              <div class="pro-group-box">
-                <div class="pro-actions-grid-1">
-                  <button type="button" class="btn-pro-ai-card" id="btnAiFaceEnhance">
-                    <span class="ai-card-icon">👤</span>
-                    <div class="ai-card-text">
-                      <b>AI Face & Beauty Glow</b>
-                      <p>Skin smoothing & natural portrait illumination</p>
-                    </div>
-                    <span class="ai-card-status-badge" id="badgeAiFace">OFF</span>
-                  </button>
-
-                  <button type="button" class="btn-pro-ai-card" id="btnAiUpscale4k">
-                    <span class="ai-card-icon">💎</span>
-                    <div class="ai-card-text">
-                      <b>AI 4K Upscale & Sharpen</b>
-                      <p>Super-resolution edge enhancement for crisp HD</p>
-                    </div>
-                    <span class="ai-card-status-badge" id="badgeAiUpscale">OFF</span>
-                  </button>
-
-                  <button type="button" class="btn-pro-ai-card" id="btnAiSilenceCut">
-                    <span class="ai-card-icon">✂️</span>
-                    <div class="ai-card-text">
-                      <b>AI Silence & Pause Remover</b>
-                      <p>Automatically trims dead audio pauses for viral pacing</p>
-                    </div>
-                    <span class="ai-card-status-badge" id="badgeAiSilence">OFF</span>
-                  </button>
-
-                  <button type="button" class="btn-pro-ai-card" id="btnAiAutoCaptionsGen">
-                    <span class="ai-card-icon">📝</span>
-                    <div class="ai-card-text">
-                      <b>AI Auto Caption Sync</b>
-                      <p>Generates word-by-word synced viral captions</p>
-                    </div>
-                    <span class="ai-card-status-badge" id="badgeAiCaptions">OFF</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- PANE 7: 📝 Text & Subs -->
-            <div id="tabTimelineText" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-font"></i> Subtitles & Typography</h4>
-                <span class="pro-pane-sub">Alex Hormozi kinetic glow & viral title overlays</span>
-              </div>
-
-              <div class="pro-group-box">
-                <label class="pro-group-label">Custom Overlay Text:</label>
-                <input type="text" id="txtTimelineCustomSub" value="" class="pro-text-input"
-                  placeholder="Type text overlay (optional)...">
-
-                <div style="margin-top: 0.65rem;">
-                  <label class="pro-group-label">Typography Presets:</label>
-                  <div class="pro-chips-grid">
-                    <button type="button" class="chip btn-text-style-preset active" data-style="hormozi">🟡 Hormozi
-                      Yellow</button>
-                    <button type="button" class="chip btn-text-style-preset" data-style="cyan">🔵 Electric Cyan</button>
-                    <button type="button" class="chip btn-text-style-preset" data-style="gold">👑 Royal 24k
-                      Gold</button>
-                    <button type="button" class="chip btn-text-style-preset" data-style="red">🔴 Attention Red</button>
-                    <button type="button" class="chip btn-text-style-preset" data-style="minimal">⚪ Clean White</button>
-                  </div>
-                </div>
-
-                <div style="margin-top: 0.65rem;">
-                  <label class="pro-group-label">Font Family:</label>
-                  <div class="pro-chips-grid">
-                    <button type="button" class="chip btn-font-family active" data-font="Inter">Modern (Inter)</button>
-                    <button type="button" class="chip btn-font-family" data-font="Montserrat">Bold (Montserrat)</button>
-                    <button type="button" class="chip btn-font-family" data-font="Bebas Neue">Impact (Bebas)</button>
-                    <button type="button" class="chip btn-font-family" data-font="Outfit">Trendy (Outfit)</button>
-                    <button type="button" class="chip btn-font-family" data-font="Playfair Display">Serif Luxury</button>
-                  </div>
-                </div>
-
-                <div style="margin-top: 0.65rem;">
-                  <label class="pro-group-label">Text Animation Effect:</label>
-                  <div class="pro-chips-grid">
-                    <button type="button" class="chip btn-text-anim active" data-anim="none">None</button>
-                    <button type="button" class="chip btn-text-anim" data-anim="typewriter">⌨️ Typewriter</button>
-                    <button type="button" class="chip btn-text-anim" data-anim="bounce">🏀 Bounce</button>
-                    <button type="button" class="chip btn-text-anim" data-anim="pop">💥 Pop-In</button>
-                    <button type="button" class="chip btn-text-anim" data-anim="pulse">✨ Neon Pulse</button>
-                    <button type="button" class="chip btn-text-anim" data-anim="slide">🚀 Slide Up</button>
-                  </div>
-                </div>
-
-                <div style="margin-top: 0.65rem;">
-                  <label class="pro-group-label">Font Size:</label>
-                  <div class="pro-chips-grid">
-                    <button type="button" class="chip btn-text-size" data-size="small">Small (24px)</button>
-                    <button type="button" class="chip btn-text-size" data-size="medium">Medium (32px)</button>
-                    <button type="button" class="chip btn-text-size active" data-size="large">Hormozi (42px)</button>
-                    <button type="button" class="chip btn-text-size" data-size="huge">Huge (52px)</button>
-                  </div>
-                </div>
-
-                <div style="margin-top: 0.65rem;">
-                  <label class="pro-group-label">Position on Screen:</label>
-                  <div class="pro-chips-grid">
-                    <button type="button" class="chip btn-text-pos" data-pos="top">🔝 Top Hook (14%)</button>
-                    <button type="button" class="chip btn-text-pos" data-pos="center">🎯 Center (45%)</button>
-                    <button type="button" class="chip btn-text-pos active" data-pos="bottom">🔽 Bottom (18%)</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- PANE 8: 😀 Stickers -->
-            <div id="tabTimelineStickers" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-icons"></i> Stickers & Call-to-Actions</h4>
-                <span class="pro-pane-sub">વિડિયો મુજબ સ્ટીકર્સ અને સોશિયલ બેજીસ</span>
-              </div>
-
-              <!-- Sticker Category Switcher Tabs -->
-              <div class="sticker-cat-tabs" style="display: flex; gap: 0.35rem; margin-bottom: 0.75rem; overflow-x: auto; padding-bottom: 0.2rem;">
-                <button type="button" class="sticker-cat-btn active" data-cat="gaming">🎮 Gaming & Action</button>
-                <button type="button" class="sticker-cat-btn" data-cat="viral">🚀 Viral / Shorts</button>
-                <button type="button" class="sticker-cat-btn" data-cat="shopping">🛍️ Patola / Saree</button>
-              </div>
-
-              <!-- Remove Sticker Action -->
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.03); border: 1px dashed rgba(215, 206, 192, 0.9); border-radius: 8px;">
-                <span style="font-size: 0.75rem; font-weight: 600; color: #64748b;">સ્ટીકર પસંદ કરો અથવા હટાવો:</span>
-                <button type="button" class="pro-sticker-btn" data-sticker="none" style="flex-direction: row; gap: 0.35rem; padding: 0.3rem 0.65rem; border-radius: 6px; background: #fff;">
-                  <span class="sticker-emoji" style="font-size: 0.95rem; margin-bottom: 0;">🚫</span>
-                  <span class="sticker-name" style="font-size: 0.75rem;">Remove Sticker</span>
-                </button>
-              </div>
-
-              <!-- 1. Gaming Category Grid -->
-              <div class="pro-stickers-grid sticker-cat-grid" data-cat-grid="gaming">
-                <button type="button" class="pro-sticker-btn" data-sticker="progamer">
-                  <span class="sticker-emoji">🎮</span>
-                  <span class="sticker-name">Pro Gamer</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="epic">
-                  <span class="sticker-emoji">🔥</span>
-                  <span class="sticker-name">Epic Moment</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="headshot">
-                  <span class="sticker-emoji">💥</span>
-                  <span class="sticker-name">Action KO</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="ultrafast">
-                  <span class="sticker-emoji">⚡</span>
-                  <span class="sticker-name">Ultra Fast</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="victory">
-                  <span class="sticker-emoji">👑</span>
-                  <span class="sticker-name">Victory Royale</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="danger">
-                  <span class="sticker-emoji">💣</span>
-                  <span class="sticker-name">Danger Zone</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="nextlevel">
-                  <span class="sticker-emoji">🚀</span>
-                  <span class="sticker-name">Next Level</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="mission">
-                  <span class="sticker-emoji">🎯</span>
-                  <span class="sticker-name">Mission Passed</span>
-                </button>
-              </div>
-
-              <!-- 2. Viral / Shorts Category Grid -->
-              <div class="pro-stickers-grid sticker-cat-grid hidden" data-cat-grid="viral">
-                <button type="button" class="pro-sticker-btn" data-sticker="subscribe">
-                  <span class="sticker-emoji">🔔</span>
-                  <span class="sticker-name">Subscribe Now</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="like">
-                  <span class="sticker-emoji">❤️</span>
-                  <span class="sticker-name">Double Tap Like</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="watchtillend">
-                  <span class="sticker-emoji">😱</span>
-                  <span class="sticker-name">Watch Till End</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="comment">
-                  <span class="sticker-emoji">💬</span>
-                  <span class="sticker-name">Drop Comment</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="share">
-                  <span class="sticker-emoji">🔁</span>
-                  <span class="sticker-name">Share Reel</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="mindblown">
-                  <span class="sticker-emoji">🤯</span>
-                  <span class="sticker-name">Mind Blown</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="plottwist">
-                  <span class="sticker-emoji">🤫</span>
-                  <span class="sticker-name">Plot Twist</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="viraltrend">
-                  <span class="sticker-emoji">✨</span>
-                  <span class="sticker-name">Viral Trend</span>
-                </button>
-              </div>
-
-              <!-- 3. Shopping / Saree Category Grid -->
-              <div class="pro-stickers-grid sticker-cat-grid hidden" data-cat-grid="shopping">
-                <button type="button" class="pro-sticker-btn" data-sticker="whatsapp">
-                  <span class="sticker-emoji">💬</span>
-                  <span class="sticker-name">Order WhatsApp</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="sale50">
-                  <span class="sticker-emoji">🏷️</span>
-                  <span class="sticker-name">50% Special Sale</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="trending">
-                  <span class="sticker-emoji">✨</span>
-                  <span class="sticker-name">Trending Patola</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="newarrival">
-                  <span class="sticker-emoji">👗</span>
-                  <span class="sticker-name">New Arrival</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="100">
-                  <span class="sticker-emoji">💯</span>
-                  <span class="sticker-name">100% Pure Silk</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="freeshipping">
-                  <span class="sticker-emoji">📦</span>
-                  <span class="sticker-name">Free Delivery</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="bestseller">
-                  <span class="sticker-emoji">⭐</span>
-                  <span class="sticker-name">Best Seller</span>
-                </button>
-                <button type="button" class="pro-sticker-btn" data-sticker="royal">
-                  <span class="sticker-emoji">👑</span>
-                  <span class="sticker-name">Royal Heritage</span>
-                </button>
-              </div>
-
-              <!-- 📍 Sticker Custom Position & Drag Settings -->
-              <div class="pro-group-box" style="margin-top: 0.9rem; padding: 0.8rem; background: rgba(0,0,0,0.03); border: 1.5px solid rgba(215, 206, 192, 0.7); border-radius: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.55rem;">
-                  <label class="pro-group-label" style="margin-bottom: 0; font-size: 0.82rem; font-weight: 700; color: #1e293b;">
-                    <i class="fa-solid fa-arrows-up-down-left-right" style="color: #6366f1;"></i> Sticker Position:
-                  </label>
-                  <span style="font-size: 0.7rem; color: #64748b; font-weight: 600;">(વિડીયો પર સીધું ખેંચી શકો છો ✋)</span>
-                </div>
-
-                <!-- 9-Grid Position Presets -->
-                <div class="pro-chips-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem;">
-                  <button type="button" class="chip btn-sticker-pos" data-pos="top-left">↖️ Top Left</button>
-                  <button type="button" class="chip btn-sticker-pos" data-pos="top-center">🔝 Top Mid</button>
-                  <button type="button" class="chip btn-sticker-pos active" data-pos="top-right">↗️ Top Right</button>
-                  <button type="button" class="chip btn-sticker-pos" data-pos="mid-left">⬅️ Mid Left</button>
-                  <button type="button" class="chip btn-sticker-pos" data-pos="center">🎯 Center</button>
-                  <button type="button" class="chip btn-sticker-pos" data-pos="mid-right">➡️ Mid Right</button>
-                  <button type="button" class="chip btn-sticker-pos" data-pos="bottom-left">↙️ Bottom Left</button>
-                  <button type="button" class="chip btn-sticker-pos" data-pos="bottom-center">🔽 Bottom Mid</button>
-                  <button type="button" class="chip btn-sticker-pos" data-pos="bottom-right">↘️ Bottom Right</button>
-                </div>
-
-                <!-- Sticker Size Selector -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.65rem; padding-top: 0.55rem; border-top: 1px dashed rgba(215, 206, 192, 0.6);">
-                  <span style="font-size: 0.75rem; font-weight: 600; color: #475569;">Sticker Size:</span>
-                  <div style="display: flex; gap: 0.35rem;">
-                    <button type="button" class="chip btn-sticker-scale" data-scale="small" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Small</button>
-                    <button type="button" class="chip btn-sticker-scale active" data-scale="normal" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Normal</button>
-                    <button type="button" class="chip btn-sticker-scale" data-scale="large" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Large</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- PANE 9: 🎵 Audio & Voice -->
-            <div id="tabTimelineAudio" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-music"></i> Audio Mixer & Song Studio</h4>
-                <span class="pro-pane-sub">Change soundtrack, upload MP3, voice changer & mixer</span>
-              </div>
-
-              <!-- 🎵 Active Soundtrack Card -->
-              <div class="pro-group-box" id="activeBgmBox" style="border: 1.5px solid rgba(0, 242, 254, 0.45); background: linear-gradient(135deg, rgba(0, 242, 254, 0.08), rgba(16, 185, 129, 0.08)); border-radius: 12px; padding: 0.9rem;">
-                <div class="pro-flex-between">
-                  <label class="pro-group-label" style="color: #00f2fe; display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0;">
-                    <i class="fa-solid fa-compact-disc fa-spin" style="animation-duration: 4s; font-size: 1rem;"></i> <span>Current Soundtrack:</span>
-                  </label>
-                  <span id="badgeActiveBgmStatus" class="pro-badge-gold">🎵 Active Track</span>
-                </div>
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-top: 0.6rem; background: rgba(0,0,0,0.45); padding: 0.7rem 0.9rem; border-radius: 9px; border: 1px solid rgba(255,255,255,0.08);">
-                  <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
-                    <b id="lblActiveSongTitle" style="color: #fff; font-size: 0.92rem; display: block;">Royal Heritage</b>
-                    <span id="lblActiveSongSubtitle" style="font-size: 0.72rem; color: #94a3b8;">Luxury Saree • Indian Royal Beat</span>
-                  </div>
-                  <div style="display: flex; gap: 0.45rem; flex-shrink: 0;">
-                    <button type="button" id="btnPreviewBgmToggle" class="btn-pro-tool" style="padding: 0.4rem 0.75rem; font-size: 0.78rem; background: rgba(0,242,254,0.15); border-color: #00f2fe; color: #00f2fe;" title="Listen to Song">
-                      <i class="fa-solid fa-play"></i> <span id="lblPreviewBgmBtn">Play</span>
+                    <button type="button" id="btnCapCutReplaceVideo" class="btn-capcut-mini" title="Replace or Upload Video">
+                      <i class="fa-solid fa-arrow-up-from-bracket"></i>
                     </button>
-                    <button type="button" id="btnRemoveBgmTrack" class="btn-pro-tool" style="padding: 0.4rem 0.65rem; color: #ef4444; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08);" title="Mute / Remove BGM">
+                    <button type="button" id="btnCapCutRemoveVideo" class="btn-capcut-mini text-red" title="Remove Video">
                       <i class="fa-solid fa-trash-can"></i>
                     </button>
+                    <input type="file" id="capcutVideoFileInput" accept="video/mp4,video/quicktime,video/webm" style="display: none;">
                   </div>
                 </div>
 
-                <!-- BGM Volume Slider -->
-                <div style="margin-top: 0.85rem;">
-                  <div class="pro-flex-between">
-                    <label class="pro-group-label" style="font-size: 0.8rem; margin-bottom: 0.2rem;">🎵 BGM Soundtrack Volume:</label>
-                    <b id="lblBgmVolDisplay" class="pro-badge-gold">85%</b>
+                <div class="pro-group-box">
+                  <label class="pro-group-label"><i class="fa-solid fa-clock-rotate-left"></i> Timeline Range (0.1s Precision):</label>
+                  <div class="pro-range-sliders">
+                    <div>
+                      <div class="pro-slider-meta">
+                        <span>▶ Start Trim:</span>
+                        <b id="lblTrimStartVal" class="pro-val-highlight">0.0s</b>
+                      </div>
+                      <input type="range" id="rngTrimStart" min="0" max="3600" step="0.5" value="0" class="pro-slider">
+                    </div>
+                    <div>
+                      <div class="pro-slider-meta">
+                        <span>⏹ End Trim:</span>
+                        <b id="lblTrimEndVal" class="pro-val-highlight">30.0s</b>
+                      </div>
+                      <input type="range" id="rngTrimEnd" min="2" max="3600" step="0.5" value="30" class="pro-slider">
+                    </div>
                   </div>
-                  <input type="range" id="rngBgmVolume" min="0" max="2.0" step="0.05" value="0.85" class="pro-slider">
-                </div>
-              </div>
 
-              <!-- 📁 Upload Custom MP3 / Song from PC -->
-              <div class="pro-group-box">
-                <input type="file" id="capcutAudioFileInput" accept="audio/*" style="display: none;">
-                <button type="button" id="btnUploadCapcutAudio" class="btn-pro-tool" style="width: 100%; padding: 0.75rem; border: 1.5px dashed #00f2fe; background: rgba(0,242,254,0.08); color: #00f2fe; font-weight: 700; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 0.6rem; cursor: pointer; transition: all 0.2s ease;">
-                  <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.2rem;"></i>
-                  <span>Upload Any Song from PC (.mp3, .wav)</span>
-                </button>
-                <div id="lblCustomAudioUploaded" class="hidden" style="margin-top: 0.4rem; font-size: 0.78rem; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
-                  <i class="fa-solid fa-circle-check"></i> <span id="lblCustomAudioName">Custom song attached to reel!</span>
-                </div>
-              </div>
-
-              <!-- 🎶 Trending Royalty-Free BGM Library -->
-              <div class="pro-group-box">
-                <div class="pro-flex-between">
-                  <label class="pro-group-label">🔥 1-Click Viral BGM Library:</label>
-                  <span class="pro-badge-gold">CapCut Pro Audio</span>
-                </div>
-                <div class="pro-chips-grid" style="grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
-                  <button type="button" class="chip btn-bgm-preset active" data-song-name="Royal Heritage" data-song-url="/audio/bgm/royal-heritage.mp3" data-song-desc="Luxury Saree • Indian Royal Beat">
-                    🎷 Royal Heritage
-                  </button>
-                  <button type="button" class="chip btn-bgm-preset" data-song-name="Cinematic Ambient" data-song-url="/audio/bgm/cinematic-ambient.mp3" data-song-desc="Dramatic Film • Storytelling">
-                    🎬 Cinematic Ambient
-                  </button>
-                  <button type="button" class="chip btn-bgm-preset" data-song-name="Lo-Fi Aesthetic" data-song-url="/audio/bgm/lofi-aesthetic.mp3" data-song-desc="Chill Chillhop • Vlog Beats">
-                    ☕ Lo-Fi Aesthetic
-                  </button>
-                  <button type="button" class="chip btn-bgm-preset" data-song-name="Luxury Saree" data-song-url="/audio/bgm/luxury-saree.mp3" data-song-desc="Festive Indian Sitar">
-                    💎 Luxury Saree
-                  </button>
-                  <button type="button" class="chip btn-bgm-preset" data-song-name="Cyber Phonk Trap" data-song-url="/audio/bgm/royal-heritage.mp3" data-song-desc="Fast Cuts & High Energy">
-                    ⚡ Phonk Beat
-                  </button>
-                  <button type="button" class="chip btn-bgm-preset" data-song-name="Mute / No Music" data-song-url="none" data-song-desc="Original Sound Only">
-                    🔇 No Music (Silent)
-                  </button>
-                </div>
-              </div>
-
-              <!-- Original Camera Audio Balancing -->
-              <div class="pro-group-box">
-                <div class="pro-flex-between">
-                  <label class="pro-group-label">📹 Original Video Camera Sound:</label>
-                  <b id="lblOrigVolDisplay" class="pro-badge-gold">100%</b>
-                </div>
-                <input type="range" id="rngOriginalVolume" min="0" max="2.0" step="0.05" value="1.0" class="pro-slider">
-
-                <label class="pro-fx-toggle-card" style="margin-top: 0.6rem;">
-                  <div>
-                    <b>🔇 Mute Original Camera Sound</b>
-                    <p>Silence camera mic and keep 100% pure BGM soundtrack</p>
+                  <div class="pro-quick-chips-row">
+                    <span class="pro-sub-label">⚡ Quick Presets:</span>
+                    <button type="button" class="chip btn-quick-cut" data-from-here="30" style="background: rgba(0,242,254,0.18); border: 1px solid #00f2fe; color: #00f2fe; font-weight: 600;" title="Make 30s Reel starting right from where you are playing"><i class="fa-solid fa-crosshairs"></i> 30s From Playhead</button>
+                    <button type="button" class="chip btn-quick-cut" data-extend="30" style="background: rgba(168,85,247,0.18); border: 1px solid #a855f7; color: #d8b4fe;" title="Extend End Trim by 30 seconds">+30s More</button>
+                    <button type="button" class="chip btn-quick-cut" data-start="0" data-end="30">First 30s</button>
+                    <button type="button" class="chip btn-quick-cut" data-start="0" data-end="max">Full Length</button>
                   </div>
-                  <input type="checkbox" id="chkMuteOrigAudio" class="pro-checkbox">
-                </label>
-              </div>
+                </div>
 
-              <div class="pro-group-box">
-                <label class="pro-group-label">Voice Changer Effect (Pitch Shift):</label>
-                <div class="pro-chips-grid">
-                  <button type="button" class="chip btn-voice-preset active" data-voice="normal">🎙️ Normal</button>
-                  <button type="button" class="chip btn-voice-preset" data-voice="deep">🎬 Deep Cinema</button>
-                  <button type="button" class="chip btn-voice-preset" data-voice="chipmunk">🐿️ Chipmunk</button>
-                  <button type="button" class="chip btn-voice-preset" data-voice="monster">👹 Monster</button>
-                  <button type="button" class="chip btn-voice-preset" data-voice="robot">🤖 Robot</button>
-                  <button type="button" class="chip btn-voice-preset" data-voice="echo">📻 Radio Echo</button>
+                <div class="pro-group-box">
+                  <label class="pro-group-label">Quick Razor & Sequence Tools:</label>
+                  <div class="pro-actions-grid-2">
+                    <button type="button" id="btnTimelineSplitTool" class="btn-pro-tool">
+                      <i class="fa-solid fa-cut"></i> <span>Split at Playhead</span>
+                    </button>
+                    <button type="button" id="btnToolRotate90" class="btn-pro-tool">
+                      <i class="fa-solid fa-rotate-right"></i> <span>Rotate 90°</span>
+                    </button>
+                    <button type="button" id="btnToolFlipH" class="btn-pro-tool">
+                      <i class="fa-solid fa-arrows-left-right"></i> <span>Flip Horizontal</span>
+                    </button>
+                    <button type="button" id="btnToolFlipV" class="btn-pro-tool">
+                      <i class="fa-solid fa-arrows-up-down"></i> <span>Flip Vertical</span>
+                    </button>
+                    <button type="button" id="btnToolFreezeFrame" class="btn-pro-tool" style="display: none;">
+                      <i class="fa-solid fa-snowflake"></i> <span>Freeze Frame (2s)</span>
+                    </button>
+                    <button type="button" id="btnToolReverseVideo" class="btn-pro-tool" style="display: none;">
+                      <i class="fa-solid fa-backward-fast"></i> <span>Reverse Speed</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <!-- Live Voice-Over Studio -->
-              <div class="pro-group-box">
-                <label class="pro-group-label">🎙️ Live Voice-Over Recording:</label>
-                <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.4rem;">
-                  <button type="button" id="btnStartVoiceRecord" class="btn-pro-tool" style="flex: 1; background: rgba(239,68,68,0.12); border: 1.5px solid #ef4444; color: #ef4444;">
-                    <i class="fa-solid fa-microphone"></i> <span>Record Voice</span>
-                  </button>
-                  <button type="button" id="btnStopVoiceRecord" class="btn-pro-tool hidden" style="flex: 1; background: rgba(34,197,94,0.12); border: 1.5px solid #22c55e; color: #22c55e;">
-                    <i class="fa-solid fa-stop"></i> <span>Stop & Save</span>
-                  </button>
+              <!-- PANE 2: Audio & Voice -->
+              <div id="tabTimelineAudio" class="pro-tab-pane" style="display: none;">
+                <div class="pro-pane-header">
+                  <h4><i class="fa-solid fa-music"></i> Audio & Background Music</h4>
+                  <span class="pro-pane-sub">Mix BGM, sync sound wave, voiceover</span>
                 </div>
-                <div id="voiceRecordStatus" class="hidden" style="margin-top: 0.5rem; font-size: 0.8rem; color: #ef4444; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
-                  <span class="recording-pulse" style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
-                  <span>Recording: </span><b id="lblVoiceRecordTime">00:00</b>
-                </div>
-              </div>
 
-              <!-- Beat Detection Marker Tool -->
-              <div class="pro-group-box">
-                <div class="pro-flex-between">
-                  <label class="pro-group-label">⚡ Audio Beat Sync:</label>
-                  <span class="pro-badge-gold">AI Beat Drops</span>
-                </div>
-                <button type="button" id="btnDetectAudioBeats" class="btn-pro-tool" style="width: 100%; margin-top: 0.4rem;">
-                  <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> <span>Auto-Detect & Mark Beats on Timeline</span>
-                </button>
-              </div>
-
-              <!-- 🔔 CapCut Sound Effects (SFX) Library -->
-              <div class="pro-group-box">
-                <div class="pro-flex-between">
-                  <label class="pro-group-label" style="display: flex; align-items: center; gap: 0.4rem;">
-                    <i class="fa-solid fa-bell" style="color: #f59e0b;"></i> <span>CapCut Sound Effects (SFX):</span>
-                  </label>
-                  <span id="badgeActiveSfxStatus" class="pro-badge-gold">None</span>
-                </div>
-                <div class="pro-chips-grid" style="margin-top: 0.5rem;">
-                  <button type="button" class="chip btn-sfx-chip active" data-sfx="none">None</button>
-                  <button type="button" class="chip btn-sfx-chip" data-sfx="whoosh">⚡ Whoosh</button>
-                  <button type="button" class="chip btn-sfx-chip" data-sfx="ding">🔔 Bell Ding</button>
-                  <button type="button" class="chip btn-sfx-chip" data-sfx="pop">🫧 Pop</button>
-                  <button type="button" class="chip btn-sfx-chip" data-sfx="camera-shutter">📸 Camera Click</button>
-                  <button type="button" class="chip btn-sfx-chip" data-sfx="ka-ching">💰 Ka-Ching</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- PANE 10: 🎬 Transitions -->
-            <div id="tabTimelineTransitions" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-film"></i> Transitions</h4>
-                <span class="pro-pane-sub">Smooth clip transitions for seamless montage flow</span>
-              </div>
-
-              <div class="pro-chips-grid">
-                <button type="button" class="chip btn-transition-chip active" data-transition="none">None</button>
-                <button type="button" class="chip btn-transition-chip" data-transition="fade">Fade to Black</button>
-                <button type="button" class="chip btn-transition-chip" data-transition="flash">White Flash Beat</button>
-                <button type="button" class="chip btn-transition-chip" data-transition="zoom">Zoom Burst</button>
-                <button type="button" class="chip btn-transition-chip" data-transition="dissolve">Cross
-                  Dissolve</button>
-                <button type="button" class="chip btn-transition-chip" data-transition="glitch">Glitch Cut</button>
-              </div>
-            </div>
-
-            <!-- PANE 10B: 🗂️ Trending Templates Marketplace (CapCut 1-Click Templates) -->
-            <div id="tabTimelineTemplates" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-table-cells-large" style="color: #f59e0b;"></i> Trending Templates</h4>
-                <span class="pro-pane-sub">1-Click viral editing styles, effects, speed & sound packs</span>
-              </div>
-
-              <div class="pro-group-box">
-                <div class="pro-actions-grid-1">
-                  <!-- Template 1: Viral Hook -->
-                  <div class="template-card-item btn-apply-template" data-tpl="viral-hook" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: all 0.2s;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                      <span style="font-size: 1.6rem;">⚡</span>
+                <div class="pro-group-box">
+                  <div class="active-bgm-card" id="activeBgmBox">
+                    <div class="active-bgm-header">
+                      <span class="badge-bgm-live" id="badgeActiveBgmStatus"><i class="fa-solid fa-circle"></i> BGM Active</span>
+                      <button type="button" id="btnRemoveBgmTrack" class="btn-icon-danger" title="Remove BGM"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="active-bgm-info">
+                      <i class="fa-solid fa-music bgm-big-icon"></i>
                       <div>
-                        <b style="color: #f59e0b; font-size: 0.88rem;">Viral Beat Hook</b>
-                        <p style="color: #a1a1aa; font-size: 0.72rem; margin: 0.15rem 0 0;">1.25x Speed + White Flash + Punch Zoom + Yellow Subs</p>
+                        <b id="lblActiveSongTitle">Cyberpunk Bass Reel</b>
+                        <span id="lblActiveSongSubtitle">Trending Viral BGM</span>
                       </div>
                     </div>
-                    <span class="pro-badge-saved" style="white-space: nowrap;">⚡ Apply</span>
-                  </div>
-
-                  <!-- Template 2: Luxury Saree / Jewelry Showcase -->
-                  <div class="template-card-item btn-apply-template" data-tpl="luxury-royal" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(217,119,6,0.3); border-radius: 12px; padding: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: all 0.2s; margin-top: 0.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                      <span style="font-size: 1.6rem;">👑</span>
-                      <div>
-                        <b style="color: #fcd34d; font-size: 0.88rem;">Royal Luxury Gold</b>
-                        <p style="color: #a1a1aa; font-size: 0.72rem; margin: 0.15rem 0 0;">Warm Gold LUT + Sparkle + 0.75x Slow-Mo + Serif Title</p>
-                      </div>
-                    </div>
-                    <span class="pro-badge-saved" style="white-space: nowrap;">👑 Apply</span>
-                  </div>
-
-                  <!-- Template 3: Cyberpunk Techno Reel -->
-                  <div class="template-card-item btn-apply-template" data-tpl="cyberpunk" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(6,182,212,0.3); border-radius: 12px; padding: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: all 0.2s; margin-top: 0.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                      <span style="font-size: 1.6rem;">🟣</span>
-                      <div>
-                        <b style="color: #22d3ee; font-size: 0.88rem;">Neon Cyber Glitch</b>
-                        <p style="color: #a1a1aa; font-size: 0.72rem; margin: 0.15rem 0 0;">Cyberpunk Neon + Glitch Pulse + Electric Cyan Text</p>
-                      </div>
-                    </div>
-                    <span class="pro-badge-saved" style="white-space: nowrap;">🟣 Apply</span>
-                  </div>
-
-                  <!-- Template 4: Wedding / Romantic Highlights -->
-                  <div class="template-card-item btn-apply-template" data-tpl="wedding" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(244,114,182,0.3); border-radius: 12px; padding: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: all 0.2s; margin-top: 0.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                      <span style="font-size: 1.6rem;">🌸</span>
-                      <div>
-                        <b style="color: #f472b6; font-size: 0.88rem;">Wedding Highlights</b>
-                        <p style="color: #a1a1aa; font-size: 0.72rem; margin: 0.15rem 0 0;">Beauty Soft Glow + Vignette + Cross Dissolve Fade</p>
-                      </div>
-                    </div>
-                    <span class="pro-badge-saved" style="white-space: nowrap;">🌸 Apply</span>
-                  </div>
-
-                  <!-- Template 5: YouTube Long Video / Tech Review -->
-                  <div class="template-card-item btn-apply-template" data-tpl="tech-review" style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(59,130,246,0.3); border-radius: 12px; padding: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: all 0.2s; margin-top: 0.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                      <span style="font-size: 1.6rem;">🎬</span>
-                      <div>
-                        <b style="color: #60a5fa; font-size: 0.88rem;">16:9 YouTube Pro</b>
-                        <p style="color: #a1a1aa; font-size: 0.72rem; margin: 0.15rem 0 0;">16:9 HD + HDR Vivid + Sharp 50% + Top Hook Title</p>
-                      </div>
-                    </div>
-                    <span class="pro-badge-saved" style="white-space: nowrap;">🎬 Apply</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- PANE 11: 📐 Canvas -->
-            <div id="tabTimelineCanvas" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-crop"></i> Canvas Aspect Ratio</h4>
-                <span class="pro-pane-sub">Select platform format with intelligent auto-padding</span>
-              </div>
-
-              <div class="pro-aspect-grid">
-                <button type="button" class="pro-aspect-btn active" data-aspect="9:16">
-                  <div class="aspect-box aspect-9-16"></div>
-                  <b>9:16 Vertical</b>
-                  <small>Reels / Shorts / TikTok</small>
-                </button>
-                <button type="button" class="pro-aspect-btn" data-aspect="16:9">
-                  <div class="aspect-box aspect-16-9"></div>
-                  <b>16:9 Landscape</b>
-                  <small>YouTube / Desktop</small>
-                </button>
-                <button type="button" class="pro-aspect-btn" data-aspect="1:1">
-                  <div class="aspect-box aspect-1-1"></div>
-                  <b>1:1 Square</b>
-                  <small>Instagram Feed</small>
-                </button>
-                <button type="button" class="pro-aspect-btn" data-aspect="4:5">
-                  <div class="aspect-box aspect-4-5"></div>
-                  <b>4:5 Portrait</b>
-                  <small>Classic Portrait</small>
-                </button>
-              </div>
-
-              <div class="pro-group-box" style="margin-top: 0.85rem;">
-                <label class="pro-group-label" style="display: flex; align-items: center; gap: 0.45rem;">
-                  <i class="fa-solid fa-wand-magic-sparkles" style="color: #00f2fe;"></i> <span>Canvas Background Fill:</span>
-                </label>
-                <div class="pro-chips-grid" style="margin-top: 0.45rem;">
-                  <button type="button" class="chip btn-canvas-bg active" data-bg="blur">✨ CapCut Blur Video Background</button>
-                  <button type="button" class="chip btn-canvas-bg" data-bg="black">⬛ Classic Black Bars</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- PANE 12: 📤 Export & Publish -->
-            <div id="tabTimelineExport" class="pro-tab-pane hidden">
-              <div class="pro-pane-header">
-                <h4><i class="fa-solid fa-share-nodes"></i> Export & 1-Click Publish</h4>
-                <span class="pro-pane-sub">Resolution, framerate, bitrate & social share</span>
-              </div>
-
-              <div class="pro-group-box">
-                <label class="pro-group-label">Resolution Output:</label>
-                <div class="pro-chips-grid">
-                  <button type="button" class="chip btn-export-res" data-res="720p">720p HD</button>
-                  <button type="button" class="chip btn-export-res active" data-res="1080p">1080p Full HD</button>
-                  <button type="button" class="chip btn-export-res" data-res="4k">4K Ultra HD</button>
-                </div>
-
-                <div style="margin-top: 0.65rem;">
-                  <label class="pro-group-label">Framerate (FPS):</label>
-                  <div class="pro-chips-grid">
-                    <button type="button" class="chip btn-export-fps" data-fps="24">24 FPS (Cinematic)</button>
-                    <button type="button" class="chip btn-export-fps active" data-fps="30">30 FPS (Standard)</button>
-                    <button type="button" class="chip btn-export-fps" data-fps="60">60 FPS (Ultra Smooth)</button>
+                    <button type="button" id="btnPreviewBgmToggle" class="btn-bgm-preview-action">
+                      <i class="fa-solid fa-play"></i> <span id="lblPreviewBgmBtn">Preview Audio</span>
+                    </button>
                   </div>
                 </div>
 
-                <div style="margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                  <button type="button" id="btnExportFromPublishTab" class="btn-pro-export-master" style="width: 100%;">
-                    <i class="fa-solid fa-arrow-up-from-bracket"></i> <span>Render & Download HD Reel</span>
+                <div class="pro-group-box">
+                  <label class="pro-group-label">BGM Track Volume:</label>
+                  <div class="pro-slider-meta">
+                    <span>Music Volume</span>
+                    <b id="lblBgmVolDisplay" class="pro-val-highlight">60%</b>
+                  </div>
+                  <input type="range" id="rngBgmVolume" min="0" max="100" step="5" value="60" class="pro-slider">
+                </div>
+
+                <div class="pro-group-box">
+                  <label class="pro-group-label">Upload Custom MP3 / Audio:</label>
+                  <input type="file" id="capcutAudioFileInput" accept="audio/mp3,audio/wav,audio/m4a,audio/*" style="display: none;">
+                  <button type="button" id="btnUploadCapcutAudio" class="btn-pro-tool" style="width: 100%; justify-content: center;">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> <span>Select Audio from PC</span>
                   </button>
-                  <button type="button" id="btnExportNextToUpload" class="btn-pro-next-sub" style="width: 100%;">
-                    <span>Next: Proceed to Upload Section</span> <i class="fa-solid fa-arrow-right"></i>
-                  </button>
+                  <div id="lblCustomAudioUploaded" class="custom-audio-pill hidden" style="margin-top: 6px;">
+                    <i class="fa-solid fa-check"></i> <span id="lblCustomAudioName">Custom Audio Loaded</span>
+                  </div>
+                </div>
+
+                <div class="pro-group-box">
+                  <label class="pro-group-label">Original Video Audio:</label>
+                  <div class="pro-slider-meta">
+                    <span>Clip Volume</span>
+                    <b id="lblOrigVolDisplay" class="pro-val-highlight">100%</b>
+                  </div>
+                  <input type="range" id="rngOriginalVolume" min="0" max="200" step="5" value="100" class="pro-slider">
+                  <div style="margin-top: 8px;">
+                    <label class="pro-checkbox-inline">
+                      <input type="checkbox" id="chkMuteOrigAudio"> <span>Mute Original Audio (BGM Only)</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div style="display: none;">
+                  <button type="button" id="btnStartVoiceRecord"></button>
+                  <button type="button" id="btnStopVoiceRecord"></button>
+                  <span id="voiceRecordStatus"></span>
+                  <span id="lblVoiceRecordTime"></span>
+                  <button type="button" id="btnDetectAudioBeats"></button>
+                  <span id="badgeActiveSfxStatus"></span>
+                </div>
+              </div>
+
+              <!-- PANE 3: Text & Captions -->
+              <div id="tabTimelineText" class="pro-tab-pane" style="display: none;">
+                <div class="pro-pane-header">
+                  <h4><i class="fa-solid fa-closed-captioning"></i> Alex Hormozi Captions</h4>
+                  <span class="pro-pane-sub">Viral animated subtitles with word highlight</span>
+                </div>
+
+                <div class="pro-group-box">
+                  <label class="pro-group-label">Custom Subtitle / Hook Text:</label>
+                  <input type="text" id="txtTimelineCustomSub" value="★ THE TENSION IS REAL 😱 ★" class="pro-project-input" style="width: 100%; margin-bottom: 8px;">
+                  <div class="caption-presets-grid">
+                    <button type="button" class="btn-sub-preset active" data-sub-style="hormozi-yellow">
+                      <span class="preset-preview" style="background: #eab308; color: #000; font-weight: 900;">VIRAL YELLOW</span>
+                    </button>
+                    <button type="button" class="btn-sub-preset" data-sub-style="hormozi-green">
+                      <span class="preset-preview" style="background: #22c55e; color: #000; font-weight: 900;">NEON GREEN</span>
+                    </button>
+                    <button type="button" class="btn-sub-preset" data-sub-style="hormozi-white">
+                      <span class="preset-preview" style="background: #ffffff; color: #000; font-weight: 900;">BOLD WHITE</span>
+                    </button>
+                    <button type="button" class="btn-sub-preset" data-sub-style="hormozi-cyan">
+                      <span class="preset-preview" style="background: #00f2fe; color: #000; font-weight: 900;">ELECTRIC CYAN</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PANE 4: Visual FX -->
+              <div id="tabTimelineFX" class="pro-tab-pane" style="display: none;">
+                <div class="pro-pane-header">
+                  <h4><i class="fa-solid fa-wand-magic-sparkles"></i> Visual Effects & Overlays</h4>
+                  <span class="pro-pane-sub">Cinematic hooks and flash zooms</span>
+                </div>
+
+                <div class="pro-group-box">
+                  <div class="fx-toggles-grid">
+                    <label class="fx-toggle-card">
+                      <input type="checkbox" id="chkFxFlash">
+                      <div class="fx-toggle-content">
+                        <b>⚡ White Flash Hook</b>
+                        <span>High-energy punch transition at 0s</span>
+                      </div>
+                    </label>
+                    <label class="fx-toggle-card">
+                      <input type="checkbox" id="chkFxZoom">
+                      <div class="fx-toggle-content">
+                        <b>🔍 Punch-in Zoom</b>
+                        <span>Dramatic 1.15x center zoom</span>
+                      </div>
+                    </label>
+                    <label class="fx-toggle-card">
+                      <input type="checkbox" id="chkFxVignette">
+                      <div class="fx-toggle-content">
+                        <b>🎬 Cinematic Vignette</b>
+                        <span>Edge dark shadow focus</span>
+                      </div>
+                    </label>
+                    <label class="fx-toggle-card">
+                      <input type="checkbox" id="chkFxGlitch">
+                      <div class="fx-toggle-content">
+                        <b>👾 Cyber Glitch Shake</b>
+                        <span>RGB split glitch shake effect</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div style="display: none;">
+                  <input type="checkbox" id="chkFxVhs">
+                  <input type="checkbox" id="chkFxSparkle">
+                </div>
+              </div>
+
+              <!-- Hidden containers for backward compatibility with JS queries -->
+              <div style="display: none;">
+                <div id="tabTimelineSpeed"></div>
+                <div id="tabTimelineFilter"></div>
+                <div id="tabTimelineAdjust">
+                  <span id="lblAdjBrightness"></span><input type="range" id="rngAdjBrightness">
+                  <span id="lblAdjContrast"></span><input type="range" id="rngAdjContrast">
+                  <span id="lblAdjSaturation"></span><input type="range" id="rngAdjSaturation">
+                  <span id="lblAdjExposure"></span><input type="range" id="rngAdjExposure">
+                  <span id="lblAdjTemp"></span><input type="range" id="rngAdjTemp">
+                  <span id="lblAdjSharp"></span><input type="range" id="rngAdjSharp">
+                  <button type="button" id="btnResetAdjustments"></button>
+                </div>
+                <div id="tabTimelineChroma">
+                  <input type="checkbox" id="chkChromaEnable">
+                  <div id="chromaSettingsGroup"></div>
+                  <input type="color" id="clrChromaCustom">
+                  <span id="lblChromaSim"></span><input type="range" id="rngChromaSimilarity">
+                  <span id="lblChromaBlend"></span><input type="range" id="rngChromaBlend">
+                </div>
+                <div id="tabTimelineAI">
+                  <button type="button" id="btnAiFaceEnhance"></button><span id="badgeAiFace"></span>
+                  <button type="button" id="btnAiUpscale4k"></button><span id="badgeAiUpscale"></span>
+                  <button type="button" id="btnAiSilenceCut"></button><span id="badgeAiSilence"></span>
+                  <button type="button" id="btnAiAutoCaptionsGen"></button><span id="badgeAiCaptions"></span>
+                </div>
+                <div id="tabTimelineStickers">
+                  <div id="gaming"></div><div id="viral"></div><div id="shopping"></div>
+                </div>
+                <div id="tabTimelineTransitions"></div>
+                <div id="tabTimelineTemplates"></div>
+                <div id="tabTimelineCanvas"></div>
+                <div id="tabTimelineExport">
+                  <button type="button" id="btnExportFromPublishTab"></button>
+                  <button type="button" id="btnExportNextToUpload"></button>
                 </div>
               </div>
             </div>
           </aside>
 
-          <!-- 3B. Center Column: Live Monitor Preview -->
+          <!-- 2B. Center Column: Live Monitor Preview (CapCut Pro Monitor) -->
           <main class="pro-preview-viewport">
             <div class="pro-player-stage">
               <div class="pro-monitor-frame" id="proMonitorFrame">
@@ -3198,7 +2388,7 @@
                 <!-- Interactive Live Subtitle Overlay -->
                 <div id="timelineLiveSubBadge" class="pro-subtitle-overlay hidden"></div>
 
-                <!-- Live Sticker Overlay (Top-Right Floating Badge) -->
+                <!-- Live Sticker Overlay -->
                 <div id="timelineStickerOverlay" class="pro-sticker-overlay hidden" style="position: absolute; top: 12%; right: 7%; z-index: 45; pointer-events: none;">
                   <div class="pro-sticker-pill">
                     <span id="stickerIconContent" class="sticker-pill-emoji">🎮</span>
@@ -3209,49 +2399,42 @@
 
               <!-- Transport Control Bar below Player -->
               <div class="pro-transport-bar">
-                <button type="button" id="btnStepBack" class="btn-transport" title="Step Back 1s"><i
-                    class="fa-solid fa-backward-step"></i></button>
-                <button type="button" id="btnTimelineTogglePlay" class="btn-transport btn-play-main"
-                  title="Play / Pause (Spacebar)">
+                <button type="button" id="btnStepBack" class="btn-transport" title="Step Back 1s"><i class="fa-solid fa-backward-step"></i></button>
+                <button type="button" id="btnTimelineTogglePlay" class="btn-transport btn-play-main" title="Play / Pause (Spacebar)">
                   <i class="fa-solid fa-play" id="timelinePlayIcon"></i>
                 </button>
-                <button type="button" id="btnStepForward" class="btn-transport" title="Step Forward 1s"><i
-                    class="fa-solid fa-forward-step"></i></button>
+                <button type="button" id="btnStepForward" class="btn-transport" title="Step Forward 1s"><i class="fa-solid fa-forward-step"></i></button>
 
                 <div class="pro-timecode-box">
-                  <span id="lblTimelineCurrentTime">00:00.00</span> / <span id="lblTimelineClipDuration">30s</span>
+                  <span id="lblTimelineCurrentTime" class="time-current">00:00.00</span>
+                  <span class="time-sep">/</span>
+                  <span id="lblTimelineClipDuration" class="time-total">00:30.00</span>
                 </div>
 
-                <div class="pro-v-divider" style="height: 18px; width: 1px; background: #272732; margin: 0 4px;"></div>
-
-                <!-- Quick Canvas Aspect Ratio Switcher -->
-                <div class="pro-quick-aspect-group" style="display: flex; gap: 4px; align-items: center;">
-                  <button type="button" class="btn-quick-ratio" id="btnRatio16x9" data-ratio="16:9" title="16:9 Landscape (YouTube)">
-                    <i class="fa-solid fa-desktop"></i> 16:9
-                  </button>
-                  <button type="button" class="btn-quick-ratio active" id="btnRatio9x16" data-ratio="9:16" title="9:16 Vertical (Reels/Shorts)">
-                    <i class="fa-solid fa-mobile-screen"></i> 9:16
-                  </button>
-                  <button type="button" class="btn-quick-ratio" id="btnToggleVideoFit" title="Toggle Fit to Screen / Fill Canvas">
+                <div class="pro-transport-right">
+                  <div class="btn-ratio-group">
+                    <button type="button" id="btnRatio16x9" class="btn-quick-ratio" data-ratio="16:9">16:9</button>
+                    <button type="button" id="btnRatio9x16" class="btn-quick-ratio active" data-ratio="9:16">9:16</button>
+                  </div>
+                  <button type="button" id="btnToggleVideoFit" class="btn-transport-tool" title="Toggle Fit / Fill Canvas">
                     <i class="fa-solid fa-expand"></i> <span id="lblVideoFitMode">Fit</span>
                   </button>
+                  <button type="button" id="btnToggleLoop" class="btn-transport-tool active" title="Toggle Loop Playback">
+                    <i class="fa-solid fa-repeat"></i>
+                  </button>
+                  <button type="button" id="btnToggleFullscreen" class="btn-transport-tool" title="Full Screen Preview">
+                    <i class="fa-solid fa-maximize"></i>
+                  </button>
                 </div>
-
-                <div class="pro-v-divider" style="height: 18px; width: 1px; background: #272732; margin: 0 4px;"></div>
-
-                <button type="button" id="btnToggleLoop" class="btn-transport active" title="Toggle Loop Playback"><i
-                    class="fa-solid fa-repeat"></i></button>
-                <button type="button" id="btnToggleFullscreen" class="btn-transport"
-                  title="Toggle Fullscreen Preview"><i class="fa-solid fa-maximize"></i></button>
               </div>
             </div>
           </main>
 
-          <!-- 3C. Right Column: Properties & Quick Inspector -->
+          <!-- 2C. Right Column: Inspector Panel (CapCut Pro Properties) -->
           <aside class="pro-inspector-panel">
             <div class="pro-pane-header">
-              <h4><i class="fa-solid fa-circle-info"></i> Clip Properties</h4>
-              <span class="pro-pane-sub">Active reel metadata & quick transform</span>
+              <h4><i class="fa-solid fa-sliders"></i> Clip Inspector</h4>
+              <span class="pro-pane-sub">Active reel properties & transform</span>
             </div>
 
             <div class="pro-group-box">
@@ -3265,8 +2448,26 @@
               </div>
             </div>
 
+            <!-- Clip Speed & Curve -->
             <div class="pro-group-box">
-              <label class="pro-group-label">Quick Transform:</label>
+              <label class="pro-group-label"><i class="fa-solid fa-gauge-high"></i> Playback Speed:</label>
+              <div class="pro-slider-meta">
+                <span>Speed Multiplier:</span>
+                <b id="lblSpeedSliderVal" class="pro-val-highlight">1.00x</b>
+              </div>
+              <input type="range" id="rngVideoSpeed" min="0.1" max="10" step="0.05" value="1.0" class="pro-slider">
+              <span id="lblSpeedDisplay" style="display: none;">1.0x</span>
+              <div class="speed-chips-grid" style="margin-top: 8px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+                <button type="button" class="btn-speed-preset" data-speed="0.5">0.5x</button>
+                <button type="button" class="btn-speed-preset active" data-speed="1.0">1.0x</button>
+                <button type="button" class="btn-speed-preset" data-speed="1.5">1.5x</button>
+                <button type="button" class="btn-speed-preset" data-speed="2.0">2.0x</button>
+              </div>
+            </div>
+
+            <!-- Quick Transform -->
+            <div class="pro-group-box">
+              <label class="pro-group-label"><i class="fa-solid fa-arrows-spin"></i> Transform:</label>
               <div class="pro-actions-grid-2">
                 <button type="button" id="btnInspectorRotate" class="btn-pro-tool-sm">
                   <i class="fa-solid fa-rotate-right"></i> Rotate 90°
@@ -3283,110 +2484,161 @@
               </div>
             </div>
 
+            <!-- Color Grading / Filter Presets -->
+            <div class="pro-group-box">
+              <label class="pro-group-label"><i class="fa-solid fa-palette"></i> Cinematic LUT / Filter:</label>
+              <div class="lut-filters-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                <button type="button" class="btn-filter-preset active" data-filter="none">Original</button>
+                <button type="button" class="btn-filter-preset" data-filter="cinematic">Cinematic</button>
+                <button type="button" class="btn-filter-preset" data-filter="vibrant">Vibrant</button>
+                <button type="button" class="btn-filter-preset" data-filter="warm">Warm</button>
+                <button type="button" class="btn-filter-preset" data-filter="noir">Noir</button>
+                <button type="button" class="btn-filter-preset" data-filter="cyberpunk">Cyber</button>
+              </div>
+            </div>
+
             <div class="pro-group-box" style="margin-top: auto;">
-              <button type="button" id="btnInspectorAiQuick" class="btn-pro-ai"
-                style="width: 100%; justify-content: center;">
+              <button type="button" id="btnInspectorAiQuick" class="btn-pro-ai" style="width: 100%; justify-content: center;">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Auto-Grade Reel</span>
               </button>
             </div>
           </aside>
         </div>
 
-        <!-- 4. Bottom Interactive Multi-Track Timeline -->
+        <!-- 3. Bottom Multi-Track Drag & Drop Timeline (CapCut Pro PC Workstation) -->
         <footer class="pro-timeline-container">
-          <!-- Timeline Toolbar -->
+          <!-- Timeline Action Bar -->
           <div class="pro-timeline-toolbar">
             <div class="timeline-tools-left">
-              <button type="button" id="btnTimelineAddClip" class="btn-timeline-action" title="Add another video clip to sequence" style="background: rgba(16,185,129,0.18); border-color: #10b981; color: #10b981;">
-                <i class="fa-solid fa-plus"></i> Add Clip
+              <button type="button" id="btnTimelineSplit" class="btn-timeline-action active-tool" title="Split active clip at playhead position (Cut)">
+                <i class="fa-solid fa-scissors"></i> <span>Split</span>
+              </button>
+              <button type="button" id="btnTimelineAddClip" class="btn-timeline-action btn-add-clip" title="Add another video clip to sequence">
+                <i class="fa-solid fa-plus"></i> <span>Add Clip</span>
               </button>
               <input type="file" id="multiClipFileInput" accept="video/mp4,video/quicktime,video/webm" style="display: none;">
-              <button type="button" id="btnTimelineSplit" class="btn-timeline-action" title="Split clip at playhead"><i
-                  class="fa-solid fa-scissors"></i> Split</button>
-              <button type="button" id="btnTimelineSpeedRampQuick" class="btn-timeline-action"><i
-                  class="fa-solid fa-gauge-high"></i> Speed Ramp</button>
-              <button type="button" id="btnTimelineDelete" class="btn-timeline-action" title="Reset clip bounds"><i
-                  class="fa-solid fa-trash-can"></i></button>
+              <button type="button" id="btnTimelineSpeedRampQuick" class="btn-timeline-action" title="Apply Speed Curve Ramp">
+                <i class="fa-solid fa-gauge-high"></i> <span>Speed Ramp</span>
+              </button>
+              <button type="button" id="btnTimelineDelete" class="btn-timeline-action" title="Reset clip bounds / Delete selection">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
             </div>
+
             <div class="timeline-tools-center">
-              <span id="lblTimelineRangeDisplay" class="timeline-range-badge">0.0s – 30.0s (30s)</span>
+              <span id="lblTimelineRangeDisplay" class="timeline-range-badge"><i class="fa-regular fa-clock"></i> 0.0s — 30.0s (30s)</span>
             </div>
+
             <div class="timeline-tools-right">
-              <span class="timeline-zoom-chip" id="btnTimelineSnapToggle" title="Magnetic Snapping"><i class="fa-solid fa-magnet"></i> Snap ON</span>
-              <span class="timeline-zoom-chip"><i class="fa-solid fa-magnifying-glass-plus"></i> Timeline Fit</span>
+              <button type="button" class="timeline-zoom-chip" id="btnTimelineSnapToggle" title="Magnetic Snapping">
+                <i class="fa-solid fa-magnet"></i> <span>Snap ON</span>
+              </button>
+              <button type="button" class="timeline-zoom-chip">
+                <i class="fa-solid fa-magnifying-glass-plus"></i> <span>Fit Timeline</span>
+              </button>
             </div>
           </div>
 
-          <!-- Multi-Track Stack -->
+          <!-- Multi-Track Stack Workspace -->
           <div class="pro-timeline-tracks" id="proTimelineTracks">
-            <!-- Time Ruler with Second Markers & Beat Markers -->
+            <!-- Time Ruler with Second Markers & Playhead Anchor -->
             <div class="pro-time-ruler" id="proTimeRulerWithBeats">
-              <span>00:00</span>
-              <span>00:05</span>
-              <span>00:10</span>
-              <span>00:15</span>
-              <span>00:20</span>
-              <span>00:25</span>
-              <span>00:30</span>
+              <span class="ruler-tick">00:00</span>
+              <span class="ruler-tick">00:05</span>
+              <span class="ruler-tick">00:10</span>
+              <span class="ruler-tick">00:15</span>
+              <span class="ruler-tick">00:20</span>
+              <span class="ruler-tick">00:25</span>
+              <span class="ruler-tick">00:30</span>
+              <span class="ruler-tick">00:35</span>
               <div id="timelineBeatMarksLayer" class="pro-beat-marks-layer"></div>
             </div>
 
-            <!-- TRACK 1: 🎬 Video Track with Dual Slider Handles & Track Controls -->
+            <!-- TRACK 1: 🎬 Video Track (V1) with Filmstrip & Dual Drag Handles -->
             <div class="pro-track-lane video-lane" id="trackLaneVideo">
               <div class="track-tag">
                 <button type="button" class="btn-track-ctl btn-track-lock" id="btnLockVideoTrack" title="Lock Video Track"><i class="fa-solid fa-lock-open"></i></button>
                 <button type="button" class="btn-track-ctl btn-track-eye" id="btnHideVideoTrack" title="Hide/Unhide Video"><i class="fa-solid fa-eye"></i></button>
-                <span><i class="fa-solid fa-video"></i> Video</span>
+                <span><i class="fa-solid fa-video"></i> V1 Video</span>
               </div>
               <div class="track-content-lane">
-                <div class="pro-multi-clip-wrapper" id="proMultiClipWrapper" style="display: flex; gap: 4px; width: 100%; height: 100%;">
-                  <div class="track-clip-block video-clip-block" id="timelineVideoClipBlock" style="flex: 1; position: relative; cursor: pointer;">
-                    <div class="clip-trim-handle handle-left" id="handleTrimLeft" title="Drag to trim start"></div>
-                    <div class="clip-thumbnails-strip"></div>
-                    <span class="clip-label" id="timelineVideoClipLabel">reel-demo.mp4</span>
-                    <div class="clip-trim-handle handle-right" id="handleTrimRight" title="Drag to trim end"></div>
+                <div class="pro-multi-clip-wrapper" id="proMultiClipWrapper">
+                  <div class="track-clip-block video-clip-block selected" id="timelineVideoClipBlock">
+                    <div class="clip-trim-handle handle-left" id="handleTrimLeft" title="Drag to trim start (Left Handle)"></div>
+                    <div class="clip-thumbnails-strip">
+                      <div class="thumb-cell"></div><div class="thumb-cell"></div><div class="thumb-cell"></div><div class="thumb-cell"></div><div class="thumb-cell"></div>
+                    </div>
+                    <span class="clip-label" id="timelineVideoClipLabel"><i class="fa-solid fa-film"></i> reel-demo.mp4 [0.0s - 30.0s]</span>
+                    <div class="clip-trim-handle handle-right" id="handleTrimRight" title="Drag to trim end (Right Handle)"></div>
                   </div>
                 </div>
-                <div class="pro-playhead-needle" id="timelinePlayheadNeedle"></div>
               </div>
             </div>
 
-            <!-- TRACK 2: 🎵 Audio Waveform Track -->
-            <div class="pro-track-lane audio-lane" id="trackLaneAudio">
-              <div class="track-tag">
-                <button type="button" class="btn-track-ctl btn-track-lock" id="btnLockAudioTrack" title="Lock Audio Track"><i class="fa-solid fa-lock-open"></i></button>
-                <button type="button" class="btn-track-ctl btn-track-mute" id="btnMuteAudioTrack" title="Mute Audio Track"><i class="fa-solid fa-volume-high"></i></button>
-                <span><i class="fa-solid fa-music"></i> Audio</span>
-              </div>
-              <div class="track-content-lane">
-                <div class="track-clip-block audio-clip-block" id="timelineAudioClipBlock" title="Click to Change Song / Open Audio Studio" style="cursor: pointer;">
-                  <div class="waveform-graphic"></div>
-                  <span class="clip-label" id="timelineAudioClipLabel">🎵 BGM • Royal Heritage</span>
-                  <button type="button" class="btn-track-change-song" id="btnTimelineChangeSong" title="Click to Change Song">
-                    <i class="fa-solid fa-arrows-rotate"></i> Change Song
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- TRACK 3: 💬 Subtitle & Effects Track -->
+            <!-- TRACK 2: 📝 Subtitle & Text Track (T1) -->
             <div class="pro-track-lane text-lane" id="trackLaneText">
               <div class="track-tag">
                 <button type="button" class="btn-track-ctl btn-track-lock" id="btnLockTextTrack" title="Lock Text Track"><i class="fa-solid fa-lock-open"></i></button>
                 <button type="button" class="btn-track-ctl btn-track-eye" id="btnHideTextTrack" title="Hide/Unhide Text"><i class="fa-solid fa-eye"></i></button>
-                <span><i class="fa-solid fa-font"></i> Text</span>
+                <span><i class="fa-solid fa-font"></i> T1 Captions</span>
               </div>
               <div class="track-content-lane">
                 <div class="track-clip-block text-clip-block">
-                  <span class="clip-label" id="timelineTrackSubLabel">💬 Text & Subtitles Layer</span>
+                  <span class="clip-label" id="timelineTrackSubLabel"><i class="fa-solid fa-closed-captioning"></i> Alex Hormozi Captions: ★ THE TENSION IS REAL ★</span>
                 </div>
               </div>
+            </div>
+
+            <!-- TRACK 3: 🎵 Audio & BGM Track (A1) with Visual Sound Waveform -->
+            <div class="pro-track-lane audio-lane" id="trackLaneAudio">
+              <div class="track-tag">
+                <button type="button" class="btn-track-ctl btn-track-lock" id="btnLockAudioTrack" title="Lock Audio Track"><i class="fa-solid fa-lock-open"></i></button>
+                <button type="button" class="btn-track-ctl btn-track-mute" id="btnMuteAudioTrack" title="Mute/Unmute Audio"><i class="fa-solid fa-volume-high"></i></button>
+                <span><i class="fa-solid fa-music"></i> A1 Audio</span>
+              </div>
+              <div class="track-content-lane">
+                <div class="track-clip-block audio-clip-block" id="timelineAudioClipBlock">
+                  <!-- Visual Real Audio Waveform Canvas / Bars -->
+                  <div class="audio-waveform-bars">
+                    <span style="height: 45%;"></span><span style="height: 70%;"></span><span style="height: 90%;"></span><span style="height: 55%;"></span><span style="height: 80%;"></span>
+                    <span style="height: 100%;"></span><span style="height: 65%;"></span><span style="height: 40%;"></span><span style="height: 75%;"></span><span style="height: 85%;"></span>
+                    <span style="height: 50%;"></span><span style="height: 95%;"></span><span style="height: 60%;"></span><span style="height: 70%;"></span><span style="height: 40%;"></span>
+                    <span style="height: 85%;"></span><span style="height: 100%;"></span><span style="height: 55%;"></span><span style="height: 65%;"></span><span style="height: 90%;"></span>
+                    <span style="height: 45%;"></span><span style="height: 70%;"></span><span style="height: 90%;"></span><span style="height: 55%;"></span><span style="height: 80%;"></span>
+                    <span style="height: 100%;"></span><span style="height: 65%;"></span><span style="height: 40%;"></span><span style="height: 75%;"></span><span style="height: 85%;"></span>
+                  </div>
+                  <span class="clip-label" id="timelineAudioClipLabel"><i class="fa-solid fa-music"></i> BGM: Cyberpunk Bass Reel (Sync)</span>
+                  <button type="button" id="btnTimelineChangeSong" class="btn-track-pill" title="Change Song"><i class="fa-solid fa-arrow-right-arrow-left"></i> Change</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- TRACK 4: ✨ Visual Effects Track (FX1) -->
+            <div class="pro-track-lane fx-lane" id="trackLaneFX">
+              <div class="track-tag">
+                <button type="button" class="btn-track-ctl btn-track-lock" title="Lock FX Track"><i class="fa-solid fa-lock-open"></i></button>
+                <button type="button" class="btn-track-ctl btn-track-eye" title="Hide/Unhide FX"><i class="fa-solid fa-eye"></i></button>
+                <span><i class="fa-solid fa-wand-magic-sparkles"></i> FX1 Overlays</span>
+              </div>
+              <div class="track-content-lane">
+                <div class="track-clip-block fx-clip-block" style="width: 25%;">
+                  <span class="clip-label"><i class="fa-solid fa-bolt"></i> White Flash Hook</span>
+                </div>
+                <div class="track-clip-block fx-clip-block" style="width: 50%; margin-left: 5%;">
+                  <span class="clip-label"><i class="fa-solid fa-magnifying-glass-plus"></i> Punch-in Zoom</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Unified Multi-Track Neon Playhead Needle -->
+            <div class="pro-playhead-needle" id="timelinePlayheadNeedle">
+              <div class="playhead-cap"><i class="fa-solid fa-caret-down"></i></div>
             </div>
           </div>
         </footer>
       </div>
     </div>
-    <!-- AUTH MODAL (Login & Register) -->
+<!-- AUTH MODAL (Login & Register) -->
     <div id="authModal" class="modal-overlay hidden"
       style="display: none; position: fixed; inset: 0; background: rgba(10, 10, 15, 0.75); backdrop-filter: blur(8px); z-index: 99999; justify-content: center; align-items: center; padding: 1rem;">
       <div class="modal-card"
