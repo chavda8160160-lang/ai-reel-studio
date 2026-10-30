@@ -7841,6 +7841,120 @@ function initTimelineStudio() {
   }
 
   // Live CSS Update Function (Instant 60fps real-time preview)
+  
+  // =========================================================================
+  // CAPCUT PRO WORKSTATION FULL FUNCTIONALITY & INTERACTION BINDINGS
+  // =========================================================================
+
+  // 1. Playback Speed Presets (0.5x, 1.0x, 1.5x, 2.0x)
+  modal.querySelectorAll('.btn-speed-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-speed-preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const spd = parseFloat(btn.getAttribute('data-speed')) || 1.0;
+      if (rngVideoSpeed) rngVideoSpeed.value = spd;
+      applySpeed(spd);
+    });
+  });
+
+  // 2. Cinematic LUT / Filter Presets
+  modal.querySelectorAll('.btn-filter-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-filter-preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const f = btn.getAttribute('data-filter') || 'none';
+      editorState.filter = f;
+      const filterLabel = document.getElementById('lblInspectorFilter');
+      if (filterLabel) filterLabel.textContent = btn.textContent.trim();
+      updateLivePreview();
+      showToast('🎨 Applied ' + btn.textContent.trim() + ' Color Grade');
+    });
+  });
+
+  // 3. Trending BGM Soundtrack Selection
+  modal.querySelectorAll('.bgm-track-card').forEach(card => {
+    card.addEventListener('click', () => {
+      modal.querySelectorAll('.bgm-track-card').forEach(c => {
+        c.classList.remove('active');
+        const badge = c.querySelector('.badge');
+        if (badge) badge.remove();
+      });
+      card.classList.add('active');
+
+      const songTitle = card.getAttribute('data-song') || 'Trending Track';
+      const songGenre = card.getAttribute('data-genre') || 'Viral Beat';
+      const songSrc = card.getAttribute('data-src') || '/rendered-reels/bgm-cyber.mp3';
+
+      const titleEl = document.getElementById('lblActiveSongTitle');
+      const subEl = document.getElementById('lblActiveSongSubtitle');
+      const trackAudioLabel = document.getElementById('timelineAudioClipLabel');
+
+      if (titleEl) titleEl.textContent = songTitle;
+      if (subEl) subEl.textContent = songGenre;
+      if (trackAudioLabel) trackAudioLabel.innerHTML = '<i class="fa-solid fa-music"></i> BGM: ' + songTitle + ' (Sync)';
+
+      const bgmPlayer = document.getElementById('timelineBgmAudioPlayer');
+      if (bgmPlayer && songSrc) {
+        bgmPlayer.src = songSrc;
+        bgmPlayer.currentTime = (videoPreview && videoPreview.currentTime) || 0;
+        if (videoPreview && !videoPreview.paused) {
+          bgmPlayer.play().catch(() => {});
+        }
+      }
+      showToast('🎵 Active BGM: ' + songTitle);
+    });
+  });
+
+  // 4. Captions Viral Styles (Hormozi Yellow, Green, White, Cyan)
+  modal.querySelectorAll('.btn-sub-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-sub-preset').forEach(b => {
+        b.classList.remove('active');
+        b.style.borderColor = 'rgba(255,255,255,0.08)';
+      });
+      btn.classList.add('active');
+      const styleName = btn.getAttribute('data-sub-style') || 'hormozi-yellow';
+      btn.style.borderColor = styleName.includes('yellow') ? '#eab308' : (styleName.includes('green') ? '#22c55e' : (styleName.includes('cyan') ? '#00f2fe' : '#ffffff'));
+
+      if (subBadge) {
+        subBadge.className = 'pro-subtitle-overlay ' + styleName;
+        if (editorState.customText) subBadge.classList.remove('hidden');
+      }
+      showToast('✨ Caption Style: ' + btn.textContent.trim());
+    });
+  });
+
+  // 5. Caption Position (Top, Center, Bottom)
+  modal.querySelectorAll('.btn-caption-pos').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.querySelectorAll('.btn-caption-pos').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const pos = btn.getAttribute('data-pos') || 'center';
+      if (subBadge) {
+        if (pos === 'top') {
+          subBadge.style.top = '15%';
+          subBadge.style.bottom = 'auto';
+        } else if (pos === 'bottom') {
+          subBadge.style.top = 'auto';
+          subBadge.style.bottom = '15%';
+        } else {
+          subBadge.style.top = '50%';
+          subBadge.style.bottom = 'auto';
+        }
+      }
+    });
+  });
+
+  // 6. Global Spacebar Play/Pause Shortcut for CapCut Studio
+  window.addEventListener('keydown', (e) => {
+    if (modal && !modal.classList.contains('hidden')) {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        if (btnTogglePlay) btnTogglePlay.click();
+      }
+    }
+  });
+
   function updateLivePreview() {
     if (!videoPreview) return;
 
