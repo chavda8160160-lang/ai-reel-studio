@@ -2,20 +2,22 @@ import React from 'react';
 import { 
   Scissors, 
   Trash2, 
-  Crop, 
   FlipHorizontal, 
   RotateCw, 
-  Snowflake, 
   Magnet, 
   ZoomIn, 
   ZoomOut, 
   Maximize,
-  MousePointer,
   Plus,
   ArrowLeftToLine,
   ArrowRightToLine,
   Copy,
-  Rows
+  Rows,
+  MousePointer,
+  Link2,
+  Music,
+  VolumeX,
+  Mic
 } from 'lucide-react';
 import { useEditorStore } from '../../store/useEditorStore';
 
@@ -38,7 +40,15 @@ export const TimelineToolbar: React.FC = () => {
     addTrack,
     duplicateSelectedClip,
     trackHeightMode,
-    toggleTrackHeightMode
+    toggleTrackHeightMode,
+    activeTool,
+    setActiveTool,
+    isLinkageEnabled,
+    toggleLinkage,
+    extractAudioFromVideo,
+    toggleClipMute,
+    isRecordingVoice,
+    setIsRecordingVoice
   } = useEditorStore();
 
   let activeClip = null;
@@ -67,29 +77,59 @@ export const TimelineToolbar: React.FC = () => {
   };
 
   return (
-    <div className="h-8 border-b px-2.5 flex items-center justify-between shrink-0 select-none text-xs bg-[#141418] border-[#24242A]">
-      {/* Left: Editing Tools */}
+    <div className="h-8 border-b px-2.5 flex items-center justify-between shrink-0 select-none text-xs bg-[#2a2a2e] border-[#38383d]">
+      {/* Left: Functional Editing Tools */}
       <div className="flex items-center gap-1">
+        {/* Selection Tool (CapCut Desktop 'A') */}
         <button
-          className="p-1.5 rounded border transition-colors text-[#C9A66B] bg-[#2A251D] border-[#C9A66B]/30"
-          title="Pointer Select Tool (V)"
+          onClick={() => setActiveTool('select')}
+          className={`h-6 px-2 flex items-center gap-1.5 rounded-[3px] border text-[11px] font-medium transition-colors duration-150 cursor-pointer ${
+            activeTool === 'select'
+              ? 'bg-[#4f8cff] text-white border-[#4f8cff]'
+              : 'text-[#8a8a93] bg-[#2f2f34] border-[#38383d] hover:text-[#d4d4d8] hover:bg-[#3a3a40]'
+          }`}
+          title="Selection Tool (A)"
         >
-          <MousePointer className="w-3.5 h-3.5 stroke-[1.5]" />
+          <MousePointer className="w-3.5 h-3.5" />
+          <span>Select</span>
         </button>
 
-        <div className="w-px h-3.5 bg-[#2A2A32] mx-1" />
+        {/* 1px Divider */}
+        <div className="w-px h-3.5 bg-[#38383d] mx-0.5" />
 
-        {/* Split at Playhead */}
+        {/* Group 1: Edit & Sequence Actions */}
         <button
           onClick={() => splitClipAtPlayhead()}
-          className="flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-medium text-[#D8D6D1] bg-[#1E1E24] border-[#2C2C33] hover:border-[#C9A66B]/50 transition-colors cursor-pointer group"
-          title="Split Clip at Playhead (S)"
+          className="h-6 px-2 flex items-center gap-1.5 rounded-[3px] border text-[11px] font-medium text-[#d4d4d8] bg-[#2f2f34] border-[#38383d] hover:bg-[#3a3a40] transition-colors duration-150 cursor-pointer group"
+          title="Split Clip at Playhead (Ctrl+B / S)"
         >
-          <Scissors className="w-3 h-3 stroke-[1.5] text-[#8A8A92] group-hover:text-[#C9A66B]" />
+          <Scissors className="w-3.5 h-3.5 text-[#8a8a93] group-hover:text-[#d4d4d8] transition-colors duration-150" />
           <span>Split</span>
         </button>
 
-        {/* Move to 0:00 Start */}
+        <button
+          onClick={() => duplicateSelectedClip()}
+          disabled={!selectedClipId}
+          className="h-6 px-2 flex items-center gap-1.5 rounded-[3px] border text-[11px] font-medium text-[#d4d4d8] bg-[#2f2f34] border-[#38383d] hover:bg-[#3a3a40] disabled:opacity-25 disabled:cursor-not-allowed transition-colors duration-150 cursor-pointer group"
+          title="Duplicate Selected Clip (Ctrl+D)"
+        >
+          <Copy className="w-3.5 h-3.5 text-[#8a8a93] group-hover:text-[#d4d4d8] transition-colors duration-150" />
+          <span>Duplicate</span>
+        </button>
+
+        <button
+          onClick={() => deleteClip()}
+          disabled={!selectedClipId}
+          className="h-6 w-6 flex items-center justify-center rounded-[3px] border text-[#8a8a93] hover:text-[#ef4444] disabled:opacity-25 disabled:cursor-not-allowed bg-[#2f2f34] border-[#38383d] hover:bg-[#3a3a40] transition-colors duration-150 cursor-pointer"
+          title="Delete Selected Clip (Delete / Backspace)"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+
+        {/* 1px Divider */}
+        <div className="w-px h-3.5 bg-[#38383d] mx-1" />
+
+        {/* Group 2: Position Alignment */}
         <button
           onClick={() => {
             if (activeClip) {
@@ -97,14 +137,13 @@ export const TimelineToolbar: React.FC = () => {
             }
           }}
           disabled={!selectedClipId}
-          className="flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-medium text-[#D8D6D1] bg-[#1E1E24] border-[#2C2C33] hover:border-[#C9A66B]/50 disabled:opacity-25 transition-colors cursor-pointer"
+          className="h-6 px-2 flex items-center gap-1.5 rounded-[3px] border text-[11px] font-medium text-[#d4d4d8] bg-[#2f2f34] border-[#38383d] hover:bg-[#3a3a40] disabled:opacity-25 disabled:cursor-not-allowed transition-colors duration-150 cursor-pointer group"
           title="Move selected clip to 00:00 (Start of timeline)"
         >
-          <ArrowLeftToLine className="w-3 h-3 text-[#C9A66B]" />
+          <ArrowLeftToLine className="w-3.5 h-3.5 text-[#8a8a93] group-hover:text-[#d4d4d8] transition-colors duration-150" />
           <span>To 0:00</span>
         </button>
 
-        {/* Move to Current Playhead */}
         <button
           onClick={() => {
             if (activeClip) {
@@ -112,128 +151,149 @@ export const TimelineToolbar: React.FC = () => {
             }
           }}
           disabled={!selectedClipId}
-          className="flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-medium text-[#D8D6D1] bg-[#1E1E24] border-[#2C2C33] hover:border-[#C9A66B]/50 disabled:opacity-25 transition-colors cursor-pointer"
+          className="h-6 px-2 flex items-center gap-1.5 rounded-[3px] border text-[11px] font-medium text-[#d4d4d8] bg-[#2f2f34] border-[#38383d] hover:bg-[#3a3a40] disabled:opacity-25 disabled:cursor-not-allowed transition-colors duration-150 cursor-pointer group"
           title="Move selected clip to current playhead"
         >
-          <ArrowRightToLine className="w-3 h-3 text-[#C9A66B]" />
+          <ArrowRightToLine className="w-3.5 h-3.5 text-[#8a8a93] group-hover:text-[#d4d4d8] transition-colors duration-150" />
           <span>To Head</span>
         </button>
 
-        {/* Duplicate */}
-        <button
-          onClick={() => duplicateSelectedClip()}
-          disabled={!selectedClipId}
-          className="flex items-center gap-1 px-2 py-0.5 rounded border text-[10.5px] font-medium text-[#D8D6D1] bg-[#1E1E24] border-[#2C2C33] hover:border-[#C9A66B]/50 disabled:opacity-25 transition-colors cursor-pointer"
-          title="Duplicate Selected Clip (Ctrl+D)"
-        >
-          <Copy className="w-3 h-3 stroke-[1.5] text-[#C9A66B]" />
-          <span>Duplicate</span>
-        </button>
+        {/* 1px Divider */}
+        <div className="w-px h-3.5 bg-[#38383d] mx-1" />
 
-        {/* Delete */}
-        <button
-          onClick={() => deleteClip()}
-          disabled={!selectedClipId}
-          className="p-1.5 rounded border text-[#8A8A92] hover:text-[#EF4444] disabled:opacity-25 bg-[#1E1E24] border-[#2C2C33] transition-colors"
-          title="Delete Selected Clip (Delete / Backspace)"
-        >
-          <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" />
-        </button>
-
-        <div className="w-px h-3.5 bg-[#2A2A32] mx-1" />
-
-        {/* Quick Transform tools */}
-        <button
-          onClick={() => alert("Crop Tool: Drag the canvas corner handles to crop.")}
-          className="p-1.5 rounded border text-[#8A8A92] hover:text-[#E8E6E1] bg-[#1E1E24] border-[#2C2C33] transition-colors"
-          title="Crop Video Canvas (C)"
-        >
-          <Crop className="w-3.5 h-3.5 stroke-[1.5]" />
-        </button>
-
+        {/* Group 3: Quick Transform Tools */}
         <button
           onClick={handleFlip}
           disabled={!selectedClipId}
-          className="p-1.5 rounded border text-[#8A8A92] hover:text-[#E8E6E1] disabled:opacity-25 bg-[#1E1E24] border-[#2C2C33] transition-colors"
+          className="h-6 w-6 flex items-center justify-center rounded-[3px] border text-[#8a8a93] hover:text-[#d4d4d8] disabled:opacity-25 disabled:cursor-not-allowed bg-[#2f2f34] border-[#38383d] hover:bg-[#3a3a40] transition-colors duration-150 cursor-pointer"
           title="Mirror / Flip Horizontal"
         >
-          <FlipHorizontal className="w-3.5 h-3.5 stroke-[1.5]" />
+          <FlipHorizontal className="w-3.5 h-3.5" />
         </button>
 
         <button
           onClick={handleRotate}
           disabled={!selectedClipId}
-          className="p-1.5 rounded border text-[#8A8A92] hover:text-[#E8E6E1] disabled:opacity-25 bg-[#1E1E24] border-[#2C2C33] transition-colors"
+          className="h-6 w-6 flex items-center justify-center rounded-[3px] border text-[#8a8a93] hover:text-[#d4d4d8] disabled:opacity-25 disabled:cursor-not-allowed bg-[#2f2f34] border-[#38383d] hover:bg-[#3a3a40] transition-colors duration-150 cursor-pointer"
           title="Rotate 90° Clockwise"
         >
-          <RotateCw className="w-3.5 h-3.5 stroke-[1.5]" />
+          <RotateCw className="w-3.5 h-3.5" />
         </button>
+
+        {/* 1px Divider */}
+        <div className="w-px h-3.5 bg-[#38383d] mx-1" />
+
+        {/* Group 3B: Audio Tools (Phase 2) */}
+        {activeClip?.type === 'video' && (
+          <button
+            onClick={() => extractAudioFromVideo(activeClip.id)}
+            className="h-6 px-2 flex items-center gap-1.5 rounded-[3px] border text-[11px] font-medium text-[#d4d4d8] bg-[#2f2f34] border-[#38383d] hover:bg-[#3a3a40] hover:border-[#4f8cff] transition-colors duration-150 cursor-pointer"
+            title="Separate / Extract Audio from Video to Track A1"
+          >
+            <Music className="w-3.5 h-3.5 text-[#4f8cff]" />
+            <span>Extract</span>
+          </button>
+        )}
+
+        {activeClip && (
+          <button
+            onClick={() => toggleClipMute(activeClip.id)}
+            className={`h-6 w-6 flex items-center justify-center rounded-[3px] border transition-colors duration-150 cursor-pointer ${
+              activeClip.properties.isMuted
+                ? 'bg-[#ef4444]/20 border-[#ef4444] text-[#ef4444]'
+                : 'bg-[#2f2f34] border-[#38383d] text-[#8a8a93] hover:text-[#d4d4d8] hover:bg-[#3a3a40]'
+            }`}
+            title={activeClip.properties.isMuted ? "Unmute Clip" : "Mute Clip Audio"}
+          >
+            <VolumeX className="w-3.5 h-3.5" />
+          </button>
+        )}
 
         <button
-          onClick={() => {
-            if (activeClip) {
-              useEditorStore.getState().trimClip(activeClip.id, 'end', 2.0);
-            }
-          }}
-          disabled={!selectedClipId}
-          className="p-1.5 rounded border text-[#8A8A92] hover:text-[#E8E6E1] disabled:opacity-25 bg-[#1E1E24] border-[#2C2C33] transition-colors"
-          title="Freeze Frame (2s hold)"
+          onClick={() => setIsRecordingVoice(!isRecordingVoice)}
+          className={`h-6 px-2 flex items-center gap-1.5 rounded-[3px] border text-[11px] font-medium transition-colors duration-150 cursor-pointer ${
+            isRecordingVoice
+              ? 'bg-[#ef4444] text-white border-[#ef4444] animate-pulse'
+              : 'text-[#8a8a93] bg-[#2f2f34] border-[#38383d] hover:text-[#d4d4d8] hover:bg-[#3a3a40]'
+          }`}
+          title="Record Voiceover (MediaRecorder onto Audio Track)"
         >
-          <Snowflake className="w-3.5 h-3.5 stroke-[1.5]" />
+          <Mic className="w-3.5 h-3.5 text-[#4f8cff]" />
+          <span>Record</span>
         </button>
 
-        <div className="w-px h-3.5 bg-[#2A2A32] mx-1" />
+        {/* 1px Divider */}
+        <div className="w-px h-3.5 bg-[#38383d] mx-1" />
 
-        {/* Add Track */}
+        {/* Group 4: Track Management */}
         <button
           onClick={() => addTrack('video')}
-          className="flex items-center gap-1 px-2 py-0.5 rounded border text-[10.5px] font-medium text-[#C9A66B] bg-[#2A251D] border-[#C9A66B]/30 hover:border-[#C9A66B]/60 transition-colors"
-          title="Add Sequence Track"
+          className="h-6 px-2 flex items-center gap-1 rounded-[3px] border text-[11px] font-medium text-[#d4d4d8] bg-[#2f2f34] border-[#38383d] hover:bg-[#3a3a40] hover:border-[#4f8cff]/50 transition-colors duration-150 cursor-pointer group"
+          title="Add Sequence Video Track"
         >
-          <Plus className="w-3 h-3 stroke-[2]" />
+          <Plus className="w-3.5 h-3.5 text-[#8a8a93] group-hover:text-[#d4d4d8] transition-colors duration-150" />
           <span>Track</span>
         </button>
       </div>
 
-      {/* Right: Height Toggle, Magnet Snap, Zoom Slider & Fit */}
-      <div className="flex items-center gap-2">
+      {/* Right: View & Snap Controls */}
+      <div className="flex items-center gap-1.5">
         {/* Track Height Toggle (Compact / Normal) */}
         <button
           onClick={toggleTrackHeightMode}
-          className="flex items-center gap-1 px-2 py-0.5 rounded border text-[10.5px] font-medium transition-colors bg-[#1E1E24] border-[#2C2C33] text-[#D8D6D1] hover:border-[#C9A66B]/50"
+          className="h-6 px-2 flex items-center gap-1.5 rounded-[3px] border text-[11px] font-medium transition-colors duration-150 bg-[#2f2f34] border-[#38383d] text-[#d4d4d8] hover:bg-[#3a3a40] cursor-pointer"
           title={`Toggle Track Height: currently ${trackHeightMode}`}
         >
-          <Rows className="w-3 h-3 text-[#C9A66B]" />
+          <Rows className="w-3.5 h-3.5 text-[#8a8a93]" />
           <span className="capitalize">{trackHeightMode}</span>
         </button>
 
-        <div className="w-px h-3.5 bg-[#2A2A32]" />
+        {/* 1px Divider */}
+        <div className="w-px h-3.5 bg-[#38383d] mx-0.5" />
 
         {/* Magnetic Snapping Toggle */}
         <button
           onClick={toggleSnap}
-          className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[10.5px] font-semibold transition-colors ${
+          className={`h-6 px-2 flex items-center gap-1.5 rounded-[3px] border text-[11px] font-medium transition-colors duration-150 cursor-pointer ${
             isSnapEnabled
-              ? 'text-[#C9A66B] bg-[#2A251D] border-[#C9A66B]/40'
-              : 'text-[#787882] bg-[#1E1E24] border-[#2C2C33] hover:text-[#D8D6D1]'
+              ? 'text-white bg-[#4f8cff] border-[#4f8cff]'
+              : 'text-[#8a8a93] bg-[#2f2f34] border-[#38383d] hover:text-[#d4d4d8] hover:bg-[#3a3a40]'
           }`}
           title="Magnetic Snapping (N)"
         >
-          <Magnet className="w-3 h-3 stroke-[1.5]" />
+          <Magnet className="w-3.5 h-3.5" />
           <span>Snap {isSnapEnabled ? 'ON' : 'OFF'}</span>
         </button>
 
-        <div className="w-px h-3.5 bg-[#2A2A32]" />
+        {/* 1px Divider */}
+        <div className="w-px h-3.5 bg-[#38383d] mx-0.5" />
 
-        {/* Zoom Slider */}
+        {/* Linkage Toggle (Video + Audio Sync) */}
+        <button
+          onClick={toggleLinkage}
+          className={`h-6 px-2 flex items-center gap-1.5 rounded-[3px] border text-[11px] font-medium transition-colors duration-150 cursor-pointer ${
+            isLinkageEnabled
+              ? 'text-white bg-[#4f8cff] border-[#4f8cff]'
+              : 'text-[#8a8a93] bg-[#2f2f34] border-[#38383d] hover:text-[#d4d4d8] hover:bg-[#3a3a40]'
+          }`}
+          title="Toggle Linkage: Video and Audio clips move together"
+        >
+          <Link2 className="w-3.5 h-3.5" />
+          <span>Link {isLinkageEnabled ? 'ON' : 'OFF'}</span>
+        </button>
+
+        {/* 1px Divider */}
+        <div className="w-px h-3.5 bg-[#38383d] mx-0.5" />
+
+        {/* Zoom Controls */}
         <div className="flex items-center gap-1">
           <button
             onClick={() => setZoom(zoom - 5)}
             disabled={zoom <= (minZoom || 1)}
-            className="text-[#8A8A92] hover:text-[#E8E6E1] disabled:opacity-25 p-0.5"
+            className="h-6 w-6 flex items-center justify-center rounded-[3px] text-[#8a8a93] hover:text-[#d4d4d8] disabled:opacity-25 disabled:cursor-not-allowed hover:bg-[#3a3a40] transition-colors duration-150 cursor-pointer"
             title="Zoom Out"
           >
-            <ZoomOut className="w-3 h-3 stroke-[1.5]" />
+            <ZoomOut className="w-3.5 h-3.5" />
           </button>
           <input
             type="range"
@@ -242,29 +302,29 @@ export const TimelineToolbar: React.FC = () => {
             step="0.5"
             value={Number(zoom.toFixed(1))}
             onChange={(e) => setZoom(parseFloat(e.target.value))}
-            className="w-16 h-1 bg-[#282832] rounded cursor-pointer"
+            className="w-16 h-1 bg-[#232326] accent-[#4f8cff] rounded cursor-pointer"
             title={`Timeline Scale: ${zoom.toFixed(1)} px/s (min: ${(minZoom || 1).toFixed(1)})`}
           />
           <button
             onClick={() => setZoom(zoom + 5)}
-            className="text-[#8A8A92] hover:text-[#E8E6E1] p-0.5"
+            className="h-6 w-6 flex items-center justify-center rounded-[3px] text-[#8a8a93] hover:text-[#d4d4d8] hover:bg-[#3a3a40] transition-colors duration-150 cursor-pointer"
             title="Zoom In"
           >
-            <ZoomIn className="w-3 h-3 stroke-[1.5]" />
+            <ZoomIn className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Fit Timeline Button (Rule 3) */}
+        {/* Fit Timeline Button */}
         <button
           onClick={() => fitToView()}
-          className={`p-1 rounded border transition-colors ${
+          className={`h-6 w-6 flex items-center justify-center rounded-[3px] border transition-colors duration-150 cursor-pointer ${
             isAutoFit 
-              ? 'bg-[#2A251D] border-[#C9A66B] text-[#C9A66B]' 
-              : 'text-[#8A8A92] hover:text-[#E8E6E1] bg-[#1E1E24] border-[#2C2C33]'
+              ? 'bg-[#4f8cff] border-[#4f8cff] text-white' 
+              : 'text-[#8a8a93] hover:text-[#d4d4d8] bg-[#2f2f34] border-[#38383d] hover:bg-[#3a3a40]'
           }`}
           title="Fit Project to Window (F)"
         >
-          <Maximize className="w-3 h-3 stroke-[1.5]" />
+          <Maximize className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

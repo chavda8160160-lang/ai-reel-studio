@@ -584,12 +584,7 @@ function initModeSwitcher() {
   if (navModeCapCut) {
     navModeCapCut.addEventListener('click', (e) => {
       e.preventDefault();
-      if (typeof window.openTimelineStudio === 'function') {
-        window.openTimelineStudio();
-      } else {
-        const btnCapCut = document.getElementById('btnOpenCapCutEditor');
-        if (btnCapCut) btnCapCut.click();
-      }
+      window.open('/clipforge/', '_blank');
     });
   }
 }

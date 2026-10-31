@@ -44,22 +44,22 @@ export const Playhead: React.FC<PlayheadProps> = ({ currentTime, totalDuration, 
         left: 0,
       }}
     >
-      {/* 1. Geometric Diamond Top Handle */}
+      {/* 1. Flat Downward Triangle Top Handle (no glow) */}
       <div
         ref={handleRef}
         onPointerDown={handlePointerDown}
-        className="w-3.5 h-4 -ml-[7px] absolute -top-0.5 pointer-events-auto cursor-ew-resize flex items-center justify-center group"
+        className="w-3 h-3 -ml-[5.5px] absolute -top-0.5 pointer-events-auto cursor-ew-resize flex items-start justify-center group"
       >
         <svg
-          viewBox="0 0 14 18"
-          className="w-3 h-4 fill-[#C9A66B] filter drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)] group-hover:scale-110 transition-transform"
+          viewBox="0 0 10 7"
+          className="w-2.5 h-[7px] fill-[#4f8cff]"
         >
-          <path d="M0 0 H14 V10 L7 17 L0 10 Z" />
+          <polygon points="0,0 10,0 5,7" />
         </svg>
       </div>
 
-      {/* 2. Thin 1.5px Razor Line */}
-      <div className="w-[1.5px] h-full bg-[#C9A66B] shadow-[0_0_6px_rgba(201,166,107,0.4)]" />
+      {/* 2. Razor 1px Accent Line (no glow) */}
+      <div className="w-px h-full bg-[#4f8cff]" />
     </div>
   );
 };

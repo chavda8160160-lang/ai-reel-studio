@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Film, 
   RotateCcw, 
@@ -9,7 +9,8 @@ import {
   Check, 
   Pencil,
   Sun,
-  Moon
+  Moon,
+  UploadCloud
 } from 'lucide-react';
 import { useEditorStore } from '../store/useEditorStore';
 
@@ -25,11 +26,23 @@ export const TopBar: React.FC = () => {
     toggleTheme,
     setExportModalOpen,
     setShortcutsModalOpen,
-    setProModalOpen 
+    setProModalOpen,
+    initAutoSave,
+    loadVideoMedia,
+    setActiveLeftTab
   } = useEditorStore();
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(projectName);
+
+  // Initialize auto-save restoration on launch
+  useEffect(() => {
+    initAutoSave();
+  }, [initAutoSave]);
+
+  useEffect(() => {
+    setTempName(projectName);
+  }, [projectName]);
 
   const handleNameSubmit = () => {
     if (tempName.trim()) {
@@ -40,17 +53,38 @@ export const TopBar: React.FC = () => {
     setIsEditingName(false);
   };
 
+  const handleTopBarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const isAudio = file.type.startsWith('audio') || /\.(mp3|wav|ogg|m4a|aac)$/i.test(file.name);
+    if (isAudio) {
+      useEditorStore.getState().loadAudioMedia(file.name, url, 30);
+    } else {
+      loadVideoMedia(file.name, url, 15);
+      const tempVid = document.createElement('video');
+      tempVid.preload = 'metadata';
+      tempVid.src = url;
+      tempVid.onloadedmetadata = () => {
+        const realDur = Math.round(tempVid.duration) || 15;
+        loadVideoMedia(file.name, url, realDur);
+      };
+    }
+    setActiveLeftTab('media');
+    e.target.value = '';
+  };
+
   return (
     <header className="h-12 border-b px-4 flex items-center justify-between shrink-0 select-none z-30 transition-colors bg-[#17171B] border-[#2A2A30] text-[#E8E6E1]">
       {/* Left: Brand Identity & Status */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2.5 group cursor-pointer">
-          <div className="w-7 h-7 rounded-md bg-[#24242B] border border-[#36363F] flex items-center justify-center text-[#C9A66B] group-hover:border-[#C9A66B]/60 transition-colors">
+          <div className="w-7 h-7 rounded-md bg-[#24242B] border border-[#36363F] flex items-center justify-center text-[#4f8cff] group-hover:border-[#4f8cff]/60 transition-colors">
             <Film className="w-3.5 h-3.5 stroke-[1.5]" />
           </div>
           <div className="flex items-center gap-2">
             <span className="font-semibold text-xs tracking-tight">ClipForge Studio</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded border bg-[#202026] border-[#36363F] text-[#C9A66B]">
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded border bg-[#202026] border-[#36363F] text-[#4f8cff]">
               PRO
             </span>
           </div>
@@ -59,7 +93,7 @@ export const TopBar: React.FC = () => {
         <div className="h-3.5 w-px bg-[#2E2E36] mx-1" />
 
         <div className="flex items-center gap-1.5 text-[11px] text-[#8A8A92]">
-          <Check className="w-3 h-3 text-[#C9A66B]" />
+          <Check className="w-3 h-3 text-[#4f8cff]" />
           <span>Auto-Saved</span>
         </div>
       </div>
@@ -74,7 +108,7 @@ export const TopBar: React.FC = () => {
             onBlur={handleNameSubmit}
             onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
             autoFocus
-            className="text-xs font-medium px-2.5 py-1 rounded border outline-none w-60 text-center bg-[#222228] border-[#C9A66B] text-white focus:ring-1 focus:ring-[#C9A66B]"
+            className="text-xs font-medium px-2.5 py-1 rounded border outline-none w-60 text-center bg-[#222228] border-[#4f8cff] text-white focus:ring-1 focus:ring-[#4f8cff]"
           />
         ) : (
           <button
@@ -86,13 +120,28 @@ export const TopBar: React.FC = () => {
             title="Click to rename project"
           >
             <span>{projectName}</span>
-            <Pencil className="w-3 h-3 text-[#6E6E77] group-hover:text-[#C9A66B] transition-colors" />
+            <Pencil className="w-3 h-3 text-[#6E6E77] group-hover:text-[#4f8cff] transition-colors" />
           </button>
         )}
       </div>
 
       {/* Right: Tools, Theme Toggle & Export */}
       <div className="flex items-center gap-2">
+        {/* Quick Upload Video / Audio */}
+        <label 
+          className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md border text-[#D8D6D1] bg-[#1F1F24] border-[#2C2C33] hover:border-[#4f8cff]/50 hover:bg-[#2A2A32] transition-colors cursor-pointer"
+          title="Import Video or Audio file directly to timeline"
+        >
+          <UploadCloud className="w-3.5 h-3.5 text-[#4f8cff]" />
+          <span>Import Video</span>
+          <input 
+            type="file" 
+            accept="video/*,audio/*,.mp4,.mov,.webm,.mkv,.mp3,.wav,.ogg" 
+            className="hidden" 
+            onChange={handleTopBarUpload}
+          />
+        </label>
+
         {/* Undo / Redo */}
         <div className="flex items-center border rounded-md p-0.5 bg-[#1F1F24] border-[#2C2C33]">
           <button
@@ -135,7 +184,7 @@ export const TopBar: React.FC = () => {
         {/* Pro Badge */}
         <button
           onClick={() => setProModalOpen(true)}
-          className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border text-[#C9A66B] bg-[#2A251D] border-[#C9A66B]/30 hover:border-[#C9A66B]/60 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border text-[#4f8cff] bg-[#1e293b] border-[#4f8cff]/30 hover:border-[#4f8cff]/60 transition-colors"
         >
           <Sparkles className="w-3 h-3 stroke-[1.5]" />
           <span>Pro</span>
@@ -144,7 +193,7 @@ export const TopBar: React.FC = () => {
         {/* Primary Export Button */}
         <button
           onClick={() => setExportModalOpen(true)}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-md text-[#121214] bg-[#C9A66B] hover:bg-[#D9B77C] active:bg-[#B88E4B] transition-colors cursor-pointer shadow-sm"
+          className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-md text-[#121214] bg-[#4f8cff] hover:bg-[#D9B77C] active:bg-[#B88E4B] transition-colors cursor-pointer shadow-sm"
         >
           <Download className="w-3.5 h-3.5 stroke-[2]" />
           <span>Export</span>
@@ -153,3 +202,4 @@ export const TopBar: React.FC = () => {
     </header>
   );
 };
+

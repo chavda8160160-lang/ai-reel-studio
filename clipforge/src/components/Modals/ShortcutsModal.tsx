@@ -4,10 +4,15 @@ import { useEditorStore } from '../../store/useEditorStore';
 
 const SHORTCUTS = [
   { key: 'Space', desc: 'Play / Pause Video' },
-  { key: 'S', desc: 'Split clip at playhead position' },
+  { key: 'A', desc: 'Selection Tool' },
+  { key: 'Ctrl + B / S', desc: 'Split clip at playhead' },
+  { key: 'Q', desc: 'Ripple Trim left to playhead' },
+  { key: 'W', desc: 'Ripple Trim right to playhead' },
+  { key: 'Ctrl + A', desc: 'Select all clips' },
   { key: 'Delete / Backspace', desc: 'Remove selected clip' },
   { key: 'Ctrl + Z', desc: 'Undo last action' },
-  { key: 'Ctrl + Y', desc: 'Redo last action' },
+  { key: 'Ctrl + Shift + Z / Ctrl + Y', desc: 'Redo last action' },
+  { key: 'Ctrl + = / -', desc: 'Zoom in / Zoom out' },
   { key: 'Ctrl + Wheel', desc: 'Zoom in / out on timeline' },
   { key: 'Left / Right Arrow', desc: 'Step 1 second backward / forward' },
   { key: 'N', desc: 'Toggle magnetic snapping' },

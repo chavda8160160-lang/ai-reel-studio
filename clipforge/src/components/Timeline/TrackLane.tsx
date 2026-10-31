@@ -57,16 +57,16 @@ export const TrackLane: React.FC<TrackLaneProps> = ({ track, zoom }) => {
   const getTrackIcon = () => {
     switch (track.type) {
       case 'video':
-        return <Video className="w-3.5 h-3.5 stroke-[1.5] text-[#93C5FD]" />;
+        return <Video className="w-3.5 h-3.5 stroke-[1.5] text-[#8a8a93]" />;
       case 'audio':
-        return <Music className="w-3.5 h-3.5 stroke-[1.5] text-[#86EFAC]" />;
+        return <Music className="w-3.5 h-3.5 stroke-[1.5] text-[#8a8a93]" />;
       case 'text':
-        return <Type className="w-3.5 h-3.5 stroke-[1.5] text-[#FDE047]" />;
+        return <Type className="w-3.5 h-3.5 stroke-[1.5] text-[#8a8a93]" />;
       case 'sticker':
-        return <Smile className="w-3.5 h-3.5 stroke-[1.5] text-[#D8B4FE]" />;
+        return <Smile className="w-3.5 h-3.5 stroke-[1.5] text-[#8a8a93]" />;
       case 'effect':
       default:
-        return <Sparkles className="w-3.5 h-3.5 stroke-[1.5] text-[#C9A66B]" />;
+        return <Sparkles className="w-3.5 h-3.5 stroke-[1.5] text-[#8a8a93]" />;
     }
   };
 
@@ -99,11 +99,11 @@ export const TrackLane: React.FC<TrackLaneProps> = ({ track, zoom }) => {
         duration: asset.type === 'text' ? 3.0 : (asset.duration || 6),
         thumbnail: asset.thumbnailUrl,
         src: asset.previewUrl || '/rendered-reels/reel-demo.mp4',
-        color: track.type === 'video' ? '#384357' : (track.type === 'audio' ? '#345242' : (track.type === 'text' ? '#7C5C30' : '#634368')),
+        color: track.type === 'video' ? '#3b4a63' : (track.type === 'audio' ? '#3d5a4f' : (track.type === 'text' ? '#5c5246' : '#4d4560')),
         properties: asset.textPayload ? {
           text: asset.textPayload.text,
           fontStyle: asset.textPayload.fontStyle,
-          fontColor: asset.textPayload.fontColor || '#E8E6E1',
+          fontColor: asset.textPayload.fontColor || '#d4d4d8',
           fontSize: asset.textPayload.fontSize || 28,
           scale: asset.textPayload.scale || 1.0,
           posY: asset.textPayload.posY || 0
@@ -123,25 +123,25 @@ export const TrackLane: React.FC<TrackLaneProps> = ({ track, zoom }) => {
   };
 
   return (
-    <div className={`flex shrink-0 ${getLaneHeightClass()} border-b select-none border-[#202026]`}>
-      {/* 1. Track Left Header (TRACK_HEADER_WIDTH px exact match = 120px) */}
+    <div className={`flex shrink-0 ${getLaneHeightClass()} border-b select-none border-[#38383d]`}>
+      {/* 1. Track Left Header (TRACK_HEADER_WIDTH px exact match) */}
       <div 
-        className="shrink-0 border-r px-2 flex items-center justify-between z-30 bg-[#141418] border-[#222228]"
+        className="shrink-0 border-r px-1.5 flex items-center justify-between z-30 bg-[#2a2a2e] border-[#38383d] overflow-hidden"
         style={{ width: `${TRACK_HEADER_WIDTH}px` }}
       >
-        <div className="flex items-center gap-1.5 overflow-hidden">
+        <div className="flex items-center gap-1 min-w-0 flex-1 mr-1 overflow-hidden">
           {getTrackIcon()}
-          <span className="text-[11px] font-medium text-[#D8D6D1] truncate" title={track.name}>
+          <span className="text-[11px] font-medium text-[#d4d4d8] truncate" title={track.name}>
             {track.name}
           </span>
         </div>
 
         {/* Track Controls: Lock, Hide, Mute (14px icons) */}
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 shrink-0">
           <button
             onClick={() => toggleTrackLock(track.id)}
-            className={`p-1 rounded hover:bg-[#202026] transition-colors ${
-              track.isLocked ? 'text-[#C9A66B]' : 'text-[#64646E] hover:text-[#A6A6B0]'
+            className={`p-1 rounded-[3px] hover:bg-[#3a3a40] transition-colors duration-150 cursor-pointer ${
+              track.isLocked ? 'text-[#4f8cff]' : 'text-[#8a8a93] hover:text-[#d4d4d8]'
             }`}
             title={track.isLocked ? 'Unlock Track' : 'Lock Track'}
           >
@@ -150,8 +150,8 @@ export const TrackLane: React.FC<TrackLaneProps> = ({ track, zoom }) => {
 
           <button
             onClick={() => toggleTrackHide(track.id)}
-            className={`p-1 rounded hover:bg-[#202026] transition-colors ${
-              track.isHidden ? 'text-[#EF4444]' : 'text-[#64646E] hover:text-[#A6A6B0]'
+            className={`p-1 rounded-[3px] hover:bg-[#3a3a40] transition-colors duration-150 cursor-pointer ${
+              track.isHidden ? 'text-[#4f8cff]' : 'text-[#8a8a93] hover:text-[#d4d4d8]'
             }`}
             title={track.isHidden ? 'Unhide Track' : 'Hide Track'}
           >
@@ -161,8 +161,8 @@ export const TrackLane: React.FC<TrackLaneProps> = ({ track, zoom }) => {
           {track.type === 'audio' && (
             <button
               onClick={() => toggleTrackMute(track.id)}
-              className={`p-1 rounded hover:bg-[#202026] transition-colors ${
-                track.isMuted ? 'text-[#EF4444]' : 'text-[#64646E] hover:text-[#A6A6B0]'
+              className={`p-1 rounded-[3px] hover:bg-[#3a3a40] transition-colors duration-150 cursor-pointer ${
+                track.isMuted ? 'text-[#4f8cff]' : 'text-[#8a8a93] hover:text-[#d4d4d8]'
               }`}
               title={track.isMuted ? 'Unmute Track' : 'Mute Track'}
             >
@@ -178,8 +178,8 @@ export const TrackLane: React.FC<TrackLaneProps> = ({ track, zoom }) => {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleLaneClick}
-        className={`flex-1 relative cursor-pointer transition-colors ${
-          isDragOver ? 'bg-[#2A251D] ring-1 ring-inset ring-[#C9A66B]' : 'bg-[#0E0E11] hover:bg-[#111115]'
+        className={`flex-1 relative cursor-pointer transition-colors duration-150 ${
+          isDragOver ? 'bg-[#2f2f36] ring-1 ring-inset ring-[#4f8cff]' : 'bg-[#232326] hover:bg-[#27272b]'
         } ${track.isLocked ? 'pointer-events-none opacity-50' : ''} ${track.isHidden ? 'opacity-30' : ''}`}
       >
         {track.clips.map((clip) => (

@@ -108,7 +108,7 @@ export const TimeRuler: React.FC<TimeRulerProps> = ({ totalDuration, zoom }) => 
     <div
       ref={rulerRef}
       onPointerDown={handlePointerDown}
-      className="h-5 relative border-b cursor-pointer select-none bg-[#111114] border-[#202026] overflow-hidden transition-[width] duration-150 ease-out"
+      className="h-5 relative border-b cursor-pointer select-none bg-[#1b1b1d] border-[#38383d] overflow-hidden transition-[width] duration-150 ease-out"
       style={{ width: `${totalWidth}px` }}
     >
       {ticks.map((tick) => (
@@ -118,14 +118,14 @@ export const TimeRuler: React.FC<TimeRulerProps> = ({ totalDuration, zoom }) => 
           style={{ left: `${tick.time * zoom}px` }}
         >
           {tick.isMajor ? (
-            <span className="text-[9.5px] font-mono text-[#8A8A92] font-medium pl-1 select-none leading-none pt-0.5">
+            <span className="text-[9.5px] font-mono text-[#8a8a93] font-medium pl-1 select-none leading-none pt-0.5">
               {tick.label}
             </span>
           ) : null}
 
           <div
             className={`w-px ${
-              tick.isMajor ? 'h-2 bg-[#64646E]' : 'h-1 bg-[#3A3A44]'
+              tick.isMajor ? 'h-2 bg-[#48484e]' : 'h-1 bg-[#323236]'
             }`}
           />
         </div>
@@ -133,7 +133,7 @@ export const TimeRuler: React.FC<TimeRulerProps> = ({ totalDuration, zoom }) => 
 
       {/* Subtle End Boundary Mark */}
       <div 
-        className="absolute top-0 bottom-0 w-px bg-[#EF4444]/40 pointer-events-none"
+        className="absolute top-0 bottom-0 w-px bg-[#4f8cff]/30 pointer-events-none"
         style={{ left: `${totalDuration * zoom}px` }}
         title="Project End"
       />

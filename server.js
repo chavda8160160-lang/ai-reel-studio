@@ -38,11 +38,12 @@ app.use('/api/auth', authRouter);
 // Root directories
 const GENERATED_DIR = path.join(__dirname, 'generated-projects');
 const UPLOADS_DIR = path.join(__dirname, 'uploads', 'videos');
+const AUDIO_CACHE_DIR = path.join(__dirname, 'uploads', 'audio-cache');
 const REELS_DIR = path.join(__dirname, 'public', 'rendered-reels');
 const DATA_DIR = path.join(__dirname, 'data');
 const SCHEDULER_FILE = path.join(DATA_DIR, 'scheduler-state.json');
 const SCHEDULED_QUEUE_FILE = path.join(DATA_DIR, 'scheduled-queue.json');
-[GENERATED_DIR, UPLOADS_DIR, REELS_DIR, DATA_DIR].forEach(dir => {
+[GENERATED_DIR, UPLOADS_DIR, AUDIO_CACHE_DIR, REELS_DIR, DATA_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
@@ -82,6 +83,94 @@ app.post('/api/audio/upload-timeline-bgm', upload.single('audioFile'), (req, res
   } catch (err) {
     console.error('Audio upload error:', err);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 🌐 Royalty-Free Online Music Search (Jamendo, Audius, Curated CC)
+const { musicService } = require('./routes/musicProviders');
+
+app.get('/api/music/search', async (req, res) => {
+  const query = (req.query.q || '').trim();
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+  const category = (req.query.category || '').trim();
+
+  try {
+    const data = await musicService.search(query, page, limit, category);
+    res.json({
+      success: true,
+      page: data.page,
+      hasMore: data.hasMore,
+      count: data.results.length,
+      results: data.results
+    });
+  } catch (err) {
+    console.error('Online music search error:', err.message);
+    res.status(500).json({ success: false, error: err.message, results: [] });
+  }
+});
+
+app.get('/api/music/track/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const track = await musicService.getTrack(id);
+    if (!track) {
+      return res.status(404).json({ success: false, error: 'Track not found' });
+    }
+    res.json({ success: true, track });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/music/categories', (req, res) => {
+  res.json({
+    success: true,
+    categories: [
+      'Trending',
+      'Pop',
+      'Lo-fi',
+      'Hip-hop',
+      'Cinematic',
+      'Devotional',
+      'Bollywood-style instrumental',
+      'Chill',
+      'Energetic'
+    ]
+  });
+});
+
+// 🎧 Audio Proxy & Server Cache (bypasses CORS & stores local offline copies)
+app.get('/api/music/proxy-audio', async (req, res) => {
+  const audioUrl = req.query.url;
+  if (!audioUrl) return res.status(400).send('Missing url param');
+
+  try {
+    const crypto = require('crypto');
+    const hash = crypto.createHash('md5').update(audioUrl).digest('hex');
+    const cachedPath = path.join(AUDIO_CACHE_DIR, `audio-${hash}.mp3`);
+
+    if (fs.existsSync(cachedPath)) {
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return fs.createReadStream(cachedPath).pipe(res);
+    }
+
+    const fetched = await fetch(audioUrl);
+    if (!fetched.ok) throw new Error(`Proxy fetch failed: ${fetched.status}`);
+
+    const arrayBuf = await fetched.arrayBuffer();
+    const buf = Buffer.from(arrayBuf);
+    fs.writeFileSync(cachedPath, buf);
+
+    res.setHeader('Content-Type', fetched.headers.get('content-type') || 'audio/mpeg');
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(buf);
+  } catch (err) {
+    console.warn('Audio proxy fallback:', err.message);
+    res.redirect(audioUrl);
   }
 });
 
@@ -1048,72 +1137,6 @@ app.get('/api/status', (req, res) => {
     hasEnvKey: !!process.env.GEMINI_API_KEY,
     generatedDir: GENERATED_DIR
   });
-});
-
-// ========================================================
-// 🎵 ONLINE MUSIC SEARCH & INSTAGRAM-STYLE AUDIO API
-// ========================================================
-app.get('/api/music/search', async (req, res) => {
-  const query = (req.query.q || '').trim();
-  const limit = Math.min(50, parseInt(req.query.limit) || 25);
-  if (!query) {
-    return res.json({ success: true, results: [] });
-  }
-
-  try {
-    const searchUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=song&limit=${limit}`;
-    const apiRes = await fetch(searchUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    if (!apiRes.ok) throw new Error(`iTunes API status ${apiRes.status}`);
-    const data = await apiRes.json();
-
-    const results = (data.results || []).map(item => ({
-      id: item.trackId,
-      title: item.trackName || 'Song',
-      artist: item.artistName || 'Artist',
-      album: item.collectionName || '',
-      artwork: (item.artworkUrl100 || '').replace('100x100bb', '300x300bb'),
-      previewUrl: item.previewUrl || '',
-      duration: Math.round((item.trackTimeMillis || 30000) / 1000)
-    })).filter(item => !!item.previewUrl);
-
-    res.json({ success: true, count: results.length, results });
-  } catch (err) {
-    console.error('Online music search error:', err);
-    res.status(500).json({ success: false, error: err.message, results: [] });
-  }
-});
-
-app.get('/api/music/trending', async (req, res) => {
-  const category = (req.query.genre || req.query.category || 'reels').toLowerCase();
-  const queries = {
-    'reels': 'bollywood hits',
-    'gujarati': 'gujarati garba',
-    'bollywood': 'arijit singh',
-    'lofi': 'hindi lofi',
-    'punjabi': 'punjabi hits',
-    'sitar': 'royal sitar'
-  };
-
-  const searchTerm = queries[category] || queries['reels'];
-  try {
-    const searchUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(searchTerm)}&media=music&entity=song&limit=25`;
-    const apiRes = await fetch(searchUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    const data = await apiRes.json();
-
-    const results = (data.results || []).map(item => ({
-      id: item.trackId,
-      title: item.trackName || 'Song',
-      artist: item.artistName || 'Artist',
-      album: item.collectionName || '',
-      artwork: (item.artworkUrl100 || '').replace('100x100bb', '300x300bb'),
-      previewUrl: item.previewUrl || '',
-      duration: Math.round((item.trackTimeMillis || 30000) / 1000)
-    })).filter(item => !!item.previewUrl);
-
-    res.json({ success: true, category, count: results.length, results });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message, results: [] });
-  }
 });
 
 // 5. AI Video Reel Generator & Smart Auto-Editor
@@ -2221,6 +2244,54 @@ ${assEvents}`;
       else if (fs.existsSync(pPublicBgm)) bgmFilePath = pPublicBgm;
     }
 
+    // 11B. Timeline Audio Clips (Multiple mixed clips with offset, duration, volume, fades)
+    const resolvedAudioClips = [];
+    if (Array.isArray(req.body.audioClips) && req.body.audioClips.length > 0) {
+      for (const ac of req.body.audioClips) {
+        if (!ac.src) continue;
+        let localPath = null;
+        if (ac.src.startsWith('http://') || ac.src.startsWith('https://')) {
+          const crypto = require('crypto');
+          const hash = crypto.createHash('md5').update(ac.src).digest('hex');
+          const cached = path.join(AUDIO_CACHE_DIR, `audio-${hash}.mp3`);
+          if (fs.existsSync(cached)) {
+            localPath = cached;
+          } else {
+            try {
+              const fetched = await fetch(ac.src);
+              if (fetched.ok) {
+                const buf = Buffer.from(await fetched.arrayBuffer());
+                fs.writeFileSync(cached, buf);
+                localPath = cached;
+              }
+            } catch (e) {
+              console.warn('Failed to fetch audio clip src:', e.message);
+            }
+          }
+        } else {
+          const clean = path.basename(ac.src);
+          const tryUploads = path.join(UPLOADS_DIR, clean);
+          const tryPublic = path.join(__dirname, 'public', clean.startsWith('/') ? clean.slice(1) : clean);
+          const tryPublicBgm = path.join(__dirname, 'public', 'audio', 'bgm', clean);
+          if (fs.existsSync(tryUploads)) localPath = tryUploads;
+          else if (fs.existsSync(tryPublic)) localPath = tryPublic;
+          else if (fs.existsSync(tryPublicBgm)) localPath = tryPublicBgm;
+        }
+
+        if (localPath && fs.existsSync(localPath)) {
+          resolvedAudioClips.push({
+            filePath: localPath,
+            start: Math.max(0, parseFloat(ac.start) || 0),
+            offset: Math.max(0, parseFloat(ac.offset) || 0),
+            duration: Math.max(0.2, parseFloat(ac.duration) || 5),
+            volume: Math.max(0, Math.min(2, parseFloat(ac.volume) ?? 0.85)),
+            fadeIn: Math.max(0, parseFloat(ac.fadeIn) || 0),
+            fadeOut: Math.max(0, parseFloat(ac.fadeOut) || 0),
+          });
+        }
+      }
+    }
+
     // 12. CapCut Sound Effects (SFX) Track Detection
     let sfxFilePath = null;
     if (sfxTrack && typeof sfxTrack === 'string' && sfxTrack.trim() && sfxTrack !== 'none') {
@@ -2264,6 +2335,16 @@ ${assEvents}`;
         sfxInputIdx = currentInputIdx++;
       }
 
+      // Input all timeline audio clips
+      const clipAudioIndices = [];
+      for (const aClip of resolvedAudioClips) {
+        ff = ff.input(aClip.filePath);
+        clipAudioIndices.push({
+          idx: currentInputIdx++,
+          clip: aClip
+        });
+      }
+
       // Audio Filter Graph
       const audioMixInputs = [];
       if (!isMuteOrig) {
@@ -2280,6 +2361,29 @@ ${assEvents}`;
       if (sfxInputIdx !== null) {
         complex.push(`[${sfxInputIdx}:a]volume=${sfxVol}[sfx_a]`);
         audioMixInputs.push('[sfx_a]');
+      }
+
+      // Mix individual timeline audio clips with offset, duration, volume, fades, and timeline delay
+      for (const item of clipAudioIndices) {
+        const { idx, clip } = item;
+        let chain = `[${idx}:a]atrim=start=${clip.offset}:duration=${clip.duration},asetpts=PTS-STARTPTS`;
+        if (clip.fadeIn > 0) {
+          chain += `,afade=t=in:st=0:d=${clip.fadeIn}`;
+        }
+        if (clip.fadeOut > 0) {
+          chain += `,afade=t=out:st=${Math.max(0, clip.duration - clip.fadeOut)}:d=${clip.fadeOut}`;
+        }
+        if (clip.volume !== 1.0) {
+          chain += `,volume=${clip.volume}`;
+        }
+        const delaySec = Math.max(0, clip.start - startSec);
+        const delayMs = Math.round(delaySec * 1000);
+        if (delayMs > 0) {
+          chain += `,adelay=${delayMs}|${delayMs}`;
+        }
+        chain += `[clip_a_${idx}]`;
+        complex.push(chain);
+        audioMixInputs.push(`[clip_a_${idx}]`);
       }
 
       if (audioMixInputs.length > 1) {
@@ -2424,26 +2528,49 @@ let cachedYtTitle = process.env.YOUTUBE_CHANNEL_TITLE || null;
 // Helper to get valid YouTube Access Token (auto-refreshes if refresh_token + client_id configured)
 async function getOrRefreshYouTubeToken(customToken) {
   let token = customToken || process.env.YOUTUBE_ACCESS_TOKEN;
-  if (process.env.YOUTUBE_REFRESH_TOKEN && process.env.YOUTUBE_CLIENT_ID && process.env.YOUTUBE_CLIENT_SECRET) {
-    try {
-      const res = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id: process.env.YOUTUBE_CLIENT_ID,
-          client_secret: process.env.YOUTUBE_CLIENT_SECRET,
-          refresh_token: process.env.YOUTUBE_REFRESH_TOKEN,
-          grant_type: 'refresh_token'
-        })
-      });
-      const data = await res.json();
-      if (data.access_token) {
-        token = data.access_token;
-        updateEnvFile({ YOUTUBE_ACCESS_TOKEN: data.access_token });
-        console.log('🔄 [YouTube Auto-Refresh] Successfully refreshed access token in background!');
+  const refreshToken = process.env.YOUTUBE_REFRESH_TOKEN;
+  if (refreshToken) {
+    // 1. Try standard client credentials if present
+    if (process.env.YOUTUBE_CLIENT_ID && process.env.YOUTUBE_CLIENT_SECRET) {
+      try {
+        const res = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: process.env.YOUTUBE_CLIENT_ID,
+            client_secret: process.env.YOUTUBE_CLIENT_SECRET,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token'
+          })
+        });
+        const data = await res.json();
+        if (data.access_token) {
+          token = data.access_token;
+          updateEnvFile({ YOUTUBE_ACCESS_TOKEN: data.access_token });
+          console.log('🔄 [YouTube Auto-Refresh] Successfully refreshed access token in background!');
+          return token;
+        }
+      } catch (e) {
+        console.warn('⚠️ [YouTube Auto-Refresh Warning]:', e.message);
       }
-    } catch (e) {
-      console.warn('⚠️ [YouTube Auto-Refresh Warning]:', e.message);
+    }
+
+    // 2. Fallback: Google OAuth Playground refresh proxy (works for playground-issued tokens)
+    try {
+      const pRes = await fetch('https://developers.google.com/oauthplayground/refreshAccessToken', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+        body: JSON.stringify({ token_uri: 'https://oauth2.googleapis.com/token', refresh_token: refreshToken })
+      });
+      const pData = await pRes.json();
+      if (pData.access_token) {
+        token = pData.access_token;
+        updateEnvFile({ YOUTUBE_ACCESS_TOKEN: pData.access_token });
+        console.log('🔄 [YouTube Auto-Refresh via Playground] Successfully refreshed access token!');
+        return token;
+      }
+    } catch (pe) {
+      console.warn('⚠️ [YouTube Playground Auto-Refresh Warning]:', pe.message);
     }
   }
   return token;

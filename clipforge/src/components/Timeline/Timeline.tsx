@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TRACK_HEADER_WIDTH, TIMELINE_END_PADDING } from '../../types/editor';
 import { TimelineToolbar } from './TimelineToolbar';
+import { VoiceRecorderBar } from './VoiceRecorderBar';
 import { TimeRuler } from './TimeRuler';
 import { TrackLane } from './TrackLane';
 import { Playhead } from './Playhead';
@@ -21,7 +22,12 @@ export const Timeline: React.FC = () => {
     duplicateSelectedClip,
     undo,
     redo,
-    snapGuideTime 
+    snapGuideTime,
+    setActiveTool,
+    trimLeftToPlayhead,
+    trimRightToPlayhead,
+    selectAllClips,
+    toggleSnap
   } = useEditorStore();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -107,10 +113,52 @@ export const Timeline: React.FC = () => {
         togglePlay();
       }
 
-      // S = Split
-      if (e.key === 's' || e.key === 'S') {
+      // A = CapCut Selection Tool
+      if (!e.ctrlKey && !e.metaKey && (e.key === 'a' || e.key === 'A')) {
+        e.preventDefault();
+        setActiveTool('select');
+      }
+
+      // Ctrl+A = Select All Clips
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+        e.preventDefault();
+        selectAllClips();
+      }
+
+      // Q = CapCut Ripple Trim Left to Playhead
+      if (!e.ctrlKey && !e.metaKey && (e.key === 'q' || e.key === 'Q')) {
+        e.preventDefault();
+        trimLeftToPlayhead();
+      }
+
+      // W = CapCut Ripple Trim Right to Playhead
+      if (!e.ctrlKey && !e.metaKey && (e.key === 'w' || e.key === 'W')) {
+        e.preventDefault();
+        trimRightToPlayhead();
+      }
+
+      // Ctrl+B or S = Split Clip at Playhead
+      if (((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) || (!e.ctrlKey && !e.metaKey && (e.key === 's' || e.key === 'S'))) {
         e.preventDefault();
         splitClipAtPlayhead();
+      }
+
+      // N = Toggle Magnetic Snapping
+      if (!e.ctrlKey && !e.metaKey && (e.key === 'n' || e.key === 'N')) {
+        e.preventDefault();
+        toggleSnap();
+      }
+
+      // Ctrl + '+' or '=' = Zoom In
+      if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        setZoom(zoom + 6);
+      }
+
+      // Ctrl + '-' = Zoom Out
+      if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) {
+        e.preventDefault();
+        setZoom(zoom - 6);
       }
 
       // Delete or Backspace = Remove
@@ -151,7 +199,7 @@ export const Timeline: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlay, splitClipAtPlayhead, deleteClip, undo, redo, fitToView]);
+  }, [togglePlay, splitClipAtPlayhead, deleteClip, undo, redo, fitToView, setActiveTool, trimLeftToPlayhead, trimRightToPlayhead, selectAllClips, toggleSnap, zoom, setZoom]);
 
   // Ctrl + Wheel = Timeline Zoom (Rule 5 & 6: Zoom out never goes below fit level)
   const handleWheel = (e: React.WheelEvent) => {
@@ -202,7 +250,7 @@ export const Timeline: React.FC = () => {
   return (
     <section 
       style={{ height: `${panelHeight}px` }}
-      className="min-h-[180px] bg-[#121214] border-t border-[#24242A] flex flex-col select-none shrink-0 z-20 relative overflow-hidden transition-colors"
+      className="min-h-[180px] bg-[#1b1b1d] border-t border-[#38383d] flex flex-col select-none shrink-0 z-20 relative overflow-hidden transition-colors duration-150"
       onWheel={handleWheel}
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleTimelineDrop}
@@ -210,12 +258,15 @@ export const Timeline: React.FC = () => {
       {/* Top Drag-to-Resize Handle (min 180px, max 55% screen) */}
       <div 
         onPointerDown={handleResizePointerDown}
-        className="absolute top-0 inset-x-0 h-1 cursor-row-resize z-50 hover:bg-[#C9A66B] transition-colors"
+        className="absolute top-0 inset-x-0 h-1 cursor-row-resize z-50 hover:bg-[#4f8cff] transition-colors duration-150"
         title="Drag up/down to resize timeline panel"
       />
 
       {/* 1. Timeline Toolbar (32px) */}
       <TimelineToolbar />
+
+      {/* Voice Recording Active Bar */}
+      <VoiceRecorderBar />
 
       {/* 2. Main Timeline Scrollable Body */}
       <div 
@@ -228,10 +279,10 @@ export const Timeline: React.FC = () => {
           style={{ width: `${TRACK_HEADER_WIDTH + timelineContentWidth}px` }}
         >
           {/* Header Row: Track Corner Label + Time Ruler (20px sticky) */}
-          <div className="flex h-5 border-b border-[#24242A] shrink-0 sticky top-0 z-30 bg-[#17171C]">
+          <div className="flex h-5 border-b border-[#38383d] shrink-0 sticky top-0 z-30 bg-[#2a2a2e]">
             {/* Top Left Track Tag Corner */}
             <div 
-              className="shrink-0 bg-[#1B1B20] border-r border-[#24242C] px-2 flex items-center justify-between text-[11px] text-[#8A8A92] font-mono tracking-wider font-medium"
+              className="shrink-0 bg-[#2a2a2e] border-r border-[#38383d] px-2 flex items-center justify-between text-[11px] text-[#8a8a93] font-mono tracking-wider font-medium"
               style={{ width: `${TRACK_HEADER_WIDTH}px` }}
             >
               <span>TRACKS</span>
@@ -265,10 +316,10 @@ export const Timeline: React.FC = () => {
             {/* Magnetic Snap Guide Line (Active during clip drag / handle trim) */}
             {snapGuideTime !== null && (
               <div 
-                className="absolute top-0 bottom-0 pointer-events-none z-30 border-l border-dashed border-[#22D3EE] transition-none"
+                className="absolute top-0 bottom-0 pointer-events-none z-30 border-l border-dashed border-[#4f8cff] transition-none"
                 style={{ left: `${TRACK_HEADER_WIDTH + snapGuideTime * zoom}px` }}
               >
-                <div className="bg-[#22D3EE] text-[#0F0F10] text-[9.5px] font-mono font-bold px-1 py-0.5 rounded shadow-lg -translate-x-1/2 mt-0.5">
+                <div className="bg-[#4f8cff] text-white text-[9.5px] font-mono font-medium px-1 py-0.5 rounded-[2px] -translate-x-1/2 mt-0.5">
                   {snapGuideTime.toFixed(2)}s
                 </div>
               </div>

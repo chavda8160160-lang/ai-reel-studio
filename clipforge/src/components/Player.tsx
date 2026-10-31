@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { 
   Play, 
   Pause, 
@@ -49,13 +49,35 @@ export const Player: React.FC = () => {
   const activeVideoClipIdRef = useRef<string | null>(null);
   const activeAudioClipIdRef = useRef<string | null>(null);
   const preloadedClipIdRef = useRef<string | null>(null);
+  const lastStoreTimeRef = useRef<number>(currentTime);
 
   const [isLooping, setIsLooping] = useState(true);
   const [fitMode, setFitMode] = useState<'contain' | 'cover'>('contain');
-  const [showDebugOverlay, setShowDebugOverlay] = useState<boolean>(true);
+  const [showDebugOverlay, setShowDebugOverlay] = useState<boolean>(false);
   const [liveVideoTime, setLiveVideoTime] = useState<number>(0);
   const [snapGuideX, setSnapGuideX] = useState<boolean>(false);
   const [snapGuideY, setSnapGuideY] = useState<boolean>(false);
+  const [stageDimensions, setStageDimensions] = useState({ width: 800, height: 450 });
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const availableW = Math.max(100, rect.width - 32);
+        const availableH = Math.max(100, rect.height - 32);
+        setStageDimensions({ width: availableW, height: availableH });
+      }
+    };
+    updateSize();
+    const ro = new ResizeObserver(() => updateSize());
+    ro.observe(containerRef.current);
+    window.addEventListener('resize', updateSize);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateSize);
+    };
+  }, []);
 
   // Toggle debug overlay with Ctrl+Shift+D (Ctrl+D is reserved for duplicate clip)
   useEffect(() => {
@@ -183,12 +205,12 @@ export const Player: React.FC = () => {
     c => currentTime >= c.start && currentTime < (c.start + c.duration)
   ) || null;
 
-  // Active text and overlay clips across all tracks (only between start and start + duration)
+  // Active text, stickers/images, and PiP clips across all upper tracks
   const activeOverlays = tracks
     .filter(t => !t.isHidden)
     .flatMap(t => t.clips.map(c => ({ clip: c, track: t })))
-    .filter(({ clip }) => 
-      (clip.type === 'text' || clip.type === 'sticker') && 
+    .filter(({ clip, track }) => 
+      (clip.type === 'text' || clip.type === 'sticker' || (clip.type === 'video' && track.id !== 'track-video')) && 
       currentTime >= clip.start && 
       currentTime < (clip.start + clip.duration)
     );
@@ -279,15 +301,17 @@ export const Player: React.FC = () => {
 
     let animId: number;
     let lastTime = performance.now();
+    lastStoreTimeRef.current = useEditorStore.getState().currentTime;
 
     const loop = (now: number) => {
-      const deltaSec = (now - lastTime) / 1000;
+      const deltaSec = Math.min(0.1, (now - lastTime) / 1000);
       lastTime = now;
 
       const store = useEditorStore.getState();
       const currentT = store.currentTime;
-      // Rule 9: The playback clock keeps running through empty gaps so the playhead moves normally even when no video is active
-      const nextTimelineTime = currentT + deltaSec;
+
+      // Check if user jumped or seeked externally (e.g. clicked timeline or pressed step frame)
+      const userSeeked = Math.abs(currentT - lastStoreTimeRef.current) > 0.35;
 
       const video = videoRef.current;
       const audio = audioRef.current;
@@ -302,7 +326,7 @@ export const Player: React.FC = () => {
             offset: c.offset ?? 0,
             duration: c.duration,
             speed: c.properties.speed || 1.0
-          }, nextTimelineTime);
+          }, currentT);
           if (st.active) {
             vClip = c;
             vState = st;
@@ -312,13 +336,18 @@ export const Player: React.FC = () => {
       }
 
       const aTrack = store.tracks.find(t => t.type === 'audio' && !t.isMuted);
-      const aClip = aTrack?.clips.find(c => nextTimelineTime >= c.start && nextTimelineTime < (c.start + c.duration)) || null;
+      const aClip = aTrack?.clips.find(c => currentT >= c.start && currentT < (c.start + c.duration)) || null;
 
-      // Handle Video Clock & State driven by pure getVideoState
+      let nextTimelineTime = currentT;
+
+      // --- Handle Video Playback ---
       if (video) {
         if (vClip && vState.active) {
-          // When getVideoState becomes active (transition false -> true, or a different clip): set video.currentTime = sourceTime, then play(). Do it once on entry.
-          if (activeVideoClipIdRef.current !== vClip.id) {
+          const speed = vClip.properties.speed || 1.0;
+          const clipOffset = vClip.offset ?? 0;
+
+          // Case A: Entering a new clip, or user jumped/seeked while playing
+          if (activeVideoClipIdRef.current !== vClip.id || userSeeked) {
             const targetSrc = vClip.src || videoSrc;
             if (targetSrc && currentLoadedVideoSrc.current !== targetSrc) {
               currentLoadedVideoSrc.current = targetSrc;
@@ -326,27 +355,52 @@ export const Player: React.FC = () => {
               video.load();
             }
 
-            video.playbackRate = vClip.properties.speed || 1.0;
-            video.volume = vTrack?.isMuted ? 0 : Math.min(1, vClip.properties.volume ?? 1);
+            video.playbackRate = speed;
+            const isVidMuted = vTrack?.isMuted || vClip.properties.isMuted;
+            video.volume = isVidMuted ? 0 : Math.min(1, vClip.properties.volume ?? 1);
             seekAndPlayOnEntry(video, vState.sourceTime);
             activeVideoClipIdRef.current = vClip.id;
-          } else if (!isSeekingRef.current) {
-            // While active: resync only if |video.currentTime - sourceTime| > 0.15
-            if (video.readyState >= 1 && Math.abs(video.currentTime - vState.sourceTime) > 0.15) {
-              video.currentTime = Math.max(0, vState.sourceTime);
+            nextTimelineTime = currentT + deltaSec;
+          } 
+          // Case B: Video is actively playing and decoded - Active Video is the Master Clock!
+          else if (!isSeekingRef.current && video.readyState >= 2 && !video.paused) {
+            const currentSourceTime = video.currentTime;
+            const videoTimelineTime = vClip.start + (currentSourceTime - clipOffset) / speed;
+            const clipEndTime = vClip.start + vClip.duration;
+
+            // Check if clip has reached its duration
+            if (videoTimelineTime >= clipEndTime) {
+              video.pause();
+              activeVideoClipIdRef.current = null;
+              nextTimelineTime = clipEndTime;
+            } else {
+              // Smooth PLL sync: advance with deltaSec, gently converge to video presentation time
+              const drift = videoTimelineTime - currentT;
+              if (Math.abs(drift) > 0.3) {
+                // If drift is significant, snap timeline to video
+                nextTimelineTime = Math.max(vClip.start, Math.min(clipEndTime, videoTimelineTime));
+              } else {
+                // Gentle nudge so timeline movement is 60fps buttery-smooth without any micro-jitter
+                nextTimelineTime = Math.max(vClip.start, Math.min(clipEndTime, currentT + deltaSec + drift * 0.18));
+              }
             }
-            if (video.paused && !video.ended) {
+          } 
+          // Case C: Video is buffering/paused or seeking
+          else {
+            if (video.paused && !video.ended && !isSeekingRef.current) {
               video.play().catch(() => {});
             }
+            nextTimelineTime = currentT + deltaSec;
           }
         } else {
-          // When playhead passes clip.start + clip.duration or in gap: pause video and show black
+          // In gap or past video clips: pause video element
           if (activeVideoClipIdRef.current !== null) {
             video.pause();
             activeVideoClipIdRef.current = null;
           }
+          nextTimelineTime = currentT + deltaSec;
 
-          // Preload upcoming clip 1 second before it starts (once per upcoming clip)
+          // Preload upcoming clip 1 second before it starts
           const upcoming = vTrack?.clips.find(c => c.start > nextTimelineTime && c.start <= nextTimelineTime + 1.0);
           if (upcoming && preloadedClipIdRef.current !== upcoming.id) {
             preloadedClipIdRef.current = upcoming.id;
@@ -362,30 +416,57 @@ export const Player: React.FC = () => {
           }
         }
 
-        // Keep debug overlay synchronized (throttled to avoid re-render thrashing)
-        if (Math.floor(now / 120) !== Math.floor((now - deltaSec * 1000) / 120)) {
+        // Keep debug overlay synchronized (only when open, throttled)
+        if (showDebugOverlay && Math.floor(now / 150) !== Math.floor((now - deltaSec * 1000) / 150)) {
           setLiveVideoTime(Number(video.currentTime.toFixed(2)));
         }
+      } else {
+        nextTimelineTime = currentT + deltaSec;
       }
 
-      // Handle Audio Clock & State (Rule 8)
+      // --- Handle Audio Playback ---
       if (audio) {
         if (aClip) {
           const offset = aClip.offset ?? 0;
           const expectedAudioTime = offset + (nextTimelineTime - aClip.start);
 
-          if (activeAudioClipIdRef.current !== aClip.id) {
+          if (activeAudioClipIdRef.current !== aClip.id || userSeeked) {
             const targetSrc = aClip.src || audioSrc;
             if (targetSrc && currentLoadedAudioSrc.current !== targetSrc) {
               currentLoadedAudioSrc.current = targetSrc;
               audio.src = targetSrc;
               audio.load();
             }
-            audio.volume = aTrack?.isMuted ? 0 : Math.min(1, aClip.properties.volume ?? 0.85);
+            const isAudMuted = aTrack?.isMuted || aClip.properties.isMuted;
+            let effVol = isAudMuted ? 0 : Math.min(1, aClip.properties.volume ?? 0.85);
+            // Dynamic Audio Fade In / Fade Out
+            const elapsedOnClip = nextTimelineTime - aClip.start;
+            const remainingOnClip = (aClip.start + aClip.duration) - nextTimelineTime;
+            if (aClip.properties.fadeIn && aClip.properties.fadeIn > 0 && elapsedOnClip < aClip.properties.fadeIn) {
+              effVol *= Math.max(0, elapsedOnClip / aClip.properties.fadeIn);
+            }
+            if (aClip.properties.fadeOut && aClip.properties.fadeOut > 0 && remainingOnClip < aClip.properties.fadeOut) {
+              effVol *= Math.max(0, remainingOnClip / aClip.properties.fadeOut);
+            }
+            audio.volume = Math.min(1, Math.max(0, effVol));
             safeSeekAudio(audio, expectedAudioTime, true);
             activeAudioClipIdRef.current = aClip.id;
           } else {
-            if (audio.readyState >= 1 && Math.abs(audio.currentTime - expectedAudioTime) > 0.15) {
+            // While audio is actively playing: update volume and fades smoothly
+            const isAudMuted = aTrack?.isMuted || aClip.properties.isMuted;
+            let effVol = isAudMuted ? 0 : Math.min(1, aClip.properties.volume ?? 0.85);
+            const elapsedOnClip = nextTimelineTime - aClip.start;
+            const remainingOnClip = (aClip.start + aClip.duration) - nextTimelineTime;
+            if (aClip.properties.fadeIn && aClip.properties.fadeIn > 0 && elapsedOnClip < aClip.properties.fadeIn) {
+              effVol *= Math.max(0, elapsedOnClip / aClip.properties.fadeIn);
+            }
+            if (aClip.properties.fadeOut && aClip.properties.fadeOut > 0 && remainingOnClip < aClip.properties.fadeOut) {
+              effVol *= Math.max(0, remainingOnClip / aClip.properties.fadeOut);
+            }
+            audio.volume = Math.min(1, Math.max(0, effVol));
+
+            // Only resync audio if drift is substantial (> 0.75s) to prevent audio stutter
+            if (audio.readyState >= 1 && Math.abs(audio.currentTime - expectedAudioTime) > 0.75) {
               audio.currentTime = Math.max(0, expectedAudioTime);
             }
             if (audio.paused && !audio.ended) {
@@ -403,14 +484,17 @@ export const Player: React.FC = () => {
       // Check boundary & loop
       if (nextTimelineTime >= store.totalDuration) {
         if (isLooping) {
+          lastStoreTimeRef.current = 0;
           store.seek(0);
           activeVideoClipIdRef.current = null;
           activeAudioClipIdRef.current = null;
         } else {
+          lastStoreTimeRef.current = store.totalDuration;
           store.seek(store.totalDuration);
           store.pause();
         }
       } else {
+        lastStoreTimeRef.current = nextTimelineTime;
         store.seek(nextTimelineTime);
       }
 
@@ -419,14 +503,58 @@ export const Player: React.FC = () => {
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [isPlaying, isLooping, videoSrc, audioSrc]);
+  }, [isPlaying, isLooping, videoSrc, audioSrc, showDebugOverlay]);
 
-  // Compute CSS filter string: real filter + color matrix presets with live adjustments
-  const getFilterStyle = (filterName: string, adj?: any) => {
+  // Active adjustment layer across tracks if any
+  const activeAdjustmentClip = tracks
+    .filter(t => !t.isHidden)
+    .flatMap(t => t.clips)
+    .find(c => c.properties.isAdjustmentLayer && currentTime >= c.start && currentTime < (c.start + c.duration));
+
+  // Compute CSS filter string: real filter + color matrix presets with live adjustments, curves, HSL, and effects
+  const getMaskClipPath = (mask?: any) => {
+    if (!mask || mask.shape === 'none') return undefined;
+    const size = mask.size || 100;
+    switch (mask.shape) {
+      case 'circle':
+        return `circle(${Math.round(size / 2)}% at 50% 50%)`;
+      case 'rectangle': {
+        const inset = Math.max(0, Math.round(50 - size / 2));
+        return `inset(${inset}% ${inset}% round 4px)`;
+      }
+      case 'horizontal': {
+        const half = Math.max(0, Math.round(50 - size / 2));
+        const bot = Math.min(100, Math.round(50 + size / 2));
+        return `polygon(0% ${half}%, 100% ${half}%, 100% ${bot}%, 0% ${bot}%)`;
+      }
+      case 'mirror': {
+        const band = Math.max(0, Math.round(50 - size / 4));
+        const bot = Math.min(100, Math.round(50 + size / 4));
+        return `polygon(0% 0%, 100% 0%, 100% ${band}%, 0% ${band}%, 0% ${bot}%, 100% ${bot}%, 100% 100%, 0% 100%)`;
+      }
+      default:
+        return undefined;
+    }
+  };
+
+  const getFilterStyle = (
+    filterName: string, 
+    adj?: any, 
+    hsl?: any, 
+    curves?: any, 
+    videoEffect?: string,
+    chromaKey?: any
+  ) => {
     if (isComparingFilter) return 'none';
 
+    // Layer active adjustment layer if present
+    const effectiveAdj = activeAdjustmentClip ? { ...(adj || {}), ...(activeAdjustmentClip.properties.adjust || {}) } : adj;
+    const effectiveFilter = (activeAdjustmentClip && activeAdjustmentClip.properties.filter !== 'none') 
+      ? activeAdjustmentClip.properties.filter 
+      : filterName;
+
     let base = '';
-    switch (filterName) {
+    switch (effectiveFilter) {
       case 'cinematic': // Teal & Gold
         base = 'contrast(1.18) saturate(1.25) sepia(0.18) hue-rotate(-12deg)';
         break;
@@ -446,16 +574,60 @@ export const Player: React.FC = () => {
         base = '';
     }
 
-    if (adj) {
+    if (effectiveAdj) {
       // Scale: -100 to 100, where 0 is neutral (1.0x)
-      const b = Math.max(0, 1 + (adj.brightness || 0) / 100);
-      const c = Math.max(0, 1 + (adj.contrast || 0) / 100);
-      const s = Math.max(0, 1 + (adj.saturation || 0) / 100);
-      const temp = adj.temperature || 0;
+      const b = Math.max(0, 1 + ((effectiveAdj.brightness || 0) + (effectiveAdj.highlights || 0) * 0.4) / 100);
+      const c = Math.max(0, 1 + ((effectiveAdj.contrast || 0) + (effectiveAdj.clarity || 0) * 0.3) / 100);
+      const s = Math.max(0, 1 + (effectiveAdj.saturation || 0) / 100);
+      const temp = effectiveAdj.temperature || 0;
+      const tint = effectiveAdj.tint || 0;
       const tempFilter = temp !== 0 
         ? (temp > 0 ? `sepia(${temp / 200}) hue-rotate(-${temp * 0.12}deg)` : `hue-rotate(${Math.abs(temp) * 0.15}deg) saturate(${1 + Math.abs(temp) / 300})`)
         : '';
-      base += ` brightness(${b.toFixed(2)}) contrast(${c.toFixed(2)}) saturate(${s.toFixed(2)}) ${tempFilter}`;
+      const tintFilter = tint !== 0 ? `hue-rotate(${tint * 0.2}deg)` : '';
+      base += ` brightness(${b.toFixed(2)}) contrast(${c.toFixed(2)}) saturate(${s.toFixed(2)}) ${tempFilter} ${tintFilter}`;
+    }
+
+    // Curves influence: Master mid.y alters brightness, Red/Blue mid.y alter tint
+    if (curves) {
+      const masterMid = curves.master?.[1]?.y ?? 50;
+      const redMid = curves.red?.[1]?.y ?? 50;
+      const blueMid = curves.blue?.[1]?.y ?? 50;
+      if (masterMid !== 50) {
+        const factor = 1 + (masterMid - 50) / 100;
+        base += ` brightness(${Math.max(0.2, factor).toFixed(2)})`;
+      }
+      if (redMid !== 50 || blueMid !== 50) {
+        const shift = ((redMid - 50) - (blueMid - 50)) * 0.4;
+        base += ` hue-rotate(${shift.toFixed(1)}deg)`;
+      }
+    }
+
+    // HSL adjustments influence
+    if (hsl) {
+      const entries = Object.values(hsl) as Array<{ hue?: number; saturation?: number; luminance?: number }>;
+      if (entries.length > 0) {
+        const avgSat = entries.reduce((acc, cur) => acc + (cur.saturation || 0), 0) / entries.length;
+        const avgLum = entries.reduce((acc, cur) => acc + (cur.luminance || 0), 0) / entries.length;
+        if (avgSat !== 0) {
+          base += ` saturate(${(1 + avgSat / 100).toFixed(2)})`;
+        }
+        if (avgLum !== 0) {
+          base += ` brightness(${(1 + avgLum / 100).toFixed(2)})`;
+        }
+      }
+    }
+
+    // Video Effects
+    if (videoEffect && videoEffect !== 'none') {
+      if (videoEffect === 'blur') base += ' blur(3px)';
+      if (videoEffect === 'flash') base += ' brightness(1.7) contrast(1.3)';
+      if (videoEffect === 'glitch') base += ' contrast(1.6) hue-rotate(90deg)';
+    }
+
+    // Chroma key color simulation
+    if (chromaKey && chromaKey.enabled) {
+      base += ' drop-shadow(0 0 10px rgba(0,0,0,0.5))';
     }
 
     return base.trim() || 'none';
@@ -495,7 +667,120 @@ export const Player: React.FC = () => {
   };
   const activeAspect = aspectConfig[aspectRatio] || aspectConfig['16:9'];
 
+  const canvasDimensions = useMemo(() => {
+    const targetRatio = activeAspect.w / activeAspect.h;
+    const stageRatio = stageDimensions.width / stageDimensions.height;
+    if (stageRatio > targetRatio) {
+      const height = stageDimensions.height;
+      const width = height * targetRatio;
+      return { width: Math.round(width), height: Math.round(height) };
+    } else {
+      const width = stageDimensions.width;
+      const height = width / targetRatio;
+      return { width: Math.round(width), height: Math.round(height) };
+    }
+  }, [stageDimensions, activeAspect]);
+
   const videoProps = activeVideoClip?.properties;
+
+  // Transition computation for active video clip
+  let transitionOpacity = 1;
+  let transitionTransform = '';
+  let transitionClipPath: string | undefined = undefined;
+
+  if (activeVideoClip && videoProps?.transition && videoProps.transition.type !== 'none') {
+    const elapsed = currentTime - activeVideoClip.start;
+    const dur = videoProps.transition.duration || 0.5;
+    if (elapsed >= 0 && elapsed < dur) {
+      const progress = Math.min(1, Math.max(0, elapsed / dur));
+      if (videoProps.transition.type === 'fade' || videoProps.transition.type === 'dissolve') {
+        transitionOpacity = progress;
+      } else if (videoProps.transition.type === 'zoom-in') {
+        transitionTransform = `scale(${1 + (1 - progress) * 0.3})`;
+      } else if (videoProps.transition.type === 'wipe-left') {
+        transitionClipPath = `inset(0 0 0 ${(1 - progress) * 100}%)`;
+      } else if (videoProps.transition.type === 'wipe-right') {
+        transitionClipPath = `inset(0 ${(1 - progress) * 100}% 0 0)`;
+      }
+    }
+  }
+
+  // Keyframe interpolation computation for active video clip
+  let kfScale = videoProps?.scale ?? 1.0;
+  let kfPosX = videoProps?.posX ?? 0;
+  let kfPosY = videoProps?.posY ?? 0;
+  let kfOpacity = videoProps?.opacity ?? 1.0;
+  let kfRotation = videoProps?.rotation ?? 0;
+
+  if (activeVideoClip && videoProps?.keyframes && videoProps.keyframes.length > 0) {
+    const timeOffset = currentTime - activeVideoClip.start;
+    const kfs = videoProps.keyframes;
+    if (timeOffset <= kfs[0].timeOffset) {
+      const first = kfs[0];
+      if (first.scale !== undefined) kfScale = first.scale;
+      if (first.posX !== undefined) kfPosX = first.posX;
+      if (first.posY !== undefined) kfPosY = first.posY;
+      if (first.opacity !== undefined) kfOpacity = first.opacity;
+      if (first.rotation !== undefined) kfRotation = first.rotation;
+    } else if (timeOffset >= kfs[kfs.length - 1].timeOffset) {
+      const last = kfs[kfs.length - 1];
+      if (last.scale !== undefined) kfScale = last.scale;
+      if (last.posX !== undefined) kfPosX = last.posX;
+      if (last.posY !== undefined) kfPosY = last.posY;
+      if (last.opacity !== undefined) kfOpacity = last.opacity;
+      if (last.rotation !== undefined) kfRotation = last.rotation;
+    } else {
+      for (let i = 0; i < kfs.length - 1; i++) {
+        if (timeOffset >= kfs[i].timeOffset && timeOffset <= kfs[i + 1].timeOffset) {
+          const kfA = kfs[i];
+          const kfB = kfs[i + 1];
+          const span = kfB.timeOffset - kfA.timeOffset;
+          const factor = span > 0 ? (timeOffset - kfA.timeOffset) / span : 0;
+          const lerp = (a: number, b: number) => a + (b - a) * factor;
+
+          kfScale = lerp(kfA.scale ?? videoProps.scale ?? 1.0, kfB.scale ?? videoProps.scale ?? 1.0);
+          kfPosX = lerp(kfA.posX ?? videoProps.posX ?? 0, kfB.posX ?? videoProps.posX ?? 0);
+          kfPosY = lerp(kfA.posY ?? videoProps.posY ?? 0, kfB.posY ?? videoProps.posY ?? 0);
+          kfOpacity = lerp(kfA.opacity ?? videoProps.opacity ?? 1.0, kfB.opacity ?? videoProps.opacity ?? 1.0);
+          kfRotation = lerp(kfA.rotation ?? videoProps.rotation ?? 0, kfB.rotation ?? videoProps.rotation ?? 0);
+          break;
+        }
+      }
+    }
+  }
+
+  // Animation preset effects
+  let animOpacityMultiplier = 1.0;
+  let animScaleMultiplier = 1.0;
+  if (activeVideoClip && videoProps) {
+    const elapsed = currentTime - activeVideoClip.start;
+
+    // In Animation
+    if (videoProps.inAnimation && elapsed >= 0 && elapsed < 0.6) {
+      const progress = elapsed / 0.6;
+      if (videoProps.inAnimation === 'Fade In') {
+        animOpacityMultiplier *= progress;
+      } else if (videoProps.inAnimation === 'Zoom In') {
+        animScaleMultiplier *= (0.7 + 0.3 * progress);
+      }
+    }
+
+    // Out Animation
+    const rem = (activeVideoClip.start + activeVideoClip.duration) - currentTime;
+    if (videoProps.outAnimation && rem >= 0 && rem < 0.6) {
+      const progress = rem / 0.6;
+      if (videoProps.outAnimation === 'Fade Out') {
+        animOpacityMultiplier *= progress;
+      } else if (videoProps.outAnimation === 'Zoom Out') {
+        animScaleMultiplier *= (0.7 + 0.3 * progress);
+      }
+    }
+
+    // Combo Animation
+    if (videoProps.comboAnimation === 'Pulse') {
+      animScaleMultiplier *= (1 + 0.05 * Math.sin(currentTime * 4));
+    }
+  }
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden select-none relative bg-[#121215]">
@@ -508,11 +793,10 @@ export const Player: React.FC = () => {
         <div 
           className="relative flex items-center justify-center bg-black overflow-hidden shadow-2xl border border-[#26262B] transition-all"
           style={{
-            aspectRatio: activeAspect.ratio,
+            width: `${canvasDimensions.width}px`,
+            height: `${canvasDimensions.height}px`,
             maxWidth: '100%',
             maxHeight: '100%',
-            width: activeAspect.w >= activeAspect.h ? '100%' : 'auto',
-            height: activeAspect.w < activeAspect.h ? '100%' : 'auto',
           }}
         >
           {/* Pure Black Background Frame (Always present if gap or beyond clips) */}
@@ -523,7 +807,7 @@ export const Player: React.FC = () => {
             ref={videoRef}
             playsInline
             onTimeUpdate={() => {
-              if (videoRef.current) {
+              if (showDebugOverlay && videoRef.current) {
                 setLiveVideoTime(Number(videoRef.current.currentTime.toFixed(2)));
               }
             }}
@@ -532,10 +816,13 @@ export const Player: React.FC = () => {
               fitMode === 'contain' ? 'object-contain' : 'object-cover'
             } ${activeVideoClip && activeVideoState.active ? 'opacity-100' : 'opacity-0'}`}
             style={{
-              transform: videoProps 
-                ? `scale(${videoProps.scale}) translate(${videoProps.posX}px, ${videoProps.posY}px) rotate(${videoProps.rotation}deg) scaleX(${videoProps.flipH ? -1 : 1}) scaleY(${videoProps.flipV ? -1 : 1})`
-                : 'none',
-              filter: videoProps ? getFilterStyle(videoProps.filter, videoProps.adjust) : 'none',
+              transform: `${videoProps 
+                ? `translate(${kfPosX}px, ${kfPosY}px) rotate(${kfRotation}deg) scale(${kfScale * animScaleMultiplier}) scaleX(${videoProps.flipH ? -1 : 1}) scaleY(${videoProps.flipV ? -1 : 1})`
+                : 'none'} ${transitionTransform}`.trim(),
+              filter: videoProps ? getFilterStyle(videoProps.filter, videoProps.adjust, videoProps.hsl, videoProps.curves, videoProps.videoEffect, videoProps.chromaKey) : 'none',
+              opacity: kfOpacity * animOpacityMultiplier * transitionOpacity,
+              mixBlendMode: videoProps?.blendMode || 'normal',
+              clipPath: transitionClipPath || getMaskClipPath(videoProps?.mask),
             }}
           />
 
@@ -546,7 +833,7 @@ export const Player: React.FC = () => {
           {isComparingFilter && (
             <div 
               data-testid="compare-badge"
-              className="absolute top-3 left-1/2 -translate-x-1/2 z-40 bg-[#C9A66B] text-[#121214] font-mono text-[10.5px] font-extrabold px-3 py-1 rounded shadow-2xl uppercase tracking-wider flex items-center gap-1.5 pointer-events-none"
+              className="absolute top-3 left-1/2 -translate-x-1/2 z-40 bg-[#4f8cff] text-[#121214] font-mono text-[10.5px] font-extrabold px-3 py-1 rounded shadow-2xl uppercase tracking-wider flex items-center gap-1.5 pointer-events-none"
             >
               <span>● COMPARE (BEFORE / RAW)</span>
             </div>
@@ -558,7 +845,7 @@ export const Player: React.FC = () => {
               data-testid="debug-overlay"
               className="absolute top-3 right-3 z-50 bg-black/90 backdrop-blur-md border border-[#3C3C48] rounded-md p-2.5 text-[10px] font-mono shadow-2xl text-zinc-300 max-w-[240px] pointer-events-none select-none"
             >
-              <div className="flex items-center justify-between pb-1 mb-1.5 border-b border-zinc-800 font-semibold text-[#C9A66B]">
+              <div className="flex items-center justify-between pb-1 mb-1.5 border-b border-zinc-800 font-semibold text-[#4f8cff]">
                 <span>DEBUG OVERLAY (Ctrl+D)</span>
                 <span className={activeVideoState.active ? "text-emerald-400 font-bold" : "text-zinc-500"}>
                   {activeVideoState.active ? "● ACTIVE" : "○ INACTIVE"}
@@ -579,7 +866,7 @@ export const Player: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">clip.offset:</span>
-                  <span className="text-[#C9A66B] font-semibold">{activeVideoClip ? `${(activeVideoClip.offset ?? 0).toFixed(2)}s` : '-'}</span>
+                  <span className="text-[#4f8cff] font-semibold">{activeVideoClip ? `${(activeVideoClip.offset ?? 0).toFixed(2)}s` : '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">clip.duration:</span>
@@ -751,7 +1038,7 @@ export const Player: React.FC = () => {
                   setEditingClipId(clip.id);
                 }}
                 className={`absolute z-30 flex items-center justify-center transition-[box-shadow] select-none ${
-                  isSelected ? 'cursor-move ring-1 ring-[#C9A66B] ring-offset-2 ring-offset-black/40' : 'cursor-pointer hover:ring-1 hover:ring-white/30'
+                  isSelected ? 'cursor-move ring-1 ring-[#4f8cff] ring-offset-2 ring-offset-black/40' : 'cursor-pointer hover:ring-1 hover:ring-white/30'
                 }`}
                 style={{
                   left: '50%',
@@ -760,7 +1047,7 @@ export const Player: React.FC = () => {
                   transformOrigin: 'center center',
                 }}
               >
-                {/* Inline Canvas Textarea or Static Styled Text */}
+                {/* Inline Canvas Textarea, Styled Text, or Image/PiP Overlay */}
                 {isEditing ? (
                   <textarea
                     autoFocus
@@ -781,13 +1068,46 @@ export const Player: React.FC = () => {
                       setEditingClipId(null);
                       commitTransaction();
                     }}
-                    className="outline-none bg-transparent resize-none overflow-hidden text-center p-0 m-0 border-b-2 border-[#C9A66B] drop-shadow-xl"
+                    className="outline-none bg-transparent resize-none overflow-hidden text-center p-0 m-0 border-b-2 border-[#4f8cff] drop-shadow-xl"
                     style={computedTextStyle}
                   />
-                ) : (
+                ) : clip.type === 'text' ? (
                   <div style={computedTextStyle} className="whitespace-pre-wrap select-none">
                     {textContent}
                   </div>
+                ) : clip.type === 'sticker' ? (
+                  (clip.src || clip.thumbnail) ? (
+                    <img
+                      src={clip.src || clip.thumbnail}
+                      alt={clip.title}
+                      className="max-w-[260px] max-h-[260px] object-contain pointer-events-none select-none rounded-[2px]"
+                      style={{
+                        opacity: opacity,
+                        mixBlendMode: clip.properties.blendMode || 'normal',
+                        transform: `scaleX(${clip.properties.flipH ? -1 : 1}) scaleY(${clip.properties.flipV ? -1 : 1})`
+                      }}
+                    />
+                  ) : clip.properties?.text ? (
+                    <div style={computedTextStyle} className="whitespace-pre-wrap select-none">
+                      {clip.properties.text}
+                    </div>
+                  ) : null
+                ) : (
+                  <video
+                    src={clip.src || videoSrc}
+                    muted
+                    autoPlay
+                    loop
+                    playsInline
+                    className="w-[260px] h-[150px] object-cover pointer-events-none select-none rounded-[3px] shadow-2xl border border-white/20"
+                    style={{
+                      opacity: opacity,
+                      mixBlendMode: clip.properties.blendMode || 'normal',
+                      transform: `scaleX(${clip.properties.flipH ? -1 : 1}) scaleY(${clip.properties.flipV ? -1 : 1})`,
+                      filter: getFilterStyle(clip.properties.filter, clip.properties.adjust, clip.properties.hsl, clip.properties.curves, clip.properties.videoEffect, clip.properties.chromaKey),
+                      clipPath: getMaskClipPath(clip.properties.mask),
+                    }}
+                  />
                 )}
 
                 {/* Bounding Box: Corner Resize Handles & Rotate Pin (when selected) */}
@@ -800,33 +1120,33 @@ export const Player: React.FC = () => {
                       className="absolute -top-7 left-1/2 -translate-x-1/2 flex flex-col items-center cursor-grab active:cursor-grabbing group/rot"
                       title="Rotate Handle"
                     >
-                      <div className="w-3 h-3 rounded-full bg-[#C9A66B] border border-black shadow flex items-center justify-center group-hover/rot:scale-125 transition-transform" />
-                      <div className="w-px h-3.5 bg-[#C9A66B]" />
+                      <div className="w-3 h-3 rounded-full bg-[#4f8cff] border border-black shadow flex items-center justify-center group-hover/rot:scale-125 transition-transform" />
+                      <div className="w-px h-3.5 bg-[#4f8cff]" />
                     </div>
 
                     {/* Corner Scale Handles */}
                     <div
                       data-handle="tl"
                       onPointerDown={handlePointerDownScale}
-                      className="absolute -top-1.5 -left-1.5 w-2.5 h-2.5 bg-[#C9A66B] border border-black rounded-sm cursor-nwse-resize shadow"
+                      className="absolute -top-1.5 -left-1.5 w-2.5 h-2.5 bg-[#4f8cff] border border-black rounded-sm cursor-nwse-resize shadow"
                       title="Resize Scale"
                     />
                     <div
                       data-handle="tr"
                       onPointerDown={handlePointerDownScale}
-                      className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 bg-[#C9A66B] border border-black rounded-sm cursor-nesw-resize shadow"
+                      className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 bg-[#4f8cff] border border-black rounded-sm cursor-nesw-resize shadow"
                       title="Resize Scale"
                     />
                     <div
                       data-handle="bl"
                       onPointerDown={handlePointerDownScale}
-                      className="absolute -bottom-1.5 -left-1.5 w-2.5 h-2.5 bg-[#C9A66B] border border-black rounded-sm cursor-nesw-resize shadow"
+                      className="absolute -bottom-1.5 -left-1.5 w-2.5 h-2.5 bg-[#4f8cff] border border-black rounded-sm cursor-nesw-resize shadow"
                       title="Resize Scale"
                     />
                     <div
                       data-handle="br"
                       onPointerDown={handlePointerDownScale}
-                      className="absolute -bottom-1.5 -right-1.5 w-2.5 h-2.5 bg-[#C9A66B] border border-black rounded-sm cursor-nwse-resize shadow"
+                      className="absolute -bottom-1.5 -right-1.5 w-2.5 h-2.5 bg-[#4f8cff] border border-black rounded-sm cursor-nwse-resize shadow"
                       title="Resize Scale"
                     />
                   </>
@@ -850,7 +1170,7 @@ export const Player: React.FC = () => {
             <button
               onClick={() => setAspectRatio('16:9')}
               className={`px-2 py-0.5 rounded font-mono text-[11px] font-medium flex items-center gap-1 ${
-                aspectRatio === '16:9' ? 'bg-[#C9A66B] text-[#121214] font-semibold' : 'text-[#8A8A92] hover:text-[#E8E6E1]'
+                aspectRatio === '16:9' ? 'bg-[#4f8cff] text-[#121214] font-semibold' : 'text-[#8A8A92] hover:text-[#E8E6E1]'
               }`}
               title="16:9 Landscape"
             >
@@ -860,7 +1180,7 @@ export const Player: React.FC = () => {
             <button
               onClick={() => setAspectRatio('9:16')}
               className={`px-2 py-0.5 rounded font-mono text-[11px] font-medium flex items-center gap-1 ${
-                aspectRatio === '9:16' ? 'bg-[#C9A66B] text-[#121214] font-semibold' : 'text-[#8A8A92] hover:text-[#E8E6E1]'
+                aspectRatio === '9:16' ? 'bg-[#4f8cff] text-[#121214] font-semibold' : 'text-[#8A8A92] hover:text-[#E8E6E1]'
               }`}
               title="9:16 Portrait"
             >
@@ -870,7 +1190,7 @@ export const Player: React.FC = () => {
             <button
               onClick={() => setAspectRatio('1:1')}
               className={`px-2 py-0.5 rounded font-mono text-[11px] font-medium flex items-center gap-1 ${
-                aspectRatio === '1:1' ? 'bg-[#C9A66B] text-[#121214] font-semibold' : 'text-[#8A8A92] hover:text-[#E8E6E1]'
+                aspectRatio === '1:1' ? 'bg-[#4f8cff] text-[#121214] font-semibold' : 'text-[#8A8A92] hover:text-[#E8E6E1]'
               }`}
               title="1:1 Square"
             >
@@ -880,7 +1200,7 @@ export const Player: React.FC = () => {
             <button
               onClick={() => setAspectRatio('4:5')}
               className={`px-2 py-0.5 rounded font-mono text-[11px] font-medium flex items-center gap-1 ${
-                aspectRatio === '4:5' ? 'bg-[#C9A66B] text-[#121214] font-semibold' : 'text-[#8A8A92] hover:text-[#E8E6E1]'
+                aspectRatio === '4:5' ? 'bg-[#4f8cff] text-[#121214] font-semibold' : 'text-[#8A8A92] hover:text-[#E8E6E1]'
               }`}
               title="4:5 Social"
             >
@@ -894,7 +1214,7 @@ export const Player: React.FC = () => {
             onClick={() => setFitMode(prev => prev === 'contain' ? 'cover' : 'contain')}
             className={`flex items-center gap-1 border rounded-md px-2 py-0.5 text-xs font-mono transition-colors ${
               fitMode === 'cover' 
-                ? 'bg-[#2A251D] border-[#C9A66B] text-[#C9A66B]' 
+                ? 'bg-[#2A251D] border-[#4f8cff] text-[#4f8cff]' 
                 : 'bg-[#1F1F24] border-[#2C2C33] text-[#8A8A92] hover:text-[#E8E6E1]'
             }`}
             title="Toggle between Contain (Fit full frame) and Cover (Fill entire screen)"
@@ -926,7 +1246,7 @@ export const Player: React.FC = () => {
           <button
             data-testid="play-pause-btn"
             onClick={togglePlay}
-            className="w-7 h-7 rounded-md bg-[#C9A66B] hover:bg-[#D9B77C] text-[#121214] flex items-center justify-center transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-md bg-[#4f8cff] hover:bg-[#D9B77C] text-[#121214] flex items-center justify-center transition-colors cursor-pointer"
             title="Play / Pause (Spacebar)"
           >
             {isPlaying ? (
@@ -946,7 +1266,7 @@ export const Player: React.FC = () => {
 
           {/* Time Counter: Current Time / Total Duration */}
           <div className="text-xs font-mono font-medium tracking-tight text-[#D8D6D1] ml-2">
-            <span className="text-[#C9A66B]">{formatTime(currentTime)}</span>
+            <span className="text-[#4f8cff]">{formatTime(currentTime)}</span>
             <span className="text-zinc-500 mx-1">/</span>
             <span className="text-zinc-400">{formatTime(totalDuration)}</span>
           </div>
@@ -957,7 +1277,7 @@ export const Player: React.FC = () => {
           <button
             onClick={() => setIsLooping(!isLooping)}
             className={`p-1.5 rounded transition-colors ${
-              isLooping ? 'text-[#C9A66B] bg-[#2A251D]' : 'text-[#8A8A92] hover:text-[#E8E6E1]'
+              isLooping ? 'text-[#4f8cff] bg-[#2A251D]' : 'text-[#8A8A92] hover:text-[#E8E6E1]'
             }`}
             title={isLooping ? 'Loop Playback Active' : 'Loop Playback Off'}
           >
@@ -976,3 +1296,4 @@ export const Player: React.FC = () => {
     </div>
   );
 };
+

@@ -9,9 +9,12 @@ import type {
   ClipProperties,
   ThemeMode,
   HistorySnapshot,
-  TrackHeightMode
+  TrackHeightMode,
+  ToolMode,
+  MediaTypeFilter
 } from '../types/editor';
 import { TRACK_HEADER_WIDTH, TIMELINE_END_PADDING } from '../types/editor';
+import { scheduleAutoSave, loadProjectFromDB } from '../utils/indexedDb';
 
 export const computeTotalDuration = (tracks: TrackItem[]): number => {
   let maxEnd = 0;
@@ -60,19 +63,72 @@ const INITIAL_PROPERTIES: ClipProperties = {
   opacity: 1,
   flipH: false,
   flipV: false,
+  blendMode: 'normal',
+  isScaleLocked: true,
+  isReversed: false,
   volume: 1,
   fadeIn: 0,
   fadeOut: 0,
   isMuted: false,
+  audioBalance: 0,
+  loudnessNormalized: false,
+  noiseReduction: false,
   speed: 1,
+  speedMode: 'constant',
+  speedCurvePreset: 'default',
+  speedCurvePoints: [
+    { timePercent: 0, speed: 1.0 },
+    { timePercent: 25, speed: 1.0 },
+    { timePercent: 50, speed: 1.0 },
+    { timePercent: 75, speed: 1.0 },
+    { timePercent: 100, speed: 1.0 },
+  ],
   adjust: {
     brightness: 0,
     contrast: 0,
     saturation: 0,
     temperature: 0,
+    tint: 0,
+    highlights: 0,
+    shadows: 0,
     vignette: 0,
     sharpen: 0,
+    clarity: 0,
   },
+  mask: {
+    shape: 'none',
+    size: 100,
+    feather: 0,
+    rotation: 0,
+    inverted: false,
+  },
+  chromaKey: {
+    enabled: false,
+    color: '#00ff00',
+    tolerance: 30,
+    smoothness: 10,
+  },
+  hsl: {
+    red: { hue: 0, saturation: 0, luminance: 0 },
+    orange: { hue: 0, saturation: 0, luminance: 0 },
+    yellow: { hue: 0, saturation: 0, luminance: 0 },
+    green: { hue: 0, saturation: 0, luminance: 0 },
+    cyan: { hue: 0, saturation: 0, luminance: 0 },
+    blue: { hue: 0, saturation: 0, luminance: 0 },
+    purple: { hue: 0, saturation: 0, luminance: 0 },
+    magenta: { hue: 0, saturation: 0, luminance: 0 },
+  },
+  curves: {
+    master: [{ x: 0, y: 0 }, { x: 50, y: 50 }, { x: 100, y: 100 }],
+    red: [{ x: 0, y: 0 }, { x: 50, y: 50 }, { x: 100, y: 100 }],
+    green: [{ x: 0, y: 0 }, { x: 50, y: 50 }, { x: 100, y: 100 }],
+    blue: [{ x: 0, y: 0 }, { x: 50, y: 50 }, { x: 100, y: 100 }],
+  },
+  transition: {
+    type: 'none',
+    duration: 0.5,
+  },
+  videoEffect: 'none',
   filter: 'none',
   text: 'THE ESSENCE OF MASTERY',
   fontFamily: 'Inter',
@@ -92,6 +148,8 @@ const INITIAL_PROPERTIES: ClipProperties = {
   shadowColor: 'rgba(0,0,0,0.7)',
   shadowBlur: 8,
   fontStyle: 'classic',
+  comboAnimation: 'none',
+  keyframes: [],
 };
 
 const INITIAL_TRACKS: TrackItem[] = [
@@ -108,16 +166,17 @@ const INITIAL_TRACKS: TrackItem[] = [
         trackId: 'track-text',
         type: 'text',
         title: 'THE ESSENCE OF MASTERY',
-        start: 1.5,
-        duration: 7.5,
+        start: 0,
+        duration: 4.5,
         sourceDuration: 20.0,
         offset: 0,
-        color: '#7C5C30',
+        color: '#5c5246',
         properties: {
           ...INITIAL_PROPERTIES,
           text: 'THE ESSENCE OF MASTERY',
-          fontColor: '#C9A66B',
-          fontStyle: 'classic',
+          fontColor: '#FFFFFF',
+          fontSize: 26,
+          posY: 130,
         }
       },
       {
@@ -125,16 +184,35 @@ const INITIAL_TRACKS: TrackItem[] = [
         trackId: 'track-text',
         type: 'text',
         title: 'PRECISION & CRAFT',
-        start: 7.5,
-        duration: 6.0,
+        start: 4.5,
+        duration: 4.5,
         sourceDuration: 20.0,
         offset: 0,
-        color: '#7C5C30',
+        color: '#5c5246',
         properties: {
           ...INITIAL_PROPERTIES,
           text: 'PRECISION & CRAFT',
-          fontColor: '#E8E6E1',
-          fontStyle: 'classic',
+          fontColor: '#4f8cff',
+          fontSize: 26,
+          posY: 130,
+        }
+      },
+      {
+        id: 'clip-text-3',
+        trackId: 'track-text',
+        type: 'text',
+        title: 'HIGH RETENTION',
+        start: 9.0,
+        duration: 5.0,
+        sourceDuration: 20.0,
+        offset: 0,
+        color: '#5c5246',
+        properties: {
+          ...INITIAL_PROPERTIES,
+          text: 'Every second counts in high-retention video.',
+          fontColor: '#FFFFFF',
+          fontSize: 24,
+          posY: 130,
         }
       }
     ]
@@ -146,29 +224,7 @@ const INITIAL_TRACKS: TrackItem[] = [
     isLocked: false,
     isHidden: false,
     isMuted: false,
-    clips: [
-      {
-        id: 'clip-sticker-1',
-        trackId: 'track-sticker',
-        type: 'sticker',
-        title: '✦ Royal Heritage',
-        start: 4,
-        duration: 5,
-        sourceDuration: 20,
-        offset: 0,
-        color: '#634368',
-        properties: {
-          ...INITIAL_PROPERTIES,
-          text: 'Royal Heritage',
-          fontFamily: 'Cinzel',
-          fontSize: 24,
-          fontColor: '#F3E8FF',
-          scale: 0.9,
-          posX: 20,
-          posY: -25,
-        }
-      }
-    ]
+    clips: []
   },
   {
     id: 'track-video',
@@ -187,12 +243,14 @@ const INITIAL_TRACKS: TrackItem[] = [
         duration: 15,
         sourceDuration: 30,
         offset: 0,
-        color: '#384357',
+        color: '#3b4a63',
         src: '/rendered-reels/reel-demo.mp4',
         thumbnail: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=200&q=80',
         properties: {
           ...INITIAL_PROPERTIES,
           filter: 'cinematic',
+          speedMode: 'curve',
+          speedCurvePreset: 'montage',
         }
       },
       {
@@ -204,7 +262,7 @@ const INITIAL_TRACKS: TrackItem[] = [
         duration: 15,
         sourceDuration: 25,
         offset: 0,
-        color: '#424D63',
+        color: '#3b4a63',
         src: '/rendered-reels/reel-demo.mp4',
         thumbnail: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&q=80',
         properties: {
@@ -231,12 +289,14 @@ const INITIAL_TRACKS: TrackItem[] = [
         duration: 30,
         sourceDuration: 60,
         offset: 0,
-        color: '#345242',
+        color: '#3d5a4f',
         src: '/rendered-reels/bgm-cyber.mp3',
         waveform: [35, 55, 75, 45, 85, 65, 40, 80, 90, 60, 50, 85, 70, 55, 75, 90, 95, 65, 45, 80, 85, 55, 40, 70, 90, 75, 60, 80, 90, 65],
         properties: {
           ...INITIAL_PROPERTIES,
           volume: 0.85,
+          fadeIn: 2.0,
+          fadeOut: 2.5,
         }
       }
     ]
@@ -269,11 +329,43 @@ interface EditorState {
   isExportModalOpen: boolean;
   isShortcutsModalOpen: boolean;
   isProModalOpen: boolean;
+  activeInstagramTrimmer: {
+    isOpen: boolean;
+    clipId?: string;
+    song?: any;
+    initialOffset?: number;
+    initialDuration?: number;
+  } | null;
+  openInstagramTrimmer: (params: { clipId?: string; song?: any; initialOffset?: number; initialDuration?: number }) => void;
+  closeInstagramTrimmer: () => void;
   isComparingFilter: boolean;
   videoSrc: string;
   audioSrc: string;
+  activeTool: ToolMode;
+  isLinkageEnabled: boolean;
+  isSidebarCollapsed: boolean;
+  isInspectorCollapsed: boolean;
+  mediaTypeFilter: MediaTypeFilter;
+  isRecordingVoice: boolean;
+  coverThumbnail: string | null;
 
   // Actions
+  setCoverThumbnail: (thumb: string | null) => void;
+  setActiveTool: (tool: ToolMode) => void;
+  toggleLinkage: () => void;
+  toggleSidebar: () => void;
+  toggleInspector: () => void;
+  setMediaTypeFilter: (filter: MediaTypeFilter) => void;
+  setIsRecordingVoice: (recording: boolean) => void;
+  extractAudioFromVideo: (clipId?: string) => void;
+  toggleClipMute: (clipId?: string) => void;
+  groupClips: (clipIds: string[]) => void;
+  ungroupClip: (clipId: string) => void;
+  addVoiceRecording: (blobUrl: string, duration: number) => void;
+  trimLeftToPlayhead: () => void;
+  trimRightToPlayhead: () => void;
+  selectAllClips: () => void;
+  initAutoSave: () => Promise<void>;
   toggleTheme: () => void;
   setProjectName: (name: string) => void;
   setTrackHeightMode: (mode: TrackHeightMode) => void;
@@ -341,7 +433,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   snapGuideTime: null,
   selectedClipId: 'clip-video-1',
   selectedTrackId: 'track-video',
-  activeLeftTab: 'media',
+  activeLeftTab: 'audio',
   activeInspectorTab: 'video',
   tracks: INITIAL_TRACKS,
   undoStack: [],
@@ -355,6 +447,383 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   isComparingFilter: false,
   videoSrc: '/rendered-reels/reel-demo.mp4',
   audioSrc: '/rendered-reels/bgm-cyber.mp3',
+  activeTool: 'select',
+  isLinkageEnabled: true,
+  isSidebarCollapsed: false,
+  isInspectorCollapsed: false,
+  mediaTypeFilter: 'all',
+  isRecordingVoice: false,
+  coverThumbnail: null,
+  activeInstagramTrimmer: null,
+
+  setCoverThumbnail: (thumb) => set({ coverThumbnail: thumb }),
+  setActiveTool: (tool) => set({ activeTool: tool }),
+  toggleLinkage: () => set(s => ({ isLinkageEnabled: !s.isLinkageEnabled })),
+  toggleSidebar: () => set(s => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
+  toggleInspector: () => set(s => ({ isInspectorCollapsed: !s.isInspectorCollapsed })),
+  setMediaTypeFilter: (filter) => set({ mediaTypeFilter: filter }),
+  setIsRecordingVoice: (recording) => set({ isRecordingVoice: recording }),
+
+  extractAudioFromVideo: (clipId) => {
+    const { selectedClipId, tracks, saveHistory } = get();
+    const targetId = clipId || selectedClipId;
+    if (!targetId) return;
+
+    let videoClip: ClipItem | null = null;
+    let videoTrackId: string | null = null;
+    for (const t of tracks) {
+      const c = t.clips.find(clip => clip.id === targetId);
+      if (c && c.type === 'video') {
+        videoClip = c;
+        videoTrackId = t.id;
+        break;
+      }
+    }
+    if (!videoClip) return;
+
+    saveHistory();
+
+    const audioClipId = `audio-extracted-${Date.now()}`;
+    const newAudioClip: ClipItem = {
+      id: audioClipId,
+      trackId: 'track-audio',
+      type: 'audio',
+      title: `Audio - ${videoClip.title.replace(/\.[^/.]+$/, '')}`,
+      start: videoClip.start,
+      duration: videoClip.duration,
+      sourceDuration: videoClip.sourceDuration,
+      offset: videoClip.offset,
+      src: videoClip.src || get().videoSrc,
+      waveform: [50, 75, 90, 65, 80, 85, 70, 95, 85, 60, 75, 90, 70, 60, 80],
+      color: '#3d5a4f',
+      properties: {
+        ...INITIAL_PROPERTIES,
+        volume: 1.0,
+        isMuted: false,
+      }
+    };
+
+    let audioTrackExists = false;
+    let updatedTracks = tracks.map(t => {
+      if (t.id === videoTrackId) {
+        return {
+          ...t,
+          clips: t.clips.map(c => c.id === targetId ? {
+            ...c,
+            properties: { ...c.properties, isMuted: true }
+          } : c)
+        };
+      }
+      if (t.type === 'audio') {
+        audioTrackExists = true;
+        return {
+          ...t,
+          clips: [...t.clips, { ...newAudioClip, trackId: t.id }]
+        };
+      }
+      return t;
+    });
+
+    if (!audioTrackExists) {
+      const newAudioTrack: TrackItem = {
+        id: `track-audio-${Date.now()}`,
+        type: 'audio',
+        name: 'A1 Audio',
+        isLocked: false,
+        isHidden: false,
+        isMuted: false,
+        clips: [newAudioClip]
+      };
+      updatedTracks.push(newAudioTrack);
+    }
+
+    const newDuration = computeTotalDuration(updatedTracks);
+    set({
+      tracks: updatedTracks,
+      selectedClipId: audioClipId,
+      selectedTrackId: 'track-audio',
+      activeInspectorTab: 'audio',
+      totalDuration: newDuration
+    });
+
+    scheduleAutoSave({
+      projectName: get().projectName,
+      tracks: updatedTracks,
+      aspectRatio: get().aspectRatio,
+      totalDuration: newDuration
+    });
+  },
+
+  toggleClipMute: (clipId) => {
+    const { selectedClipId, tracks, saveHistory } = get();
+    const targetId = clipId || selectedClipId;
+    if (!targetId) return;
+
+    saveHistory();
+    const updatedTracks = tracks.map(t => ({
+      ...t,
+      clips: t.clips.map(c => c.id === targetId ? {
+        ...c,
+        properties: { ...c.properties, isMuted: !c.properties.isMuted }
+      } : c)
+    }));
+
+    set({ tracks: updatedTracks });
+    scheduleAutoSave({
+      projectName: get().projectName,
+      tracks: updatedTracks,
+      aspectRatio: get().aspectRatio,
+      totalDuration: get().totalDuration
+    });
+  },
+
+  groupClips: (clipIds) => {
+    if (!clipIds || clipIds.length < 2) return;
+    const { tracks, saveHistory } = get();
+    saveHistory();
+    const groupId = `group-${Date.now()}`;
+    const updatedTracks = tracks.map(t => ({
+      ...t,
+      clips: t.clips.map(c => clipIds.includes(c.id) ? { ...c, groupId } : c)
+    }));
+    set({ tracks: updatedTracks });
+    scheduleAutoSave({
+      projectName: get().projectName,
+      tracks: updatedTracks,
+      aspectRatio: get().aspectRatio,
+      totalDuration: get().totalDuration
+    });
+  },
+
+  ungroupClip: (clipId) => {
+    const { tracks, saveHistory } = get();
+    let targetGroupId: string | undefined;
+    for (const t of tracks) {
+      const found = t.clips.find(c => c.id === clipId);
+      if (found?.groupId) {
+        targetGroupId = found.groupId;
+        break;
+      }
+    }
+    if (!targetGroupId) return;
+
+    saveHistory();
+    const updatedTracks = tracks.map(t => ({
+      ...t,
+      clips: t.clips.map(c => c.groupId === targetGroupId ? { ...c, groupId: undefined } : c)
+    }));
+    set({ tracks: updatedTracks });
+    scheduleAutoSave({
+      projectName: get().projectName,
+      tracks: updatedTracks,
+      aspectRatio: get().aspectRatio,
+      totalDuration: get().totalDuration
+    });
+  },
+
+  addVoiceRecording: (blobUrl, duration) => {
+    const { tracks, currentTime, saveHistory } = get();
+    saveHistory();
+    const newId = `voice-${Date.now()}`;
+    const dur = Math.max(0.5, duration);
+    const timeStr = new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' });
+    const voiceClip: ClipItem = {
+      id: newId,
+      trackId: 'track-audio',
+      type: 'audio',
+      title: `Voiceover ${timeStr}`,
+      start: currentTime,
+      duration: dur,
+      sourceDuration: dur,
+      offset: 0,
+      src: blobUrl,
+      waveform: [35, 60, 85, 95, 80, 50, 75, 90, 85, 70, 60, 80, 55, 40],
+      color: '#3d5a4f',
+      properties: {
+        ...INITIAL_PROPERTIES,
+        volume: 1.0,
+      }
+    };
+
+    let audioFound = false;
+    const updatedTracks = tracks.map(t => {
+      if (t.type === 'audio') {
+        audioFound = true;
+        return { ...t, clips: [...t.clips, voiceClip] };
+      }
+      return t;
+    });
+
+    if (!audioFound) {
+      updatedTracks.push({
+        id: `track-audio-${Date.now()}`,
+        type: 'audio',
+        name: 'A1 Audio',
+        isLocked: false,
+        isHidden: false,
+        isMuted: false,
+        clips: [voiceClip]
+      });
+    }
+
+    const newTotalDuration = computeTotalDuration(updatedTracks);
+    set({
+      tracks: updatedTracks,
+      selectedClipId: newId,
+      selectedTrackId: 'track-audio',
+      totalDuration: newTotalDuration,
+      isRecordingVoice: false
+    });
+
+    scheduleAutoSave({
+      projectName: get().projectName,
+      tracks: updatedTracks,
+      aspectRatio: get().aspectRatio,
+      totalDuration: newTotalDuration
+    });
+  },
+
+  initAutoSave: async () => {
+    try {
+      const saved = await loadProjectFromDB();
+      if (saved && saved.tracks && saved.tracks.length > 0) {
+        // Sanitize legacy mock data to avoid duplicate collisions
+        const cleanTracks = saved.tracks.map(t => {
+          if (t.type === 'sticker') {
+            return {
+              ...t,
+              clips: t.clips.filter((c: ClipItem) => c.id !== 'clip-sticker-1' && (c.src || c.thumbnail || c.properties?.text))
+            };
+          }
+          if (t.type === 'text') {
+            return {
+              ...t,
+              clips: t.clips.map((c: ClipItem) => ({
+                ...c,
+                properties: {
+                  ...c.properties,
+                  posY: (!c.properties?.posY || c.properties.posY === 0) ? 130 : c.properties.posY
+                }
+              }))
+            };
+          }
+          return t;
+        });
+
+        set({
+          projectName: saved.projectName || 'Master Cinema Reel #1',
+          tracks: cleanTracks,
+          aspectRatio: (saved.aspectRatio as AspectRatio) || '16:9',
+          totalDuration: saved.totalDuration || computeTotalDuration(cleanTracks),
+        });
+      }
+    } catch (e) {
+      console.warn('Auto-save load failed:', e);
+    }
+  },
+
+  trimLeftToPlayhead: () => {
+    const { selectedClipId, currentTime, tracks } = get();
+    if (!selectedClipId) return;
+
+    let targetClip: ClipItem | null = null;
+    for (const t of tracks) {
+      const c = t.clips.find(clip => clip.id === selectedClipId);
+      if (c) {
+        targetClip = c;
+        break;
+      }
+    }
+
+    if (!targetClip) return;
+    const clipEnd = targetClip.start + targetClip.duration;
+    // Playhead must be strictly inside the clip to trim in
+    if (currentTime <= targetClip.start || currentTime >= clipEnd) return;
+
+    get().saveHistory();
+    const speed = targetClip.properties.speed || 1.0;
+    const cutDelta = currentTime - targetClip.start;
+    const newOffset = (targetClip.offset ?? 0) + cutDelta * speed;
+    const newDuration = Number((clipEnd - currentTime).toFixed(2));
+    const newStart = Number(currentTime.toFixed(2));
+
+    const newTracks = tracks.map(t => ({
+      ...t,
+      clips: t.clips.map(c => {
+        if (c.id === selectedClipId) {
+          return {
+            ...c,
+            start: newStart,
+            duration: newDuration,
+            offset: newOffset
+          };
+        }
+        return c;
+      })
+    }));
+
+    const durFit = computeDurationAndFit(newTracks, get());
+    set({ tracks: newTracks, ...durFit });
+    scheduleAutoSave({
+      projectName: get().projectName,
+      tracks: newTracks,
+      aspectRatio: get().aspectRatio,
+      totalDuration: durFit.totalDuration
+    });
+  },
+
+  trimRightToPlayhead: () => {
+    const { selectedClipId, currentTime, tracks } = get();
+    if (!selectedClipId) return;
+
+    let targetClip: ClipItem | null = null;
+    for (const t of tracks) {
+      const c = t.clips.find(clip => clip.id === selectedClipId);
+      if (c) {
+        targetClip = c;
+        break;
+      }
+    }
+
+    if (!targetClip) return;
+    const clipEnd = targetClip.start + targetClip.duration;
+    // Playhead must be strictly inside the clip to trim out
+    if (currentTime <= targetClip.start || currentTime >= clipEnd) return;
+
+    get().saveHistory();
+    const newDuration = Number((currentTime - targetClip.start).toFixed(2));
+
+    const newTracks = tracks.map(t => ({
+      ...t,
+      clips: t.clips.map(c => {
+        if (c.id === selectedClipId) {
+          return {
+            ...c,
+            duration: newDuration
+          };
+        }
+        return c;
+      })
+    }));
+
+    const durFit = computeDurationAndFit(newTracks, get());
+    set({ tracks: newTracks, ...durFit });
+    scheduleAutoSave({
+      projectName: get().projectName,
+      tracks: newTracks,
+      aspectRatio: get().aspectRatio,
+      totalDuration: durFit.totalDuration
+    });
+  },
+
+  selectAllClips: () => {
+    const { tracks } = get();
+    // Select first clip if not selected or activate all
+    const allClips = tracks.flatMap(t => t.clips);
+    if (allClips.length > 0) {
+      set({ selectedClipId: allClips[0].id, selectedTrackId: allClips[0].trackId });
+    }
+  },
 
   setTrackHeightMode: (mode) => set({ trackHeightMode: mode }),
   toggleTrackHeightMode: () => set(s => ({ trackHeightMode: s.trackHeightMode === 'compact' ? 'normal' : 'compact' })),
@@ -624,7 +1093,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   moveClip: (clipId, newStart, newTrackId) => {
-    const { isSnapEnabled, currentTime } = get();
+    const { isSnapEnabled, isLinkageEnabled, currentTime } = get();
     let targetStart = Math.max(0, newStart);
 
     // Magnetic Snapping logic
@@ -641,32 +1110,64 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     set((state) => {
       let movingClip: ClipItem | null = null;
-      const cleanedTracks = state.tracks.map(t => {
+      for (const t of state.tracks) {
         const found = t.clips.find(c => c.id === clipId);
-        if (found) movingClip = { ...found };
-        return {
-          ...t,
-          clips: t.clips.filter(c => c.id !== clipId)
-        };
-      });
+        if (found) {
+          movingClip = { ...found };
+          break;
+        }
+      }
 
       if (!movingClip) return state;
 
-      const finalTrackId = newTrackId || (movingClip as ClipItem).trackId;
-      const updatedClip: ClipItem = {
-        ...(movingClip as ClipItem),
-        trackId: finalTrackId,
-        start: Number(targetStart.toFixed(2))
-      };
+      const origStart = movingClip.start;
+      const finalTargetStart = Number(targetStart.toFixed(2));
+      const deltaSec = finalTargetStart - origStart;
 
-      const newTracks = cleanedTracks.map(t => {
-        if (t.id === finalTrackId) {
-          return { ...t, clips: [...t.clips, updatedClip].sort((a, b) => a.start - b.start) };
+      const finalTrackId = newTrackId || movingClip.trackId;
+
+      const newTracks = state.tracks.map(t => {
+        // Linked Audio Shift: When moving a video clip and linkage is ON, move synchronized audio clips by same delta
+        if (isLinkageEnabled && movingClip!.type === 'video' && t.type === 'audio' && Math.abs(deltaSec) > 0.01) {
+          return {
+            ...t,
+            clips: t.clips.map(ac => {
+              if (Math.abs(ac.start - origStart) <= 0.2) {
+                return {
+                  ...ac,
+                  start: Number(Math.max(0, ac.start + deltaSec).toFixed(2))
+                };
+              }
+              return ac;
+            }).sort((a, b) => a.start - b.start)
+          };
         }
-        return t;
+
+        // Clean out and reinsert moving clip
+        const otherClips = t.clips.filter(c => c.id !== clipId);
+        if (t.id === finalTrackId) {
+          const updatedClip: ClipItem = {
+            ...movingClip!,
+            trackId: finalTrackId,
+            start: finalTargetStart
+          };
+          return {
+            ...t,
+            clips: [...otherClips, updatedClip].sort((a, b) => a.start - b.start)
+          };
+        }
+
+        return { ...t, clips: otherClips };
       });
 
       const durFit = computeDurationAndFit(newTracks, state);
+      scheduleAutoSave({
+        projectName: state.projectName,
+        tracks: newTracks,
+        aspectRatio: state.aspectRatio,
+        totalDuration: durFit.totalDuration
+      });
+
       return {
         tracks: newTracks,
         ...durFit
@@ -913,16 +1414,37 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   addClipToTrack: (trackId, clipData) => {
     get().saveHistory();
     const { currentTime, tracks } = get();
+    const clipType = (clipData.type || 'video') as TrackType;
+    const defaultColor = 
+      clipType === 'audio' ? '#3d5a4f' :
+      clipType === 'text' ? '#5c5246' :
+      (clipType === 'sticker' || clipType === 'effect') ? '#4d4560' :
+      '#3b4a63';
+
+    const track = tracks.find(t => t.id === trackId);
+    let startPos = clipData.start ?? currentTime;
+    if (track && track.clips.length > 0) {
+      // Find any overlapping clip or snap to end of previous clip (no overlap)
+      const prevClips = track.clips.filter(c => c.start <= startPos);
+      if (prevClips.length > 0) {
+        const lastPrev = prevClips.reduce((latest, c) => (c.start + c.duration > latest.start + latest.duration ? c : latest));
+        const lastPrevEnd = lastPrev.start + lastPrev.duration;
+        if (startPos < lastPrevEnd || Math.abs(startPos - lastPrevEnd) < 0.4) {
+          startPos = lastPrevEnd;
+        }
+      }
+    }
+
     const newClip: ClipItem = {
       id: `clip-${Date.now()}`,
       trackId,
-      type: (clipData.type || 'video') as TrackType,
+      type: clipType,
       title: clipData.title || 'New Clip',
-      start: clipData.start ?? currentTime,
+      start: Number(startPos.toFixed(2)),
       duration: clipData.duration || 6,
       sourceDuration: clipData.sourceDuration || 15,
-      offset: 0,
-      color: clipData.color || '#384357',
+      offset: clipData.offset ?? 0,
+      color: clipData.color || defaultColor,
       thumbnail: clipData.thumbnail,
       waveform: clipData.waveform,
       src: clipData.src,
@@ -1094,4 +1616,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setExportModalOpen: (open) => set({ isExportModalOpen: open }),
   setShortcutsModalOpen: (open) => set({ isShortcutsModalOpen: open }),
   setProModalOpen: (open) => set({ isProModalOpen: open }),
+  openInstagramTrimmer: (params) => set({
+    activeInstagramTrimmer: {
+      isOpen: true,
+      clipId: params.clipId,
+      song: params.song,
+      initialOffset: params.initialOffset ?? 0,
+      initialDuration: params.initialDuration,
+    }
+  }),
+  closeInstagramTrimmer: () => set({ activeInstagramTrimmer: null }),
 }));

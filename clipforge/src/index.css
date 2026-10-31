@@ -9,6 +9,17 @@
     --accent-gold: #C9A66B;
     --text-primary: #E8E6E1;
     --text-muted: #8A8A92;
+
+    /* Professional NLE Timeline Color Palette */
+    --bg: #1b1b1d;
+    --track: #232326;
+    --header: #2a2a2e;
+    --border: #38383d;
+    --text: #d4d4d8;
+    --muted: #8a8a93;
+    --accent: #4f8cff;
+    --btn: #2f2f34;
+    --btn-hover: #3a3a40;
   }
 
   html.light {

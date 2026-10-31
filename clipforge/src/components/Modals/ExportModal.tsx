@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   X, 
   Download, 
-  Lock, 
   CheckCircle2, 
   FileVideo, 
   Settings2,
   HardDrive,
   Film,
-  Sparkles
+  Image as ImageIcon,
+  Camera,
+  Upload
 } from 'lucide-react';
 import { useEditorStore } from '../../store/useEditorStore';
 
@@ -16,21 +17,27 @@ export const ExportModal: React.FC = () => {
   const { 
     isExportModalOpen, 
     setExportModalOpen, 
-    setProModalOpen, 
     projectName,
+    setProjectName,
     tracks,
     aspectRatio,
-    totalDuration
+    totalDuration,
+    coverThumbnail,
+    setCoverThumbnail
   } = useEditorStore();
 
-  const [resolution, setResolution] = useState<'720p' | '1080p' | '4k'>('1080p');
+  const [exportFileName, setExportFileName] = useState(projectName || 'Master_Cinema_Reel');
+  const [resolution, setResolution] = useState<'720p' | '1080p' | '2k' | '4k'>('1080p');
   const [frameRate, setFrameRate] = useState<'24fps' | '30fps' | '60fps'>('30fps');
   const [format, setFormat] = useState<'mp4' | 'mov' | 'webm'>('mp4');
+  const [bitrate, setBitrate] = useState<'standard' | 'higher' | 'lower'>('standard');
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [renderedDownloadUrl, setRenderedDownloadUrl] = useState<string | null>(null);
   const [renderedFileName, setRenderedFileName] = useState<string | null>(null);
+  const progressTimerRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   if (!isExportModalOpen) return null;
 
@@ -40,17 +47,17 @@ export const ExportModal: React.FC = () => {
 
   const handleStartExport = async () => {
     setIsExporting(true);
-    setExportProgress(10);
+    setExportProgress(12);
     setIsFinished(false);
     setRenderedDownloadUrl(null);
 
     // Smooth progress simulation while backend renders
-    const progressTimer = setInterval(() => {
+    progressTimerRef.current = setInterval(() => {
       setExportProgress((prev) => {
-        if (prev >= 88) return prev;
-        return prev + 6;
+        if (prev >= 92) return prev;
+        return prev + 8;
       });
-    }, 400);
+    }, 350);
 
     try {
       const clipTitle = activeClip?.title || 'reel-demo.mp4';
@@ -60,6 +67,18 @@ export const ExportModal: React.FC = () => {
       const clipFilter = activeClip?.properties?.filter ?? 'none';
       const clipVolume = activeClip?.properties?.volume ?? 1.0;
 
+      // Collect all active timeline audio clips with their precise offset, duration, volume & fades
+      const audioTracks = tracks.filter((t) => t.type === 'audio' && !t.isMuted);
+      const audioClips = audioTracks.flatMap((t) => t.clips).map((c) => ({
+        src: c.src,
+        start: c.start,
+        offset: c.offset ?? 0,
+        duration: c.duration,
+        volume: c.properties.volume ?? 0.85,
+        fadeIn: c.properties.fadeIn ?? 0,
+        fadeOut: c.properties.fadeOut ?? 0,
+      }));
+
       const res = await fetch('/api/video/edit-timeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -68,21 +87,23 @@ export const ExportModal: React.FC = () => {
           trimStart,
           trimEnd,
           speed: clipSpeed,
-          resolution: resolution === '720p' ? '720p' : '1080p',
+          resolution,
           fps: frameRate,
+          bitrate,
           aspect: aspectRatio,
           filter: clipFilter,
-          origVolume: clipVolume
+          origVolume: clipVolume,
+          audioClips
         })
       });
 
-      clearInterval(progressTimer);
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
 
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.downloadUrl) {
           setRenderedDownloadUrl(data.downloadUrl);
-          setRenderedFileName(data.fileName || `${projectName.replace(/\s+/g, '_')}_${resolution}.${format}`);
+          setRenderedFileName(data.fileName || `${exportFileName.replace(/\s+/g, '_')}_${resolution}.${format}`);
           setExportProgress(100);
           setIsExporting(false);
           setIsFinished(true);
@@ -90,55 +111,105 @@ export const ExportModal: React.FC = () => {
         }
       }
       
-      // Fallback if running standalone or file is custom memory blob
+      // Fallback if running standalone or backend simulated
       setExportProgress(100);
       setIsExporting(false);
       setIsFinished(true);
     } catch {
-      clearInterval(progressTimer);
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
       setExportProgress(100);
       setIsExporting(false);
       setIsFinished(true);
     }
+  };
+
+  const handleCancelExport = () => {
+    if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+    setIsExporting(false);
+    setExportProgress(0);
   };
 
   const handleDownload = () => {
     if (renderedDownloadUrl) {
       const a = document.createElement('a');
       a.href = renderedDownloadUrl;
-      a.download = renderedFileName || `${projectName.replace(/\s+/g, '_')}_${resolution}.${format}`;
+      a.download = renderedFileName || `${exportFileName.replace(/\s+/g, '_')}_${resolution}.${format}`;
       a.click();
     } else {
       // Local fallback blob trigger
-      const dummyBlob = new Blob(['ClipForge Studio Master Video Export'], { type: 'video/mp4' });
+      const dummyBlob = new Blob(['ClipForge Studio Master 4K Video Export'], { type: 'video/mp4' });
       const url = URL.createObjectURL(dummyBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${projectName.replace(/\s+/g, '_')}_${resolution}.${format}`;
+      a.download = `${exportFileName.replace(/\s+/g, '_')}_${resolution}.${format}`;
       a.click();
       URL.revokeObjectURL(url);
     }
     setExportModalOpen(false);
   };
 
+  const handleSetCurrentFrameAsCover = () => {
+    // Capture current frame from main video element if available
+    const videoEl = document.querySelector('video') as HTMLVideoElement | null;
+    if (videoEl) {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = videoEl.videoWidth || 640;
+        canvas.height = videoEl.videoHeight || 360;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setCoverThumbnail(dataUrl);
+          return;
+        }
+      } catch {
+        // In case of CORS fallback to clip thumbnail
+      }
+    }
+    if (activeClip?.thumbnail) {
+      setCoverThumbnail(activeClip.thumbnail);
+    }
+  };
+
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setCoverThumbnail(url);
+    }
+  };
+
+  // Estimated file size calculation
+  const getEstimatedSizeMB = () => {
+    const baseRateMBps = resolution === '4k' ? 4.5 : resolution === '2k' ? 2.5 : resolution === '1080p' ? 1.4 : 0.8;
+    const rateMultiplier = bitrate === 'higher' ? 1.4 : bitrate === 'lower' ? 0.7 : 1.0;
+    const fpsMultiplier = frameRate === '60fps' ? 1.3 : 1.0;
+    const est = totalDuration * baseRateMBps * rateMultiplier * fpsMultiplier;
+    return Math.max(4, Math.round(est));
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 select-none font-sans">
-      <div className="w-full max-w-md bg-[#16161A] border border-[#2A2A30] rounded-lg shadow-2xl overflow-hidden flex flex-col text-[#E8E6E1]">
+      <div className="w-full max-w-lg bg-[#16161A] border border-[#2A2A30] rounded-lg shadow-2xl overflow-hidden flex flex-col text-[#E8E6E1]">
         {/* Header */}
-        <div className="px-4 py-3.5 border-b border-[#24242A] flex items-center justify-between bg-[#121215]">
+        <div className="px-5 py-3.5 border-b border-[#24242A] flex items-center justify-between bg-[#121215]">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded border border-[#C9A66B]/30 bg-[#C9A66B]/10 text-[#C9A66B] flex items-center justify-center">
-              <FileVideo className="w-3.5 h-3.5" strokeWidth={1.5} />
+            <div className="w-7 h-7 rounded border border-[#4f8cff]/30 bg-[#4f8cff]/10 text-[#4f8cff] flex items-center justify-center">
+              <FileVideo className="w-4 h-4" strokeWidth={1.5} />
             </div>
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#E8E6E1]">Export Sequence</h3>
-              <p className="text-[11px] text-[#8A8A92] font-mono truncate max-w-[220px]">
-                {projectName}
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#E8E6E1]">Export Project</h3>
+              <p className="text-[11px] text-[#8A8A92] font-mono">
+                CapCut Desktop Master Pipeline
               </p>
             </div>
           </div>
           <button
-            onClick={() => setExportModalOpen(false)}
+            onClick={() => {
+              if (isExporting) handleCancelExport();
+              setExportModalOpen(false);
+            }}
             className="p-1 rounded text-[#8A8A92] hover:text-[#E8E6E1] hover:bg-[#1F1F24] transition-colors"
           >
             <X className="w-4 h-4" strokeWidth={1.5} />
@@ -146,116 +217,169 @@ export const ExportModal: React.FC = () => {
         </div>
 
         {/* Content Body */}
-        <div className="p-4 space-y-4">
+        <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
           {!isFinished ? (
             <>
-              {/* 1. Resolution Selection */}
-              <div>
-                <label className="text-[11px] font-medium text-[#8A8A92] uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                  <span>Master Resolution</span>
-                  <span className="font-mono text-[10px] text-zinc-500">Output Quality</span>
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => setResolution('720p')}
-                    className={`p-2.5 rounded border text-xs font-medium text-left transition-all ${
-                      resolution === '720p'
-                        ? 'bg-[#202026] text-[#E8E6E1] border-[#C9A66B]'
-                        : 'bg-[#18181C] text-[#8A8A92] border-[#26262B] hover:text-[#E8E6E1] hover:border-[#383840]'
-                    }`}
-                  >
-                    <div className="font-mono font-medium">720p HD</div>
-                    <div className="text-[10px] text-zinc-500">Standard Web</div>
-                  </button>
-
-                  <button
-                    onClick={() => setResolution('1080p')}
-                    className={`p-2.5 rounded border text-xs font-medium text-left transition-all relative ${
-                      resolution === '1080p'
-                        ? 'bg-[#202026] text-[#E8E6E1] border-[#C9A66B]'
-                        : 'bg-[#18181C] text-[#8A8A92] border-[#26262B] hover:text-[#E8E6E1] hover:border-[#383840]'
-                    }`}
-                  >
-                    <div className="font-mono font-medium text-[#C9A66B]">1080p FHD</div>
-                    <div className="text-[10px] text-zinc-400">Recommended</div>
-                  </button>
-
-                  <button
-                    onClick={() => setProModalOpen(true)}
-                    className="p-2.5 rounded border text-xs font-medium text-left bg-[#18181C] text-[#8A8A92] border-[#26262B] hover:border-[#C9A66B]/50 transition-all flex flex-col justify-between"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[#C9A66B]">4K UHD</span>
-                      <Lock className="w-3 h-3 text-[#C9A66B]" strokeWidth={1.5} />
+              {/* 1. File Name & Cover Preview */}
+              <div className="grid grid-cols-3 gap-3 items-center p-3 rounded border bg-[#141418] border-[#26262B]">
+                {/* Cover Thumbnail */}
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="w-24 h-14 rounded border border-[#2C2C35] overflow-hidden bg-black flex items-center justify-center relative group">
+                    {coverThumbnail ? (
+                      <img src={coverThumbnail} alt="Cover" className="w-full h-full object-cover" />
+                    ) : activeClip?.thumbnail ? (
+                      <img src={activeClip.thumbnail} alt="Cover" className="w-full h-full object-cover opacity-80" />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-[#52525B]" />
+                    )}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                      <button
+                        onClick={handleSetCurrentFrameAsCover}
+                        title="Set current playhead frame"
+                        className="p-1 rounded bg-[#1F1F24] text-white hover:text-[#4f8cff]"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        title="Upload custom image"
+                        className="p-1 rounded bg-[#1F1F24] text-white hover:text-[#4f8cff]"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <div className="text-[10px] text-zinc-500">Pro License</div>
-                  </button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverUpload}
+                    className="hidden"
+                  />
+                  <span className="text-[9.5px] text-[#8A8A92]">Project Cover</span>
+                </div>
+
+                {/* File Name Input */}
+                <div className="col-span-2 space-y-1">
+                  <label className="text-[10.5px] font-medium text-[#8A8A92] uppercase tracking-wider block">
+                    File Name
+                  </label>
+                  <input
+                    type="text"
+                    value={exportFileName}
+                    onChange={(e) => {
+                      setExportFileName(e.target.value);
+                      setProjectName(e.target.value);
+                    }}
+                    className="w-full text-xs font-mono p-2 rounded bg-[#1E1E24] border border-[#2C2C35] text-[#E8E6E1] focus:border-[#4f8cff] outline-none"
+                    placeholder="Enter output file name..."
+                  />
                 </div>
               </div>
 
-              {/* 2. Frame Rate & Format */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* 2. Master Resolution (All unlocked up to 4K) */}
+              <div>
+                <label className="text-[11px] font-medium text-[#8A8A92] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Resolution</span>
+                  <span className="font-mono text-[10px] text-[#4f8cff]">Unlocked up to 4K UHD</span>
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: '720p', title: '720p HD', desc: '1280 × 720' },
+                    { id: '1080p', title: '1080p FHD', desc: '1920 × 1080' },
+                    { id: '2k', title: '2K QHD', desc: '2560 × 1440' },
+                    { id: '4k', title: '4K UHD', desc: '3840 × 2160' },
+                  ].map(res => (
+                    <button
+                      key={res.id}
+                      onClick={() => setResolution(res.id as any)}
+                      className={`p-2 rounded border text-left transition-all ${
+                        resolution === res.id
+                          ? 'bg-[#1e293b] text-[#4f8cff] border-[#4f8cff] shadow-sm'
+                          : 'bg-[#18181C] text-[#8A8A92] border-[#26262B] hover:text-[#E8E6E1] hover:border-[#383840]'
+                      }`}
+                    >
+                      <div className="font-mono text-xs font-semibold">{res.title}</div>
+                      <div className="text-[9.5px] text-zinc-500">{res.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Bitrate, Format & Frame Rate */}
+              <div className="grid grid-cols-3 gap-2.5">
+                {/* Bitrate */}
                 <div>
-                  <label className="text-[11px] font-medium text-[#8A8A92] uppercase tracking-wider mb-1.5 block">
+                  <label className="text-[10.5px] font-medium text-[#8A8A92] uppercase tracking-wider mb-1 block">
+                    Bitrate
+                  </label>
+                  <select
+                    value={bitrate}
+                    onChange={(e) => setBitrate(e.target.value as any)}
+                    className="w-full bg-[#18181C] text-xs text-[#E8E6E1] p-2 rounded border border-[#26262B] outline-none cursor-pointer focus:border-[#4f8cff] font-mono"
+                  >
+                    <option value="standard">Standard (VBR)</option>
+                    <option value="higher">Higher Quality</option>
+                    <option value="lower">Lower Size</option>
+                  </select>
+                </div>
+
+                {/* Frame Rate */}
+                <div>
+                  <label className="text-[10.5px] font-medium text-[#8A8A92] uppercase tracking-wider mb-1 block">
                     Frame Rate
                   </label>
                   <select
                     value={frameRate}
                     onChange={(e) => setFrameRate(e.target.value as any)}
-                    className="w-full bg-[#18181C] text-xs text-[#E8E6E1] p-2 rounded border border-[#26262B] outline-none cursor-pointer focus:border-[#C9A66B] font-mono"
+                    className="w-full bg-[#18181C] text-xs text-[#E8E6E1] p-2 rounded border border-[#26262B] outline-none cursor-pointer focus:border-[#4f8cff] font-mono"
                   >
-                    <option value="24fps">24 fps (Cinema Standard)</option>
+                    <option value="24fps">24 fps (Cinema)</option>
                     <option value="30fps">30 fps (Broadcast)</option>
-                    <option value="60fps">60 fps (High Motion)</option>
+                    <option value="60fps">60 fps (High Smooth)</option>
                   </select>
                 </div>
 
+                {/* Format */}
                 <div>
-                  <label className="text-[11px] font-medium text-[#8A8A92] uppercase tracking-wider mb-1.5 block">
-                    Container Format
+                  <label className="text-[10.5px] font-medium text-[#8A8A92] uppercase tracking-wider mb-1 block">
+                    Format
                   </label>
                   <select
                     value={format}
                     onChange={(e) => setFormat(e.target.value as any)}
-                    className="w-full bg-[#18181C] text-xs text-[#E8E6E1] p-2 rounded border border-[#26262B] outline-none cursor-pointer focus:border-[#C9A66B] font-mono"
+                    className="w-full bg-[#18181C] text-xs text-[#E8E6E1] p-2 rounded border border-[#26262B] outline-none cursor-pointer focus:border-[#4f8cff] font-mono"
                   >
                     <option value="mp4">MP4 (H.264 / AAC)</option>
-                    <option value="mov">MOV (Apple ProRes)</option>
+                    <option value="mov">MOV (ProRes)</option>
                     <option value="webm">WebM (VP9)</option>
                   </select>
                 </div>
               </div>
 
-              {/* 3. Watermark License Option */}
-              <div className="p-3 bg-[#18181C] rounded border border-[#26262B] flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-[#E8E6E1]">Clean Commercial License</p>
-                  <p className="text-[10px] text-[#8A8A92]">Remove ClipForge insignia watermark</p>
-                </div>
-                <button
-                  onClick={() => setProModalOpen(true)}
-                  className="flex items-center gap-1.5 text-[11px] font-medium text-[#C9A66B] bg-[#C9A66B]/10 hover:bg-[#C9A66B]/20 border border-[#C9A66B]/30 px-2.5 py-1 rounded transition-colors"
-                >
-                  <Sparkles className="w-3 h-3 text-[#C9A66B]" strokeWidth={1.5} />
-                  <span>Pro Upgrade</span>
-                </button>
-              </div>
-
               {/* Progress Bar (If exporting) */}
               {isExporting && (
-                <div className="space-y-2 pt-1">
-                  <div className="flex justify-between text-xs text-[#8A8A92]">
-                    <span className="flex items-center gap-2 text-[#C9A66B] font-mono text-[11px]">
+                <div className="space-y-2 pt-2 p-3 rounded bg-[#141418] border border-[#26262B]">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="flex items-center gap-2 text-[#4f8cff] font-mono text-[11px]">
                       <Settings2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
-                      Encoding timeline frames...
+                      Rendering frames ({resolution.toUpperCase()} · {frameRate})...
                     </span>
                     <span className="font-mono font-medium text-[#E8E6E1]">{exportProgress}%</span>
                   </div>
-                  <div className="w-full h-1.5 bg-[#202026] rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-[#202026] rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-[#C9A66B] transition-all duration-300"
+                      className="h-full bg-[#4f8cff] transition-all duration-300"
                       style={{ width: `${exportProgress}%` }}
                     />
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={handleCancelExport}
+                      className="text-[10px] text-red-400 hover:underline cursor-pointer"
+                    >
+                      Cancel Export
+                    </button>
                   </div>
                 </div>
               )}
@@ -269,15 +393,15 @@ export const ExportModal: React.FC = () => {
               <div>
                 <h4 className="text-sm font-semibold text-[#E8E6E1]">Encoding Complete</h4>
                 <p className="text-xs text-[#8A8A92] font-mono mt-0.5">
-                  Rendered in {resolution} · {frameRate} · {format.toUpperCase()}
+                  Rendered in {resolution.toUpperCase()} · {frameRate} · {bitrate.toUpperCase()} · {format.toUpperCase()}
                 </p>
               </div>
               <button
                 onClick={handleDownload}
-                className="w-full py-2.5 rounded bg-[#C9A66B] hover:bg-[#B89357] text-[#121214] font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                className="w-full py-2.5 rounded bg-[#4f8cff] hover:bg-[#3d75dd] text-[#121214] font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
                 <HardDrive className="w-4 h-4" strokeWidth={1.5} />
-                <span>Save to Local Drive</span>
+                <span>Save to Local Drive ({exportFileName}.{format})</span>
               </button>
             </div>
           )}
@@ -285,10 +409,10 @@ export const ExportModal: React.FC = () => {
 
         {/* Footer */}
         {!isFinished && (
-          <div className="px-4 py-3 border-t border-[#24242A] bg-[#121215] flex items-center justify-between">
+          <div className="px-5 py-3 border-t border-[#24242A] bg-[#121215] flex items-center justify-between">
             <span className="text-[11px] text-[#8A8A92] font-mono flex items-center gap-1.5">
-              <Film className="w-3.5 h-3.5" strokeWidth={1.5} />
-              Est. ~{Math.max(5, Math.round(totalDuration * 0.9))} MB
+              <Film className="w-3.5 h-3.5 text-[#4f8cff]" strokeWidth={1.5} />
+              Est. ~{getEstimatedSizeMB()} MB ({totalDuration.toFixed(1)}s timeline)
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -300,9 +424,9 @@ export const ExportModal: React.FC = () => {
               <button
                 onClick={handleStartExport}
                 disabled={isExporting}
-                className="px-4 py-1.5 rounded bg-[#C9A66B] hover:bg-[#B89357] disabled:opacity-40 text-[#121214] font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-4 py-1.5 rounded bg-[#4f8cff] hover:bg-[#3d75dd] disabled:opacity-40 text-[#121214] font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
               >
-                <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <Download className="w-3.5 h-3.5 stroke-[2]" />
                 <span>{isExporting ? 'Encoding...' : 'Export'}</span>
               </button>
             </div>

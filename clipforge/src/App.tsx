@@ -8,6 +8,7 @@ import { Timeline } from './components/Timeline/Timeline';
 import { ExportModal } from './components/Modals/ExportModal';
 import { ShortcutsModal } from './components/Modals/ShortcutsModal';
 import { ProModal } from './components/Modals/ProModal';
+import { InstagramAudioTrimmer } from './components/Modals/InstagramAudioTrimmer';
 
 export const App: React.FC = () => {
   const { theme } = useEditorStore();
@@ -53,6 +54,7 @@ export const App: React.FC = () => {
       <ExportModal />
       <ShortcutsModal />
       <ProModal />
+      <InstagramAudioTrimmer />
     </div>
   );
 };
